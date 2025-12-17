@@ -2,7 +2,7 @@
 
 This roadmap outlines the flight plan for TravelBlock, a flight-simulator-based focus app. The goal is to build a fully functional travel simulation where focus time translates to real-world distance between airports.
 
-Versioning Guide
+## Versioning Guide
 
 Format: vX.Y.Z (e.g., v0.1.0, v0.2.0, v1.0.0)
 

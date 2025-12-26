@@ -8,6 +8,15 @@ export type ThemedTextProps = TextProps & {
   type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
 };
 
+/**
+ * Render text that adapts color to the active theme and applies a predefined typography variant.
+ *
+ * @param style - Additional Text style overrides to merge with the component's variant styles
+ * @param lightColor - Optional color to use when the light theme is active
+ * @param darkColor - Optional color to use when the dark theme is active
+ * @param type - Typography variant to apply: 'default', 'title', 'defaultSemiBold', 'subtitle', or 'link'
+ * @returns A React Native Text element with the resolved theme color and the selected typography styles
+ */
 export function ThemedText({
   style,
   lightColor,

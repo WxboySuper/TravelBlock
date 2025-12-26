@@ -4,6 +4,12 @@ import { type ComponentProps } from 'react';
 
 type Props = Omit<ComponentProps<typeof Link>, 'href'> & { href: Href & string };
 
+/**
+ * Render a Link that opens an external URL using the platform-appropriate browser.
+ *
+ * @param href - The external URL to open when the link is activated.
+ * @returns A Link element configured to open `href` in a new tab on web or in an in-app browser on native platforms.
+ */
 export function ExternalLink({ href, ...rest }: Props) {
   return (
     <Link

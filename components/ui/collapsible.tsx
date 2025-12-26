@@ -7,6 +7,15 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+/**
+ * Renders a collapsible section with a tappable header that shows or hides its children.
+ *
+ * The header displays a chevron icon and the given `title`; tapping the header toggles visibility.
+ * The chevron rotates 90° when open and its color adapts to the current color scheme.
+ *
+ * @param title - Text displayed in the header
+ * @returns A React element containing the header and, when open, the section content
+ */
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useColorScheme() ?? 'light';

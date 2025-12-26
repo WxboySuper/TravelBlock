@@ -6,6 +6,14 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+/**
+ * Renders the app's bottom tab navigator with Home and Explore tabs.
+ *
+ * The navigator uses the current color scheme to set the active tint, hides the header,
+ * and uses a haptic-enabled tab button. Each tab provides a title and an icon.
+ *
+ * @returns The tab layout JSX element containing the configured Tabs navigator
+ */
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 

@@ -16,35 +16,6 @@ Pre-1.0: Use v0.Y.0 for the initial build. Release early, test on device often.
 
 Philosophy: "Code on PC, Run on Phone." Every checkmark is a tangible app update.
 
-<details>
-<summary>🗂️ <strong>Milestone Progress Task List</strong></summary>
-
-[ ] Project Initialization (v0.1.0)
-
-[ ] Airport Database & Logic
-
-[ ] The Home Airport
-
-[ ] The Time Slider Logic
-
-[ ] Flight Visualization (Map)
-
-[ ] The Simulator Engine (Real-Time + No Pause)
-
-[ ] Session History (Logbook)
-
-[ ] Analytics & Charts
-
-[ ] Audio Immersion (Sound Effects)
-
-[ ] v1.0.0: The Flight Simulator
-
-[ ] v2.0.0: Driving Mode
-
-[ ] v3.0.0: Storm Chase Mode
-
-</details>
-
 ## v0.1.0-alpha: The Hello World (Expo)
 
 Goal: Get the app running on your physical Android device.

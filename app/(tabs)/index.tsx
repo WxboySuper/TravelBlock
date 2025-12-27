@@ -7,6 +7,15 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
 
+/**
+ * Home screen for the tabs root that displays a parallax header and introductory content.
+ *
+ * Renders a parallax-scrolling layout containing a header image, a welcome title with waving
+ * illustration, and three informational step sections (try editing the app, explore a modal with
+ * actions, and reset the project).
+ *
+ * @returns A React element representing the home screen layout with its header and step content.
+ */
 export default function HomeScreen() {
   return (
     <ParallaxScrollView

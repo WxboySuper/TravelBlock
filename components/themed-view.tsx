@@ -7,6 +7,14 @@ export type ThemedViewProps = ViewProps & {
   darkColor?: string;
 };
 
+/**
+ * Render a View whose background color is resolved from the current theme.
+ *
+ * @param lightColor - Optional background color to use in light theme
+ * @param darkColor - Optional background color to use in dark theme
+ * @param style - Additional view style(s) to merge with the themed background color
+ * @returns A View element with the computed background color and any forwarded props
+ */
 export function ThemedView({ style, lightColor, darkColor, ...otherProps }: ThemedViewProps) {
   const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background');
 

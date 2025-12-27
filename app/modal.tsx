@@ -4,6 +4,11 @@ import { StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
+/**
+ * Modal screen component that displays a title and a link to navigate back to the home screen.
+ *
+ * @returns The rendered JSX element for the modal screen
+ */
 export default function ModalScreen() {
   return (
     <ThemedView style={styles.container}>

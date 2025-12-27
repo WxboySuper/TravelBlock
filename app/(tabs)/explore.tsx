@@ -9,6 +9,11 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
 
+/**
+ * Render the Explore tab screen with a parallax header and multiple informational collapsible sections.
+ *
+ * @returns The Explore screen React element containing a parallax header, title, example content, and collapsible informational sections.
+ */
 export default function TabTwoScreen() {
   return (
     <ParallaxScrollView

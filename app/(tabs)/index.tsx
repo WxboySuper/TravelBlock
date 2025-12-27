@@ -1,11 +1,30 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, Alert } from 'react-native';
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
+
+const styles = StyleSheet.create({
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepContainer: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+  },
+});
 
 /**
  * Home screen for the tabs root that displays a parallax header and introductory content.
@@ -53,18 +72,14 @@ export default function HomeScreen() {
             </Link.Trigger>
             <Link.Preview />
             <Link.Menu>
-              <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-              <Link.MenuAction
-                title="Share"
-                icon="square.and.arrow.up"
-                onPress={() => alert('Share pressed')}
-              />
+              <Link.MenuAction title="Action" icon="cube" onPress={handleAction} />
+              <Link.MenuAction title="Share" icon="square.and.arrow.up" onPress={handleShare} />
               <Link.Menu title="More" icon="ellipsis">
                 <Link.MenuAction
                   title="Delete"
                   icon="trash"
                   destructive
-                  onPress={() => alert('Delete pressed')}
+                  onPress={handleDelete}
                 />
               </Link.Menu>
             </Link.Menu>
@@ -95,21 +110,14 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+function handleAction() {
+  Alert.alert('Action pressed');
+}
+
+function handleShare() {
+  Alert.alert('Share pressed');
+}
+
+function handleDelete() {
+  Alert.alert('Delete pressed');
+}

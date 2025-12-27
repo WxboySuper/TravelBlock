@@ -6,10 +6,7 @@ module.exports = defineConfig([
   expoConfig,
   {
     ignores: ['dist/*'],
-    plugins: {
-      react: require('eslint-plugin-react'),
-      'react-hooks': require('eslint-plugin-react-hooks'),
-    },
+    // Plugins are provided by the extended Expo config; avoid redefining them here.
     settings: {
       react: {
         version: 'detect',

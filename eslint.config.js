@@ -6,5 +6,22 @@ module.exports = defineConfig([
   expoConfig,
   {
     ignores: ['dist/*'],
+    plugins: {
+      react: require('eslint-plugin-react'),
+      'react-hooks': require('eslint-plugin-react-hooks'),
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+    rules: {
+      // New JSX transform doesn't require React in scope
+      'react/jsx-uses-react': 'off',
+      'react/react-in-jsx-scope': 'off',
+      // Enforce hooks rules
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
   },
 ]);

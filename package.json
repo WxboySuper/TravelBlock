@@ -1,8 +1,8 @@
 {
-  "name": "expo-template-default",
-  "license": "0BSD",
+  "name": "travelblock",
+  "license": "MIT",
   "main": "expo-router/entry",
-  "version": "54.0.35",
+  "version": "0.0.1",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -47,6 +47,9 @@
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2",
     "eslint": "^9.25.0",
-    "eslint-config-expo": "~10.0.0"
+    "eslint-config-expo": "~10.0.0",
+    "@babel/preset-react": "^7.22.0",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0"
   }
 }

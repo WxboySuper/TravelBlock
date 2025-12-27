@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * This script is used to reset the project to a blank state.

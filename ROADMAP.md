@@ -32,7 +32,7 @@ Goal: Get the app running on your physical Android device.
 
 Goal: Teaching the app geography.
 
-[ ] Create airports.json dataset (ICAO, Name, Lat, Lon).
+[x] Create airports.json dataset (ICAO, Name, Lat, Lon).
 
 [ ] Implement utility functions to calculate distance between two coordinates (Great Circle Distance).
 

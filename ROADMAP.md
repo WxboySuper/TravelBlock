@@ -20,13 +20,13 @@ Philosophy: "Code on PC, Run on Phone." Every checkmark is a tangible app update
 
 Goal: Get the app running on your physical Android device.
 
-[ ] Install Node.js & Expo CLI.
+[x] Install Node.js & Expo CLI.
 
-[ ] Initialize project with npx create-expo-app travel-block.
+[x] Initialize project with npx create-expo-app travel-block.
 
-[ ] Install "Expo Go" on Android device.
+[x] Install "Expo Go" on Android device.
 
-[ ] Scan QR Code and verify the app runs.
+[x] Scan QR Code and verify the app runs.
 
 ## v0.2.0-alpha: Airport Data Layer
 

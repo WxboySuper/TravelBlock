@@ -1,4 +1,4 @@
-import { PropsWithChildren, useState } from 'react';
+import { PropsWithChildren, useState, useCallback } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useColorScheme() ?? 'light';
-  const handleToggle = () => setIsOpen((value) => !value);
+  const handleToggle = useCallback(() => setIsOpen((value) => !value), []);
   const rotateStyle = { transform: [{ rotate: isOpen ? '90deg' : '0deg' }] };
 
   return (

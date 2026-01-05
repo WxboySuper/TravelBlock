@@ -21,4 +21,6 @@ module.exports = {
       statements: 90,
     },
   },
+  // Ensure shared test setup is loaded for all Jest environments (ts-jest and jest-expo)
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };

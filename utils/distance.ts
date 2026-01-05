@@ -183,19 +183,39 @@ function normalizeToPoints(
   c?: number,
   d?: number
 ): [Coordinates, Coordinates] {
-  if (typeof a === 'object' && typeof b === 'object') {
+  if (isCoordinates(a) && isCoordinates(b)) {
     return [a as Coordinates, b as Coordinates];
   }
-  // If the first arg is a number, ensure the remaining args are numbers
-  if (typeof a === 'number') {
-    if (typeof b !== 'number' || typeof c !== 'number' || typeof d !== 'number') {
-      throw new Error('Invalid numeric arguments: expected (lat1, lon1, lat2, lon2)');
-    }
 
-    return normalizeFromNumbersTuple([a, b, c as number, d as number]);
+  if (isNumbersTuple(a, b, c, d)) {
+    return normalizeFromNumbersTuple([a as number, b as number, c as number, d as number]);
   }
 
   throw new Error('Invalid arguments: expected (lat1, lon1, lat2, lon2) or (point1, point2)');
+}
+
+/** Type-guard: true when the value looks like `Coordinates` */
+function isCoordinates(value: unknown): value is Coordinates {
+  const candidate = value as Partial<Coordinates>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    typeof candidate.lat === 'number' &&
+    typeof candidate.lon === 'number' &&
+    Number.isFinite(candidate.lat) &&
+    Number.isFinite(candidate.lon)
+  );
+}
+
+/** Predicate to verify the numeric 4-tuple path. Kept small to reduce complexity in the main flow. */
+function isNumbersTuple(a: unknown, b: unknown, c: unknown, d: unknown): boolean {
+  return (
+    typeof a === 'number' &&
+    typeof b === 'number' &&
+    typeof c === 'number' &&
+    typeof d === 'number'
+  );
 }
 
 function normalizeFromNumbersTuple(nums: [number, number, number, number]): [Coordinates, Coordinates] {

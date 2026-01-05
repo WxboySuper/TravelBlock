@@ -46,28 +46,17 @@ export interface AirportSearchBarProps extends Omit<TextInputProps, 'value'> {
 }
 
 /**
- * Search input bar for airport selection with icon, input field, and optional clear button.
+ * Render a themed airport search bar with a leading search icon, a text input, and an optional clear button.
  *
- * Provides a search input with:
- * - Search icon on the left
- * - Debounced text input (debouncing handled by parent)
- * - Clear button (×) that appears when text is present
- * - Theme-aware styling
+ * The clear button appears only when `value` is non-empty.
  *
- * @param value - Current search query
- * @param onChangeText - Callback when text changes
- * @param onClear - Callback when clear button is pressed
- * @param placeholder - Placeholder text (default: "Search airports...")
- * @param props - Additional TextInput props
- * @returns A themed search input component
- *
- * @example
- * <AirportSearchBar
- *   value={searchQuery}
- *   onChangeText={setSearchQuery}
- *   onClear={() => console.log('cleared')}
- * />
- * */
+ * @param value - Current search query shown in the input
+ * @param onChangeText - Invoked with the new text when the input changes
+ * @param onClear - Optional callback invoked when the clear button is pressed
+ * @param placeholder - Placeholder text for the input (default: "Search airports...")
+ * @param props - Additional TextInput props forwarded to the underlying TextInput
+ * @returns A React element representing the airport search bar
+ */
 export function AirportSearchBar({  value,
   onChangeText,
   onClear,

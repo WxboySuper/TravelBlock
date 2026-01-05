@@ -43,22 +43,11 @@ let airportCache: Record<string, InternalAirport> | null = null;
 let airportArray: InternalAirport[] | null = null;
 
 /**
- * Loads the airport dataset from airports.json.
- * 
- * This function implements lazy loading - the data is only loaded on first access.
- * Subsequent calls return the cached data immediately.
- * 
- * The data is loaded synchronously using require() for simplicity and reliability
- * in the React Native environment. The dataset is cached in memory for the lifetime
- * of the application.
- * 
- * @returns A Promise that resolves to the complete airport dataset
- * 
- * @example
- * ```typescript
- * const airports = await loadAirports();
- * console.log(`Loaded ${Object.keys(airports).length} airports`);
- * ```
+ * Load and cache the complete airport dataset for in-memory use.
+ *
+ * This function lazily loads and normalizes airport data on first call and caches it so subsequent calls return the same in-memory dataset.
+ *
+ * @returns The airport dataset keyed by uppercase ICAO code, with normalized and precomputed search fields
  */
 export function loadAirports(): Promise<AirportData> {
   if (airportCache) {
@@ -176,30 +165,11 @@ export function searchAirports(query: string): Airport[] {
 }
 
 /**
- * Finds all airports within a specified distance from an origin point.
- * 
- * This function uses the Haversine formula (via calculateDistance) to compute
- * the great-circle distance between the origin and each airport. Only airports
- * within the specified maximum distance are returned.
- * 
- * Results are sorted by distance (nearest first).
- * 
- * Performance note: This function iterates through all airports, so it may take
- * 50-100ms for the full dataset. Consider caching results for repeated queries
- * with the same origin and distance.
- * 
+ * Return airports within a maximum distance from an origin coordinate, ordered nearest first.
+ *
  * @param origin - Origin coordinates (latitude and longitude)
  * @param maxDistance - Maximum distance in miles
- * @returns Array of airports within range, sorted by distance (nearest first)
- * 
- * @example
- * ```typescript
- * // Find all airports within 50 miles of New York City
- * const nycCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
- * const nearbyAirports = getAirportsWithinDistance(nycCoords, 50);
- * 
- * console.log(`Found ${nearbyAirports.length} airports within 50 miles`);
- * ```
+ * @returns Array of Airport objects at or within `maxDistance` miles of `origin`, sorted by proximity (nearest first)
  */
 export function getAirportsWithinDistance(
   origin: Coordinates,
@@ -259,29 +229,10 @@ export function getAirportByICAO(icao: string): Airport | null {
   return airportCache[icao.toUpperCase()] ?? null;
 }
 /**
- * Retrieves all airports in a specific country.
- * 
- * Countries are identified by their two-letter country codes (e.g., "US", "GB", "FR").
- * The search is case-insensitive.
- * 
- * Results are returned in the order they appear in the dataset (no specific sorting).
- * Consider sorting results by name or other criteria if needed.
- * 
- * @param country - Two-letter country code (case-insensitive)
- * @returns Array of all airports in the specified country
- * 
- * @example
- * ```typescript
- * // Get all airports in the United States
- * const usAirports = getAirportsByCountry("US");
- * console.log(`Found ${usAirports.length} airports in the US`);
- * 
- * // Get all airports in the United Kingdom
- * const ukAirports = getAirportsByCountry("GB");
- * 
- * // Case-insensitive
- * const frAirports = getAirportsByCountry("fr");
- * ```
+ * Retrieve airports that belong to the specified country.
+ *
+ * @param country - Two-letter ISO country code; comparison is case-insensitive
+ * @returns Array of airports in the specified country, in the same order they appear in the dataset
  */
 export function getAirportsByCountry(country: string): Airport[] {
   if (!airportArray) {

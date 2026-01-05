@@ -491,30 +491,38 @@ function useAirportSearch({ visible, hasLoaded, onSearchChange, externalQuery, o
   );
 
   useEffect(() => {
-    if (!visible) return;
-    if (onSearchChange) return;
-    if (!hasLoaded) return;
+    if (!visible) {
+      return () => {};
+    }
 
-    const q = (externalQuery ?? query ?? '').trim();
-    if (!q) {
+    if (onSearchChange) {
+      return () => {};
+    }
+
+    if (!hasLoaded) {
+      return () => {};
+    }
+
+    const searchTerm = (externalQuery ?? query ?? '').trim();
+    if (!searchTerm) {
       setAirports([]);
       setError(null);
       setLoading(false);
-      return;
+      return () => {};
     }
 
     setLoading(true);
     setError(null);
-      const timer = setTimeout(() => {
-        runSearch(q, {
-          origin,
-          distanceInKm,
-          mounted,
-          setAirports,
-          setError,
-          setLoading,
-        });
-      }, 300);
+    const timer = setTimeout(() => {
+      runSearch(searchTerm, {
+        origin,
+        distanceInKm,
+        mounted,
+        setAirports,
+        setError,
+        setLoading,
+      });
+    }, 300);
 
     return () => {
       clearTimeout(timer);

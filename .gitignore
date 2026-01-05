@@ -45,3 +45,6 @@ app-example
 
 # Personal Documentation
 /docs/personal/
+
+# Coverage
+coverage/

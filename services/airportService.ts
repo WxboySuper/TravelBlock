@@ -18,6 +18,7 @@
 
 import { Airport, AirportData } from '../types/airport';
 import { Coordinates, calculateDistance } from '../utils/distance';
+import { computeScore } from './airportScoring';
 
 /**
  * In-memory cache for loaded airport data.
@@ -49,20 +50,61 @@ let airportArray: Airport[] | null = null;
  * console.log(`Loaded ${Object.keys(airports).length} airports`);
  * ```
  */
-export async function loadAirports(): Promise<AirportData> {
+export function loadAirports(): Promise<AirportData> {
   if (airportCache) {
-    return airportCache;
+    return Promise.resolve(airportCache);
   }
 
   // Use require for synchronous loading in React Native
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const data: AirportData = require('../data/airports.json');
-  
-  airportCache = data;
-  airportArray = Object.values(data);
-  
-  return data;
+  const rawData: AirportData = require('../data/airports.json');
+
+  // Normalize keys to uppercase and precompute lowercase/normalized search fields
+  const normalized: AirportData = {};
+
+  for (const [key, airport] of Object.entries(rawData)) {
+    const icaoKey = String(key).trim().toUpperCase();
+
+    // Defensive defaults
+    const name = typeof airport.name === 'string' ? airport.name : '';
+    const city = typeof airport.city === 'string' ? airport.city : '';
+    const iata = typeof airport.iata === 'string' ? airport.iata : '';
+    const icao = typeof airport.icao === 'string' ? airport.icao : icaoKey;
+
+    // Normalize strings for search: lowercase + unicode decomposition without diacritics
+    const normalizeForSearch = (s: string) =>
+      s
+        .normalize ? s.normalize('NFKD').replace(/\p{Diacritic}/gu, '') : s;
+
+    const __lcName = normalizeForSearch(name).toLowerCase();
+    const __lcCity = normalizeForSearch(city).toLowerCase();
+    const __lcIata = normalizeForSearch(iata).toLowerCase();
+    const __lcIcao = normalizeForSearch(icao).toLowerCase();
+
+    // Normalize country code to uppercase for reliable country filtering
+    const countryCode = String(airport.country ?? '').toUpperCase();
+
+    // Attach precomputed fields to the airport object (structural typing allows extras)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enhanced: any = {
+      ...airport,
+      country: countryCode,
+      __lcName,
+      __lcCity,
+      __lcIata,
+      __lcIcao,
+    };
+
+    normalized[icaoKey] = enhanced as Airport;
+  }
+
+  airportCache = normalized;
+  airportArray = Object.values(normalized);
+
+  return Promise.resolve(airportCache);
 }
+
+
 
 /**
  * Searches for airports matching the given query string.
@@ -106,51 +148,13 @@ export function searchAirports(query: string): Airport[] {
     return [];
   }
 
-  const searchTerm = query.trim().toLowerCase();
+  // Normalize search term for consistent matching
+  const normalizeForSearch = (s: string) => (s.normalize ? s.normalize('NFKD').replace(/\p{Diacritic}/gu, '') : s);
+  const searchTerm = normalizeForSearch(query.trim()).toLowerCase();
   const results: Array<{ airport: Airport; score: number }> = [];
 
   for (const airport of airportArray) {
-    let score = 0;
-
-    // ICAO exact match (highest priority)
-    if (airport.icao.toLowerCase() === searchTerm) {
-      score += 1000;
-    }
-    // ICAO prefix match
-    else if (airport.icao.toLowerCase().startsWith(searchTerm)) {
-      score += 500;
-    }
-
-    // IATA exact match (high priority)
-    if (airport.iata && airport.iata.toLowerCase() === searchTerm) {
-      score += 900;
-    }
-    // IATA prefix match
-    else if (airport.iata && airport.iata.toLowerCase().startsWith(searchTerm)) {
-      score += 450;
-    }
-
-    // Name substring match
-    if (airport.name.toLowerCase().includes(searchTerm)) {
-      // Prefix match in name gets higher score
-      if (airport.name.toLowerCase().startsWith(searchTerm)) {
-        score += 300;
-      } else {
-        score += 100;
-      }
-    }
-
-    // City substring match
-    if (airport.city.toLowerCase().includes(searchTerm)) {
-      // Prefix match in city gets higher score
-      if (airport.city.toLowerCase().startsWith(searchTerm)) {
-        score += 250;
-      } else {
-        score += 80;
-      }
-    }
-
-    // If any match found, add to results
+    const score = computeScore(airport, searchTerm);
     if (score > 0) {
       results.push({ airport, score });
     }
@@ -242,27 +246,9 @@ export function getAirportByICAO(icao: string): Airport | null {
     return null;
   }
 
-  // Try exact match first
-  const exactMatch = airportCache[icao];
-  if (exactMatch) {
-    return exactMatch;
-  }
-
-  // Try uppercase (most common format)
-  const upperMatch = airportCache[icao.toUpperCase()];
-  if (upperMatch) {
-    return upperMatch;
-  }
-
-  // Try lowercase as fallback
-  const lowerMatch = airportCache[icao.toLowerCase()];
-  if (lowerMatch) {
-    return lowerMatch;
-  }
-
-  return null;
+  // Keys are normalized to uppercase during loading
+  return airportCache[icao.toUpperCase()] ?? null;
 }
-
 /**
  * Retrieves all airports in a specific country.
  * 

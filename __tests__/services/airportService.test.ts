@@ -10,12 +10,12 @@
  */
 
 import {
-  loadAirports,
-  searchAirports,
-  getAirportsWithinDistance,
+  clearCache,
   getAirportByICAO,
   getAirportsByCountry,
-  clearCache,
+  getAirportsWithinDistance,
+  loadAirports,
+  searchAirports,
 } from '../../services/airportService';
 import { Coordinates } from '../../utils/distance';
 
@@ -186,17 +186,13 @@ describe('Airport Service', () => {
       expect(hasJFK || hasLGA).toBe(true);
     });
 
-    it('should sort results by distance (nearest first)', () => {
+    it('should return airports within specified distance', () => {
       const nycCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
       const nearbyAirports = getAirportsWithinDistance(nycCoords, 100);
       
       expect(nearbyAirports.length).toBeGreaterThan(1);
-      
-      // Verify sorting by checking distances are non-decreasing
-      // (we don't return distances, so we verify at least we got results)
       expect(nearbyAirports[0]).toBeDefined();
     });
-
     it('should return empty array when no airports within range', () => {
       // Middle of the Pacific Ocean
       const oceanCoords: Coordinates = { lat: 0, lon: -140 };

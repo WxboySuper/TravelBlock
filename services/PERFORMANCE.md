@@ -56,6 +56,7 @@ Once loaded, all data remains in memory for the application lifetime, eliminatin
 ### 3. Efficient Search Scoring
 
 Search results are scored and sorted by relevance:
+
 - Exact ICAO/IATA matches: highest priority (score: 900-1000)
 - Prefix matches: medium priority (score: 250-500)
 - Substring matches: lower priority (score: 80-300)
@@ -63,6 +64,7 @@ Search results are scored and sorted by relevance:
 ### 4. Dual Data Structures
 
 The service maintains two data structures:
+
 - **Object/Dictionary**: O(1) lookup by ICAO code
 - **Array**: Efficient iteration for search and filtering
 
@@ -104,7 +106,7 @@ All acceptance criteria met with >90% coverage requirement.
 Based on test suite execution with 42 test cases:
 
 | Operation | Time | Status |
-|-----------|------|--------|
+| ---: | :---: | :--- |
 | Initial Load | <200ms | ✓ Pass |
 | Cached Load | <5ms | ✓ Pass |
 | Search (typical) | <100ms | ✓ Pass |

@@ -55,6 +55,7 @@ const usAirports = getAirportsByCountry('US');
 ### Testing
 
 The service has comprehensive test coverage (>95%) covering:
+
 - Lazy loading and caching behavior
 - Search functionality across all fields
 - Distance calculations and filtering
@@ -62,6 +63,7 @@ The service has comprehensive test coverage (>95%) covering:
 - Performance characteristics
 
 Run tests:
+
 ```bash
 npm test -- __tests__/services/airportService.test.ts
 ```
@@ -77,6 +79,7 @@ Loads the airport dataset. Called automatically by other functions, but can be c
 Searches for airports matching the query across multiple fields. Results are scored and sorted by relevance.
 
 **Parameters:**
+
 - `query`: Search term (name, city, ICAO, or IATA code)
 
 **Returns:** Array of matching airports, sorted by relevance
@@ -86,6 +89,7 @@ Searches for airports matching the query across multiple fields. Results are sco
 Retrieves a single airport by its ICAO code. Case-insensitive O(1) lookup.
 
 **Parameters:**
+
 - `icao`: 4-letter ICAO code
 
 **Returns:** Airport object or null if not found
@@ -95,6 +99,7 @@ Retrieves a single airport by its ICAO code. Case-insensitive O(1) lookup.
 Finds all airports within a specified distance from an origin point.
 
 **Parameters:**
+
 - `origin`: Coordinates object with lat and lon
 - `maxDistance`: Maximum distance in miles
 
@@ -105,6 +110,7 @@ Finds all airports within a specified distance from an origin point.
 Retrieves all airports in a specific country.
 
 **Parameters:**
+
 - `country`: 2-letter country code (e.g., "US", "GB", "FR")
 
 **Returns:** Array of airports in the specified country
@@ -120,12 +126,14 @@ See [../types/airport.ts](../types/airport.ts) for detailed type definitions:
 ### Dependencies
 
 The Airport Service depends on:
+
 - `utils/distance.ts`: Haversine distance calculations
 - `data/airports.json`: Airport dataset (~29,000 airports)
 
 ### Future Enhancements
 
 Potential improvements for future phases:
+
 - Advanced filtering (elevation, timezone, state)
 - Custom sorting options
 - Result pagination for large datasets

@@ -1,8 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import type { AirportWithDistance } from '@/types/airport';
+import { loadAirports, searchAirports } from '@/services/airportService';
+import type { Airport, AirportWithDistance } from '@/types/airport';
 import type { Coordinates } from '@/utils/distance';
-import { useCallback, useState, type ReactElement } from 'react';
+import { calculateDistance, calculateDistanceKm } from '@/utils/distance';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -50,6 +52,25 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, marginBottom: 8 },
   emptySubtext: { fontSize: 14 },
 });
+
+function attachDistance(
+  airports: Airport[],
+  origin?: Coordinates | null,
+  distanceInKm?: boolean
+): AirportWithDistance[] {
+  if (!origin) {
+    return airports.map((a) => ({ ...a, distance: undefined }));
+  }
+
+  const compute = distanceInKm ? calculateDistanceKm : calculateDistance;
+
+  return airports
+    .map((airport) => {
+      const distance = compute(origin, { lat: airport.lat, lon: airport.lon });
+      return { ...airport, distance };
+    })
+    .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+}
 
 /**
  * Displays a concise results summary like "3 results" with correct singular/plural form.
@@ -312,7 +333,7 @@ export function SelectAirportModal({
   onClose,
   onSelectAirport,
   origin,
-  airports = [],
+  airports: airportsProp,
   distanceInKm = false,
   title = 'Select Airport',
   isLoading = false,
@@ -320,39 +341,36 @@ export function SelectAirportModal({
   searchQuery: searchQueryProp,
   onSearchChange,
 }: SelectAirportModalProps) {
-  const [localSearchQuery, setLocalSearchQuery] = useState('');
-  const setSearch = useCallback(
-    (q: string) => {
-      if (onSearchChange) {
-        try {
-          onSearchChange(q);
-        } catch (error) {
-          // Log error to avoid breaking modal while still providing visibility
-          console.warn('SelectAirportModal: onSearchChange callback threw an error', error);
-        }
-      } else {
-        setLocalSearchQuery(q);
-      }
-    },
-    [onSearchChange]
-  );
-
-  const effectiveSearchQuery = typeof searchQueryProp === 'string' ? searchQueryProp : localSearchQuery;
   const backgroundColor = useThemeColor({ light: '#fff', dark: '#1a1a1a' }, 'background');
-  const handleClose = useCallback(() => {
-    setSearch('');
-    onClose();
-  }, [onClose, setSearch]);
+
+  // Hook: load airports lazily when modal is visible
+  const { hasLoaded, loaderLoading, loaderError } = useAirportLoader(visible);
+
+  // Hook: manage search (debounced) when not externally controlled
+  const {
+    airports: searchedAirports,
+    loading: searchLoading,
+    error: searchError,
+    query,
+    setQuery,
+  } = useAirportSearch({
+    visible,
+    hasLoaded,
+    onSearchChange,
+    externalQuery: searchQueryProp,
+    origin,
+    distanceInKm,
+  });
+
+  const distanceUnit = distanceInKm ? 'km' : 'mi';
 
   const handleSelectAirport = useCallback(
     (airport: AirportWithDistance) => {
       onSelectAirport(airport);
-      handleClose();
+      onClose();
     },
-    [onSelectAirport, handleClose]
+    [onSelectAirport, onClose]
   );
-
-  const distanceUnit = distanceInKm ? 'km' : 'mi';
 
   const keyExtractor = useCallback((item: AirportWithDistance) => item.icao, []);
 
@@ -368,27 +386,172 @@ export function SelectAirportModal({
     [handleSelectAirport, origin, distanceUnit]
   );
 
+  const resolvedAirports = airportsProp ? attachDistance(airportsProp, origin, distanceInKm) : searchedAirports;
+  const resolvedLoading = isLoading || loaderLoading || searchLoading;
+  const resolvedError = errorMessage ?? loaderError ?? searchError;
+
   return (
     <Modal
       visible={visible}
-      onRequestClose={handleClose}
+      onRequestClose={onClose}
       animationType="slide"
       presentationStyle="fullScreen"
       testID="select-airport-modal"
       accessibilityViewIsModal
     >
       <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <ModalHeader title={title} onClose={handleClose} />
+        <ModalHeader title={title} onClose={onClose} />
         <ModalBody
-          airports={airports}
-          isLoading={isLoading}
-          errorMessage={errorMessage}
-          searchQuery={effectiveSearchQuery}
-          setSearchQuery={setSearch}
+          airports={resolvedAirports}
+          isLoading={resolvedLoading}
+          errorMessage={resolvedError}
+          searchQuery={searchQueryProp ?? query}
+          setSearchQuery={setQuery}
           renderAirportItem={renderAirportItem}
           keyExtractor={keyExtractor}
         />
       </SafeAreaView>
     </Modal>
   );
+}
+
+// Hook: lazy-load airports when modal opens
+function useAirportLoader(visible: boolean) {
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    if (!visible) return () => {
+      mounted.current = false;
+    };
+
+    setLoading(true);
+    setError(null);
+
+    let cancelled = false;
+    loadAirports()
+      .then(() => {
+        if (!cancelled && mounted.current) setHasLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled && mounted.current) setError('Unable to load airports. Please try again.');
+      })
+      .finally(() => {
+        if (!cancelled && mounted.current) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      mounted.current = false;
+    };
+  }, [visible]);
+
+  return { hasLoaded, loaderLoading: loading, loaderError: error };
+}
+
+type UseAirportSearchArgs = {
+  visible: boolean;
+  hasLoaded: boolean;
+  onSearchChange?: (q: string) => void;
+  externalQuery?: string | undefined;
+  origin?: Coordinates | null;
+  distanceInKm?: boolean;
+};
+
+// Hook: perform debounced search using service when modal is visible and not externally controlled
+function useAirportSearch({ visible, hasLoaded, onSearchChange, externalQuery, origin, distanceInKm }: UseAirportSearchArgs) {
+  const [airports, setAirports] = useState<AirportWithDistance[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(true);
+  const [query, setQueryState] = useState<string>('');
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const setQuery = useCallback(
+    (q: string) => {
+      if (onSearchChange) {
+        try {
+          onSearchChange(q);
+        } catch (e) {
+          console.warn('onSearchChange threw', e);
+        }
+        return;
+      }
+      setQueryState(q);
+    },
+    [onSearchChange]
+  );
+
+  useEffect(() => {
+    if (!visible) {
+      return () => undefined;
+    }
+
+    if (onSearchChange) {
+      return () => undefined;
+    }
+
+    if (!hasLoaded) {
+      return () => undefined;
+    }
+
+    const searchTerm = (externalQuery ?? query ?? '').trim();
+    if (!searchTerm) {
+      setAirports([]);
+      setError(null);
+      setLoading(false);
+      return () => undefined;
+    }
+
+    setLoading(true);
+    setError(null);
+    const timer = setTimeout(() => {
+      runSearch(searchTerm, {
+        origin,
+        distanceInKm,
+        mounted,
+        setAirports,
+        setError,
+        setLoading,
+      });
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [visible, hasLoaded, externalQuery, onSearchChange, query, origin, distanceInKm]);
+
+  return { airports, loading, error, query, setQuery };
+}
+
+function runSearch(
+  q: string,
+  opts: {
+    origin?: Coordinates | null | undefined;
+    distanceInKm?: boolean | undefined;
+    mounted: React.MutableRefObject<boolean>;
+    setAirports: (a: AirportWithDistance[]) => void;
+    setError: (s: string | null) => void;
+    setLoading: (b: boolean) => void;
+  }
+) {
+  const { origin, distanceInKm, mounted, setAirports, setError, setLoading } = opts;
+  try {
+    const results = searchAirports(q);
+    const withDistance = attachDistance(results, origin, distanceInKm);
+    if (mounted.current) setAirports(withDistance);
+  } catch (e) {
+    console.error('searchAirports failed', e);
+    if (mounted.current) setError('Unable to search airports. Please try again.');
+  } finally {
+    if (mounted.current) setLoading(false);
+  }
 }

@@ -45,6 +45,54 @@ export function degreesToRadians(degrees: number): number {
 }
 
 /**
+ * Validates that a latitude value is within the valid range of -90 to 90 degrees.
+ * @throws {Error} If latitude is out of valid range
+ */
+function validateLatitude(lat: number): void {
+  if (lat < -90 || lat > 90) {
+    throw new Error('Latitude must be between -90 and 90 degrees');
+  }
+}
+
+/**
+ * Validates that a longitude value is within the valid range of -180 to 180 degrees.
+ * @throws {Error} If longitude is out of valid range
+ */
+function validateLongitude(lon: number): void {
+  if (lon < -180 || lon > 180) {
+    throw new Error('Longitude must be between -180 and 180 degrees');
+  }
+}
+
+/**
+ * Validates latitude and longitude ranges for two geographic points.
+ * @throws {Error} If any coordinate is out of valid range
+ */
+function validateCoordinates(point1: Coordinates, point2: Coordinates): void {
+  validateLatitude(point1.lat);
+  validateLatitude(point2.lat);
+  validateLongitude(point1.lon);
+  validateLongitude(point2.lon);
+}
+
+/**
+ * Computes the angular distance (in radians) between two geographic points
+ * using the Haversine formula.
+ */
+function haversineAngularDistance(point1: Coordinates, point2: Coordinates): number {
+  const φ1 = degreesToRadians(point1.lat);
+  const φ2 = degreesToRadians(point2.lat);
+  const Δφ = degreesToRadians(point2.lat - point1.lat);
+  const Δλ = degreesToRadians(point2.lon - point1.lon);
+
+  const haversine =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
+  return 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+/**
  * Calculates the great circle distance between two points on Earth using the Haversine formula.
  * Returns the distance in miles.
  * 
@@ -79,31 +127,16 @@ export function degreesToRadians(degrees: number): number {
  * 
  * @see {@link https://en.wikipedia.org/wiki/Haversine_formula|Haversine formula on Wikipedia}
  */
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number;
+export function calculateDistance(point1: Coordinates, point2: Coordinates): number;
 export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
+  a: number | Coordinates,
+  b: number | Coordinates,
+  c?: number,
+  d?: number
 ): number {
-  // Convert latitude and longitude from degrees to radians
-  const φ1 = degreesToRadians(lat1);
-  const φ2 = degreesToRadians(lat2);
-  const Δφ = degreesToRadians(lat2 - lat1);
-  const Δλ = degreesToRadians(lon2 - lon1);
-
-  // Haversine formula
-  // haversine = sin²(Δφ/2) + cos(φ1) * cos(φ2) * sin²(Δλ/2)
-  const haversine =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-
-  // angularDistance = 2 * atan2(√haversine, √(1−haversine))
-  const angularDistance = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
-
-  // Distance = Earth's radius * angularDistance
-  const distance = EARTH_RADIUS_MILES * angularDistance;
-
-  return distance;
+  const [point1, point2] = normalizeToPoints(a, b, c, d);
+  return calculateDistanceWithRadius(point1, point2, EARTH_RADIUS_MILES);
 }
 
 /**
@@ -128,29 +161,67 @@ export function calculateDistance(
  * 
  * @see {@link calculateDistance} for the miles version
  */
+export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number;
+export function calculateDistanceKm(point1: Coordinates, point2: Coordinates): number;
 export function calculateDistanceKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
+  a: number | Coordinates,
+  b: number | Coordinates,
+  c?: number,
+  d?: number
 ): number {
-  // Convert latitude and longitude from degrees to radians
-  const φ1 = degreesToRadians(lat1);
-  const φ2 = degreesToRadians(lat2);
-  const Δφ = degreesToRadians(lat2 - lat1);
-  const Δλ = degreesToRadians(lon2 - lon1);
+  const [point1, point2] = normalizeToPoints(a, b, c, d);
+  return calculateDistanceWithRadius(point1, point2, EARTH_RADIUS_KM);
+}
 
-  // Haversine formula
-  const haversine =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+/**
+ * Normalize arguments to a pair of `Coordinates` objects.
+ * Accepts either `(lat1, lon1, lat2, lon2)` or `(point1, point2)`.
+ */
+function normalizeToPoints(
+  a: number | Coordinates,
+  b: number | Coordinates,
+  c?: number,
+  d?: number
+): [Coordinates, Coordinates] {
+  if (typeof a === 'object' && typeof b === 'object') {
+    return [a as Coordinates, b as Coordinates];
+  }
+  // If the first arg is a number, ensure the remaining args are numbers
+  if (typeof a === 'number') {
+    if (typeof b !== 'number' || typeof c !== 'number' || typeof d !== 'number') {
+      throw new Error('Invalid numeric arguments: expected (lat1, lon1, lat2, lon2)');
+    }
 
-  const angularDistance = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+    return normalizeFromNumbersTuple([a, b, c as number, d as number]);
+  }
 
-  // Distance = Earth's radius in km * angularDistance
-  const distance = EARTH_RADIUS_KM * angularDistance;
+  throw new Error('Invalid arguments: expected (lat1, lon1, lat2, lon2) or (point1, point2)');
+}
 
-  return distance;
+function normalizeFromNumbersTuple(nums: [number, number, number, number]): [Coordinates, Coordinates] {
+  const [lat1, lon1, lat2, lon2] = nums;
+  if ([lat1, lon1, lat2, lon2].some((v) => typeof v !== 'number' || Number.isNaN(v))) {
+    throw new Error('Invalid numeric arguments for coordinates');
+  }
+
+  return [
+    { lat: lat1, lon: lon1 },
+    { lat: lat2, lon: lon2 },
+  ];
+}
+
+/**
+ * Internal helper to calculate distance given an Earth radius.
+ * Validates coordinates, computes angular distance, and applies the radius.
+ */
+function calculateDistanceWithRadius(
+  point1: Coordinates,
+  point2: Coordinates,
+  radius: number
+): number {
+  validateCoordinates(point1, point2);
+  const angularDistance = haversineAngularDistance(point1, point2);
+  return radius * angularDistance;
 }
 
 /**
@@ -174,7 +245,7 @@ export function calculateDistanceBetweenPoints(
   point1: Coordinates,
   point2: Coordinates
 ): number {
-  return calculateDistance(point1.lat, point1.lon, point2.lat, point2.lon);
+  return calculateDistance(point1, point2);
 }
 
 /**
@@ -198,5 +269,5 @@ export function calculateDistanceBetweenPointsKm(
   point1: Coordinates,
   point2: Coordinates
 ): number {
-  return calculateDistanceKm(point1.lat, point1.lon, point2.lat, point2.lon);
+  return calculateDistanceKm(point1, point2);
 }

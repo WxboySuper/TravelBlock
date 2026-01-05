@@ -1,3 +1,8 @@
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import type { AirportWithDistance } from '@/types/airport';
+import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useCallback } from 'react';
 import {
   StyleSheet,
@@ -5,11 +10,6 @@ import {
   View,
   ViewProps,
 } from 'react-native';
-import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import type { AirportWithDistance } from '@/types/airport';
 
 const styles = StyleSheet.create({
   container: {
@@ -98,8 +98,7 @@ export interface AirportListItemProps extends ViewProps {
 export function AirportListItem({
   airport,
   onPress,
-  showDistance = Boolean(airport.distance),
-  distanceUnit = 'mi',
+  showDistance = airport.distance !== undefined,  distanceUnit = 'mi',
   style,
   ...props
 }: AirportListItemProps) {

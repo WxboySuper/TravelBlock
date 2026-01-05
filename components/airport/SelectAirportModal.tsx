@@ -4,12 +4,12 @@ import type { AirportWithDistance } from '@/types/airport';
 import type { Coordinates } from '@/utils/distance';
 import { useCallback, useState, type ReactElement } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Modal,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AirportListItem } from './AirportListItem';
@@ -25,6 +25,8 @@ type SelectAirportModalProps = {
   title?: string;
   isLoading?: boolean;
   errorMessage?: string | null;
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
 };
 
 const styles = StyleSheet.create({
@@ -43,14 +45,15 @@ const styles = StyleSheet.create({
   listContainer: { flex: 1 },
   resultCountText: { paddingHorizontal: 16, paddingVertical: 6 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   emptyText: { fontSize: 16, marginBottom: 8 },
-  emptySubtext: { fontSize: 14, color: '#666' },
+  emptySubtext: { fontSize: 14 },
 });
 
-function ResultsCount({ count }: { count: number }) {
+function ResultsCount({ count, testID }: { count: number; testID?: string }) {
   return (
-    <ThemedText style={styles.resultCountText}>
+    <ThemedText testID={testID} style={styles.resultCountText}>
       {count} result{count !== 1 ? 's' : ''}
     </ThemedText>
   );
@@ -60,29 +63,62 @@ function LoadingView() {
   return (
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" testID="loading-indicator" />
-      <ThemedText style={{ marginTop: 12 }}>Loading airports...</ThemedText>
+      <ThemedText style={styles.loadingText}>Loading airports...</ThemedText>
     </View>
   );
 }
 
 function ErrorView({ message }: { message: string }) {
+  const subTextColor = useThemeColor({ light: '#666', dark: '#9a9a9a' }, 'text');
   return (
-    <View style={styles.emptyContainer}>
-      <ThemedText type="subtitle" style={styles.emptyText}>
-        ⚠️ Error
-      </ThemedText>
-      <ThemedText style={styles.emptySubtext}>{message}</ThemedText>
-    </View>
+    <MessageView
+      viewTestID="select-airport-error-view"
+      title="⚠️ Error"
+      titleTestID="select-airport-error-title"
+      message={message}
+      messageTestID="select-airport-error-message"
+      messageColor={subTextColor}
+    />
   );
 }
 
 function EmptyView({ searchQuery }: { searchQuery: string }) {
+  const subTextColor = useThemeColor({ light: '#666', dark: '#9a9a9a' }, 'text');
   return (
-    <View style={styles.emptyContainer}>
-      <ThemedText type="subtitle" style={styles.emptyText}>
-        No airports found
+    <MessageView
+      viewTestID="select-airport-empty-view"
+      title="No airports found"
+      titleTestID="select-airport-empty-title"
+      message={searchQuery.length > 0 ? 'Try a different search term' : 'Start typing to search'}
+      messageTestID="select-airport-empty-subtext"
+      messageColor={subTextColor}
+    />
+  );
+}
+
+function MessageView({
+  viewTestID,
+  title,
+  titleTestID,
+  message,
+  messageTestID,
+  messageColor,
+}: {
+  viewTestID: string;
+  title: string;
+  titleTestID: string;
+  message: string;
+  messageTestID: string;
+  messageColor?: string;
+}) {
+  return (
+    <View style={styles.emptyContainer} testID={viewTestID}>
+      <ThemedText type="subtitle" style={styles.emptyText} testID={titleTestID}>
+        {title}
       </ThemedText>
-      <ThemedText style={styles.emptySubtext}>{searchQuery.length > 0 ? 'Try a different search term' : 'Start typing to search'}</ThemedText>
+      <ThemedText style={[styles.emptySubtext, messageColor ? { color: messageColor } : undefined]} testID={messageTestID}>
+        {message}
+      </ThemedText>
     </View>
   );
 }
@@ -102,7 +138,6 @@ function AirportListComponent({
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       style={styles.listContainer}
-      scrollEnabled
       removeClippedSubviews
       maxToRenderPerBatch={20}
       updateCellsBatchingPeriod={50}
@@ -176,7 +211,7 @@ export function ModalBody({
       case 'list':
         return (
           <>
-            <ResultsCount count={airports.length} />
+            <ResultsCount count={airports.length} testID="select-airport-results-count" />
             <AirportListComponent airports={airports} renderItem={renderAirportItem} keyExtractor={keyExtractor} />
           </>
         );
@@ -203,14 +238,32 @@ export function SelectAirportModal({
   title = 'Select Airport',
   isLoading = false,
   errorMessage,
+  searchQuery: searchQueryProp,
+  onSearchChange,
 }: SelectAirportModalProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const backgroundColor = useThemeColor({ light: '#fff', dark: '#1a1a1a' }, 'background');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const setSearch = useCallback(
+    (q: string) => {
+      if (onSearchChange) {
+        try {
+          onSearchChange(q);
+        } catch (error) {
+          // Log error to avoid breaking modal while still providing visibility
+          console.warn('SelectAirportModal: onSearchChange callback threw an error', error);
+        }
+      } else {
+        setLocalSearchQuery(q);
+      }
+    },
+    [onSearchChange]
+  );
 
+  const effectiveSearchQuery = typeof searchQueryProp === 'string' ? searchQueryProp : localSearchQuery;
+  const backgroundColor = useThemeColor({ light: '#fff', dark: '#1a1a1a' }, 'background');
   const handleClose = useCallback(() => {
-    setSearchQuery('');
+    setSearch('');
     onClose();
-  }, [onClose]);
+  }, [onClose, setSearch]);
 
   const handleSelectAirport = useCallback(
     (airport: AirportWithDistance) => {
@@ -245,14 +298,14 @@ export function SelectAirportModal({
       testID="select-airport-modal"
       accessibilityViewIsModal
     >
-      <SafeAreaView style={[styles.container, { backgroundColor }]}> 
+      <SafeAreaView style={[styles.container, { backgroundColor }]}>
         <ModalHeader title={title} onClose={handleClose} />
         <ModalBody
           airports={airports}
           isLoading={isLoading}
           errorMessage={errorMessage}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
+          searchQuery={effectiveSearchQuery}
+          setSearchQuery={setSearch}
           renderAirportItem={renderAirportItem}
           keyExtractor={keyExtractor}
         />

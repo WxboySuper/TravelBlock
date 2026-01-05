@@ -1,3 +1,6 @@
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { useCallback } from 'react';
 import {
   StyleSheet,
@@ -5,9 +8,6 @@ import {
   TouchableOpacity,
   type TextInputProps,
 } from 'react-native';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
 
 const styles = StyleSheet.create({
   container: {
@@ -62,18 +62,13 @@ export interface AirportSearchBarProps extends Omit<TextInputProps, 'value'> {
  * @returns A themed search input component
  *
  * @example
- * ```tsx
- * const [query, setQuery] = useState('');
  * <AirportSearchBar
- *   value={query}
- *   onChangeText={setQuery}
- *   onClear={() => setQuery('')}
- *   placeholder="Find an airport..."
+ *   value={searchQuery}
+ *   onChangeText={setSearchQuery}
+ *   onClear={() => console.log('cleared')}
  * />
- * ```
- */
-export function AirportSearchBar({
-  value,
+ * */
+export function AirportSearchBar({  value,
   onChangeText,
   onClear,
   placeholder = 'Search airports...',
@@ -97,13 +92,8 @@ export function AirportSearchBar({
     onClear?.();
   }, [onChangeText, onClear]);
 
-  const handleClearPress = useCallback(() => {
-    handleClear();
-  }, [handleClear]);
-
   return (
-    <ThemedView style={styles.container}>
-      {/* Search icon */}
+    <ThemedView style={styles.container} testID="airport-search-bar">      {/* Search icon */}
       <ThemedText type="defaultSemiBold">🔍</ThemedText>
 
       {/* Search input */}
@@ -128,7 +118,7 @@ export function AirportSearchBar({
       {value.length > 0 && (
         <TouchableOpacity
           style={styles.clearButton}
-          onPress={handleClearPress}
+          onPress={handleClear}
           testID="airport-search-clear"
           accessibilityLabel="Clear search"
           accessibilityHint="Clears the search input"

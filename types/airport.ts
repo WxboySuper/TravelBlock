@@ -1,15 +1,15 @@
 /**
  * Type definitions for airport data.
- * 
+ *
  * This module defines the structure of airport data as stored in airports.json
  * and used throughout the application.
- * 
+ *
  * @module types/airport
  */
 
 /**
  * Represents an airport with all its associated metadata.
- * 
+ *
  * The data structure matches the format in airports.json, where each airport
  * is identified by its ICAO code and contains comprehensive information about
  * the airport's location, identifiers, and timezone.
@@ -53,13 +53,13 @@ export interface Airport {
 
 /**
  * Represents the complete airport dataset.
- * 
+ *
  * This is a dictionary/map structure where:
  * - Keys are ICAO codes (e.g., "KJFK", "EGLL")
  * - Values are Airport objects
- * 
+ *
  * This structure allows for O(1) lookup by ICAO code.
- * 
+ *
  * @example
  * ```typescript
  * const airports: AirportData = {
@@ -75,3 +75,23 @@ export interface Airport {
  * ```
  */
 export type AirportData = Record<string, Airport>;
+
+/**
+ * An Airport augmented with an optional distance value.
+ *
+ * This interface extends `Airport` and adds a `distance` property which
+ * represents the straight-line (great-circle) distance from a provided
+ * origin point to the airport. Distances are expressed in miles by default
+ * (the service's Haversine implementation returns miles) unless the caller
+ * explicitly requests kilometers.
+ */
+export interface AirportWithDistance extends Airport {
+  /**
+   * Distance from an origin point to this airport.
+   * - Unit: miles by default. If the consuming API specifies `distanceInKm`,
+   *   the value may be in kilometers.
+   * - Type: straight-line (great-circle) distance computed using the
+   *   Haversine formula, not driving or route distance.
+   */
+  distance?: number;
+}

@@ -45,8 +45,10 @@ export function degreesToRadians(degrees: number): number {
 }
 
 /**
- * Validates that a latitude value is within the valid range of -90 to 90 degrees.
- * @throws {Error} If latitude is out of valid range
+ * Ensure a latitude value is between -90 and 90 degrees inclusive.
+ *
+ * @param lat - Latitude in degrees.
+ * @throws Error if `lat` is less than -90 or greater than 90.
  */
 function validateLatitude(lat: number): void {
   if (lat < -90 || lat > 90) {
@@ -55,8 +57,10 @@ function validateLatitude(lat: number): void {
 }
 
 /**
- * Validates that a longitude value is within the valid range of -180 to 180 degrees.
- * @throws {Error} If longitude is out of valid range
+ * Ensures a longitude value is between -180 and 180 degrees.
+ *
+ * @param lon - The longitude in decimal degrees
+ * @throws Error if `lon` is less than -180 or greater than 180
  */
 function validateLongitude(lon: number): void {
   if (lon < -180 || lon > 180) {
@@ -65,8 +69,7 @@ function validateLongitude(lon: number): void {
 }
 
 /**
- * Validates latitude and longitude ranges for two geographic points.
- * @throws {Error} If any coordinate is out of valid range
+ * Ensure both coordinates have latitudes between -90 and 90 and longitudes between -180 and 180.
  */
 function validateCoordinates(point1: Coordinates, point2: Coordinates): void {
   validateLatitude(point1.lat);
@@ -76,8 +79,11 @@ function validateCoordinates(point1: Coordinates, point2: Coordinates): void {
 }
 
 /**
- * Computes the angular distance (in radians) between two geographic points
- * using the Haversine formula.
+ * Compute the great-circle angular distance between two geographic points.
+ *
+ * @param point1 - First geographic coordinate with `lat` and `lon` in degrees
+ * @param point2 - Second geographic coordinate with `lat` and `lon` in degrees
+ * @returns The angular distance between `point1` and `point2` in radians
  */
 function haversineAngularDistance(point1: Coordinates, point2: Coordinates): number {
   const φ1 = degreesToRadians(point1.lat);
@@ -129,6 +135,15 @@ function haversineAngularDistance(point1: Coordinates, point2: Coordinates): num
  */
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number;
 export function calculateDistance(point1: Coordinates, point2: Coordinates): number;
+/**
+ * Compute the great-circle distance in miles between two geographic points.
+ *
+ * @param a - Either the first `Coordinates` object or the latitude of the first point
+ * @param b - Either the second `Coordinates` object or the longitude of the first point
+ * @param c - Latitude of the second point when using numeric coordinates
+ * @param d - Longitude of the second point when using numeric coordinates
+ * @returns The distance between the two points in miles along the Earth's surface
+ */
 export function calculateDistance(
   a: number | Coordinates,
   b: number | Coordinates,
@@ -163,6 +178,17 @@ export function calculateDistance(
  */
 export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number;
 export function calculateDistanceKm(point1: Coordinates, point2: Coordinates): number;
+/**
+ * Compute the great-circle distance between two geographic points in kilometers.
+ *
+ * Accepts either two `Coordinates` objects (as `a` and `b`) or four numeric arguments (`lat1, lon1, lat2, lon2`).
+ *
+ * @param a - First point or latitude of the first point when using numeric arguments
+ * @param b - Second point or longitude of the first point when using numeric arguments
+ * @param c - Latitude of the second point when using numeric arguments
+ * @param d - Longitude of the second point when using numeric arguments
+ * @returns The distance between the two points in kilometers
+ */
 export function calculateDistanceKm(
   a: number | Coordinates,
   b: number | Coordinates,
@@ -174,8 +200,14 @@ export function calculateDistanceKm(
 }
 
 /**
- * Normalize arguments to a pair of `Coordinates` objects.
- * Accepts either `(lat1, lon1, lat2, lon2)` or `(point1, point2)`.
+ * Convert the provided arguments into a two-element array of Coordinates.
+ *
+ * @param a - Either a Coordinates object representing the first point or the numeric `lat1` value
+ * @param b - Either a Coordinates object representing the second point or the numeric `lon1` value
+ * @param c - The numeric `lat2` value when `a` is numeric
+ * @param d - The numeric `lon2` value when `a` is numeric
+ * @returns A tuple `[point1, point2]` of `Coordinates`
+ * @throws Error if arguments do not match either `(point1, point2)` or `(lat1, lon1, lat2, lon2)` forms
  */
 function normalizeToPoints(
   a: number | Coordinates,
@@ -198,6 +230,13 @@ function normalizeToPoints(
   throw new Error('Invalid arguments: expected (lat1, lon1, lat2, lon2) or (point1, point2)');
 }
 
+/**
+ * Convert a numeric tuple [lat1, lon1, lat2, lon2] into two Coordinate objects.
+ *
+ * @param nums - Four numbers in the order: `lat1, lon1, lat2, lon2` (latitude and longitude in degrees)
+ * @returns A two-element array `[point1, point2]` where `point1` is `{ lat: lat1, lon: lon1 }` and `point2` is `{ lat: lat2, lon: lon2 }`
+ * @throws Error if any tuple element is not a number or is `NaN`
+ */
 function normalizeFromNumbersTuple(nums: [number, number, number, number]): [Coordinates, Coordinates] {
   const [lat1, lon1, lat2, lon2] = nums;
   if ([lat1, lon1, lat2, lon2].some((v) => typeof v !== 'number' || Number.isNaN(v))) {
@@ -211,8 +250,12 @@ function normalizeFromNumbersTuple(nums: [number, number, number, number]): [Coo
 }
 
 /**
- * Internal helper to calculate distance given an Earth radius.
- * Validates coordinates, computes angular distance, and applies the radius.
+ * Compute the surface distance between two coordinates using the supplied sphere radius.
+ *
+ * @param point1 - The first geographic coordinate (latitude/longitude)
+ * @param point2 - The second geographic coordinate (latitude/longitude)
+ * @param radius - Radius of the sphere to use for the calculation; the returned distance is in the same units as this value
+ * @returns The distance between `point1` and `point2` in the same units as `radius`
  */
 function calculateDistanceWithRadius(
   point1: Coordinates,

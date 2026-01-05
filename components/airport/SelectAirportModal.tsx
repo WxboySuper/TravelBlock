@@ -492,15 +492,15 @@ function useAirportSearch({ visible, hasLoaded, onSearchChange, externalQuery, o
 
   useEffect(() => {
     if (!visible) {
-      return () => {};
+      return () => undefined;
     }
 
     if (onSearchChange) {
-      return () => {};
+      return () => undefined;
     }
 
     if (!hasLoaded) {
-      return () => {};
+      return () => undefined;
     }
 
     const searchTerm = (externalQuery ?? query ?? '').trim();
@@ -508,7 +508,7 @@ function useAirportSearch({ visible, hasLoaded, onSearchChange, externalQuery, o
       setAirports([]);
       setError(null);
       setLoading(false);
-      return () => {};
+      return () => undefined;
     }
 
     setLoading(true);

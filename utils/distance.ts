@@ -256,7 +256,6 @@ function isNumbersTuple(a: unknown, b: unknown, c: unknown, d: unknown): boolean
  * @returns A two-element array `[point1, point2]` where `point1` is `{ lat: lat1, lon: lon1 }` and `point2` is `{ lat: lat2, lon: lon2 }`
  * @throws Error if any tuple element is not a number or is `NaN`
  */
->>>>>>> coderabbitai/docstrings/d448057
 function normalizeFromNumbersTuple(nums: [number, number, number, number]): [Coordinates, Coordinates] {
   const [lat1, lon1, lat2, lon2] = nums;
   if ([lat1, lon1, lat2, lon2].some((v) => typeof v !== 'number' || Number.isNaN(v))) {

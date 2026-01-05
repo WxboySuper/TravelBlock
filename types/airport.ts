@@ -44,6 +44,11 @@ export interface Airport {
   
   /** Timezone identifier (e.g., "America/New_York", "Europe/London") */
   tz: string;
+  /** Optional precomputed lowercase/normalized search fields */
+  __lcIcao?: string;
+  __lcIata?: string;
+  __lcName?: string;
+  __lcCity?: string;
 }
 
 /**

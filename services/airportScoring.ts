@@ -34,31 +34,10 @@ export function computeScore(airport: Airport, searchTerm: string): number {
 }
 
 function getLcFields(airport: Airport) {
-  // Prefer precomputed normalized fields (e.g. __lcName). Use a small loop
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const airportAny: any = airport as any;
-  type OutKey = 'lcIcao' | 'lcIata' | 'lcName' | 'lcCity';
-  const fields: Array<[OutKey, string, keyof Airport]> = [
-    ['lcIcao', '__lcIcao', 'icao'],
-    ['lcIata', '__lcIata', 'iata'],
-    ['lcName', '__lcName', 'name'],
-    ['lcCity', '__lcCity', 'city'],
-  ];
+  const lcIcao = typeof airport.__lcIcao === 'string' ? airport.__lcIcao : String(airport.icao ?? '').toLowerCase();
+  const lcIata = typeof airport.__lcIata === 'string' ? airport.__lcIata : String(airport.iata ?? '').toLowerCase();
+  const lcName = typeof airport.__lcName === 'string' ? airport.__lcName : String(airport.name ?? '').toLowerCase();
+  const lcCity = typeof airport.__lcCity === 'string' ? airport.__lcCity : String(airport.city ?? '').toLowerCase();
 
-  const result: Record<OutKey, string> = {} as Record<OutKey, string>;
-  for (const [outKey, preKey, fallbackKey] of fields) {
-    const preVal = airportAny[preKey];
-    if (typeof preVal === 'string') {
-      result[outKey] = preVal;
-    } else {
-      result[outKey] = String(airportAny[fallbackKey] ?? '').toLowerCase();
-    }
-  }
-
-  return {
-    lcIcao: result.lcIcao,
-    lcIata: result.lcIata,
-    lcName: result.lcName,
-    lcCity: result.lcCity,
-  };
+  return { lcIcao, lcIata, lcName, lcCity };
 }

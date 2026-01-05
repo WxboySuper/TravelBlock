@@ -24,13 +24,23 @@ import { computeScore } from './airportScoring';
  * In-memory cache for loaded airport data.
  * Initially null, populated on first access.
  */
-let airportCache: AirportData | null = null;
+// Internal airport type includes runtime precomputed normalized fields
+type InternalAirport = Airport & {
+  __lcIcao: string;
+  __lcIata: string;
+  __lcName: string;
+  __lcCity: string;
+  // normalized uppercase country
+  country: string;
+};
+
+let airportCache: Record<string, InternalAirport> | null = null;
 
 /**
  * Array cache for efficient iteration and filtering.
  * Populated when data is first loaded.
  */
-let airportArray: Airport[] | null = null;
+let airportArray: InternalAirport[] | null = null;
 
 /**
  * Loads the airport dataset from airports.json.
@@ -60,7 +70,7 @@ export function loadAirports(): Promise<AirportData> {
   const rawData: AirportData = require('../data/airports.json');
 
   // Normalize keys to uppercase and precompute lowercase/normalized search fields
-  const normalized: AirportData = {};
+  const normalized: Record<string, InternalAirport> = {};
 
   for (const [key, airport] of Object.entries(rawData)) {
     const icaoKey = String(key).trim().toUpperCase();
@@ -84,18 +94,17 @@ export function loadAirports(): Promise<AirportData> {
     // Normalize country code to uppercase for reliable country filtering
     const countryCode = String(airport.country ?? '').toUpperCase();
 
-    // Attach precomputed fields to the airport object (structural typing allows extras)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const enhanced: any = {
+    // Create a fully-typed internal airport object with precomputed fields
+    const enhanced: InternalAirport = {
       ...airport,
       country: countryCode,
       __lcName,
       __lcCity,
       __lcIata,
       __lcIcao,
-    };
+    } as InternalAirport;
 
-    normalized[icaoKey] = enhanced as Airport;
+    normalized[icaoKey] = enhanced;
   }
 
   airportCache = normalized;

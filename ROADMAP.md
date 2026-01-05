@@ -118,7 +118,31 @@ Goal: History tracking.
 
 [ ] Add Charts: "Where you flew" (Map view of all past routes).
 
-## v0.10.0-alpha: Final Polish
+## v0.10.0-alpha: Seat & Ticket Rewards System
+
+Goal: Introduce a points economy and ticket/seat purchase flows to increase retention.
+
+[ ] Implement `services/pointsService.ts` (award, balance, spend, history)
+
+[ ] Persist points/transactions in local DB (SQLite)
+
+[ ] Add `TicketStoreScreen` and purchase/checkout flow
+
+[ ] Add `SeatSelector` component and integrate with flight state
+
+[ ] Award points on flight completion and update balances
+
+[ ] Add account UI for points history and balances
+
+Acceptance Criteria:
+
+[ ] Points are earned and persisted after completed flights
+
+[ ] Users can spend points to purchase ticket tiers or seats
+
+[ ] Transactions are auditable and balances update correctly
+
+## v0.11.0-alpha: Final Polish
 
 [ ] Refine UI (Dark mode cockpit).
 

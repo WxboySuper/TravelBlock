@@ -20,6 +20,13 @@ import { Airport, AirportData } from '../types/airport';
 import { Coordinates, calculateDistance } from '../utils/distance';
 import { computeScore } from './airportScoring';
 
+// Normalize strings for search: unicode decomposition without diacritics
+function normalizeForSearch(s: string): string {
+  return typeof String.prototype.normalize === 'function'
+    ? s.normalize('NFKD').replace(/\p{Diacritic}/gu, '')
+    : s;
+}
+
 /**
  * In-memory cache for loaded airport data.
  * Initially null, populated on first access.
@@ -81,11 +88,6 @@ export function loadAirports(): Promise<AirportData> {
     const iata = typeof airport.iata === 'string' ? airport.iata : '';
     const icao = typeof airport.icao === 'string' ? airport.icao : icaoKey;
 
-    // Normalize strings for search: lowercase + unicode decomposition without diacritics
-    const normalizeForSearch = (s: string) =>
-      s
-        .normalize ? s.normalize('NFKD').replace(/\p{Diacritic}/gu, '') : s;
-
     const __lcName = normalizeForSearch(name).toLowerCase();
     const __lcCity = normalizeForSearch(city).toLowerCase();
     const __lcIata = normalizeForSearch(iata).toLowerCase();
@@ -111,6 +113,14 @@ export function loadAirports(): Promise<AirportData> {
   airportArray = Object.values(normalized);
 
   return Promise.resolve(airportCache);
+}
+
+// Strip internal precomputed fields from an InternalAirport before returning
+function stripInternal(internal: InternalAirport): Airport {
+  // Destructure away internal fields
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { __lcIcao, __lcIata, __lcName, __lcCity, ...publicFields } = internal;
+  return publicFields as Airport;
 }
 
 
@@ -158,9 +168,8 @@ export function searchAirports(query: string): Airport[] {
   }
 
   // Normalize search term for consistent matching
-  const normalizeForSearch = (s: string) => (s.normalize ? s.normalize('NFKD').replace(/\p{Diacritic}/gu, '') : s);
   const searchTerm = normalizeForSearch(query.trim()).toLowerCase();
-  const results: Array<{ airport: Airport; score: number }> = [];
+  const results: Array<{ airport: InternalAirport; score: number }> = [];
 
   for (const airport of airportArray) {
     const score = computeScore(airport, searchTerm);
@@ -169,10 +178,10 @@ export function searchAirports(query: string): Airport[] {
     }
   }
 
-  // Sort by score (descending) and return airports
+  // Sort by score (descending) and return public Airport objects (strip internals)
   return results
     .sort((a, b) => b.score - a.score)
-    .map((result) => result.airport);
+    .map((result) => stripInternal(result.airport));
 }
 
 /**
@@ -209,7 +218,7 @@ export function getAirportsWithinDistance(
     return [];
   }
 
-  const results: Array<{ airport: Airport; distance: number }> = [];
+  const results: Array<{ airport: InternalAirport; distance: number }> = [];
 
   for (const airport of airportArray) {
     const airportCoords: Coordinates = {
@@ -224,10 +233,10 @@ export function getAirportsWithinDistance(
     }
   }
 
-  // Sort by distance (ascending)
+  // Sort by distance (ascending) and strip internal fields before returning
   return results
     .sort((a, b) => a.distance - b.distance)
-    .map((result) => result.airport);
+    .map((result) => stripInternal(result.airport));
 }
 
 /**
@@ -255,8 +264,9 @@ export function getAirportByICAO(icao: string): Airport | null {
     return null;
   }
 
-  // Keys are normalized to uppercase during loading
-  return airportCache[icao.toUpperCase()] ?? null;
+  // Keys are normalized to uppercase during loading; return a public Airport object
+  const found = airportCache[icao.toUpperCase()];
+  return found ? stripInternal(found) : null;
 }
 /**
  * Retrieves all airports in a specific country.
@@ -290,7 +300,9 @@ export function getAirportsByCountry(country: string): Airport[] {
 
   const countryCode = country.toUpperCase();
   
-  return airportArray.filter((airport) => airport.country === countryCode);
+  return airportArray
+    .filter((airport) => airport.country === countryCode)
+    .map((airport) => stripInternal(airport));
 }
 
 /**

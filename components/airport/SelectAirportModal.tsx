@@ -4,7 +4,7 @@ import { loadAirports, searchAirports } from '@/services/airportService';
 import type { Airport, AirportWithDistance } from '@/types/airport';
 import type { Coordinates } from '@/utils/distance';
 import { calculateDistance, calculateDistanceKm } from '@/utils/distance';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import {
   ActivityIndicator,
   FlatList,

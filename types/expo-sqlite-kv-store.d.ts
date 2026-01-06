@@ -19,6 +19,19 @@ declare module 'expo-sqlite/kv-store' {
     setItemSync(key: string, value: string): void;
     getItemSync(key: string): string | null;
   }
+  // Named exports for convenience and compatibility with different import styles
+  export function setItem(key: string, value: string): Promise<void>;
+  export function getItem(key: string): Promise<string | null>;
+  export function removeItem(key: string): Promise<void>;
+  export function multiGet(keys: string[]): Promise<Array<[string, string | null]>>;
+  export function multiSet(keyValuePairs: Array<[string, string]>): Promise<void>;
+  export function multiRemove(keys: string[]): Promise<void>;
+  export function clear(): Promise<void>;
+  export function getAllKeys(): Promise<string[]>;
+  export function mergeItem(key: string, value: string): Promise<void>;
+
+  export function setItemSync(key: string, value: string): void;
+  export function getItemSync(key: string): string | null;
 
   declare const Storage: KVStorage;
   export default Storage;

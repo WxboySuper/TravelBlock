@@ -1,7 +1,7 @@
 import type { Airport } from '../types/airport';
 // Use Expo's SQLite-based KV store. The package exposes the same simple
 // get/set/remove primitives we need via the `expo-sqlite/kv-store` entrypoint.
-import * as KV from 'expo-sqlite/kv-store';
+import { setItem, getItem, removeItem } from '../expo-sqlite/kv-store';
 
 /**
  * Keys used for storage operations.
@@ -19,7 +19,7 @@ export const storageService = {
    */
   async saveHomeAirport(airport: Airport): Promise<void> {
     try {
-      await KV.setItem(StorageKey.HOME_AIRPORT, JSON.stringify(airport));
+      await setItem(StorageKey.HOME_AIRPORT, JSON.stringify(airport));
     } catch (error) {
       console.error('Error saving home airport:', error);
       throw error;
@@ -31,7 +31,7 @@ export const storageService = {
    */
   async getHomeAirport(): Promise<Airport | null> {
     try {
-      const data = await KV.getItem(StorageKey.HOME_AIRPORT);
+      const data = await getItem(StorageKey.HOME_AIRPORT);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.error('Error getting home airport:', error);
@@ -44,7 +44,7 @@ export const storageService = {
    */
   async clearHomeAirport(): Promise<void> {
     try {
-      await KV.removeItem(StorageKey.HOME_AIRPORT);
+      await removeItem(StorageKey.HOME_AIRPORT);
     } catch (error) {
       console.error('Error clearing home airport:', error);
     }

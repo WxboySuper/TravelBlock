@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
 import { ThemedText } from '@/components/themed-text';
@@ -7,103 +7,6 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { storageService } from '@/services/storageService';
 import type { Airport } from '@/types/airport';
-import { TouchableOpacity } from 'react-native-gesture-handler';
-
-export default function HomeScreen() {
-  const [homeAirport, setHomeAirport] = useState<Airport | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    loadHomeAirport();
-  }, []);
-
-  async function loadHomeAirport() {
-    try {
-      const saved = await storageService.getHomeAirport();
-      setHomeAirport(saved);
-    } catch (error) {
-      console.error('Failed to load home airport', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  const handleSelectAirport = async (airport: Airport) => {
-    const previousAirport = homeAirport;
-
-    // Optimistically update UI
-    setHomeAirport(airport);
-
-    try {
-      await storageService.saveHomeAirport(airport);
-      // Only close modal when persistence succeeds
-      setIsModalVisible(false);
-    } catch (error) {
-      console.error('Failed to save home airport', error);
-      // Revert optimistic update on error to keep UI consistent
-      setHomeAirport(previousAirport ?? null);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <ThemedView style={styles.container}>
-        <ThemedText>Loading...</ThemedText>
-      </ThemedView>
-    );
-  }
-
-  return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="title">TravelBlock</ThemedText>
-        <ThemedText type="subtitle">Ready for Departure</ThemedText>
-      </View>
-
-      <View style={styles.content}>
-        {homeAirport ? (
-          <View style={styles.airportCard}>
-            <View style={styles.airportIcon}>
-              <IconSymbol name="house.fill" size={32} color="#0a7ea4" />
-            </View>
-            <View style={styles.airportInfo}>
-              <ThemedText type="defaultSemiBold">Home Base</ThemedText>
-              <ThemedText>{homeAirport.name}</ThemedText>
-              <ThemedText type="small" style={styles.subText}>
-                {homeAirport.city}, {homeAirport.country} ({homeAirport.icao})
-              </ThemedText>
-            </View>
-            <TouchableOpacity onPress={() => setIsModalVisible(true)} style={styles.editButton}>
-              <IconSymbol name="pencil" size={20} color="#687076" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <IconSymbol name="airplane.departure" size={64} color="#687076" style={{ marginBottom: 16 }} />
-            <ThemedText type="subtitle" style={{ textAlign: 'center' }}>Set Your Home Base</ThemedText>
-            <ThemedText style={styles.emptyText}>
-              Choose your starting airport to begin your focus journey.
-            </ThemedText>
-            <TouchableOpacity
-              onPress={() => setIsModalVisible(true)}
-              style={styles.button}
-            >
-              <ThemedText type="defaultSemiBold" style={{ color: '#fff' }}>Select Airport</ThemedText>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      <SelectAirportModal
-        visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onSelectAirport={handleSelectAirport}
-        title="Select Home Base"
-      />
-    </ThemedView>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -158,3 +61,102 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 });
+
+export default function HomeScreen() {
+  const [homeAirport, setHomeAirport] = useState<Airport | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadHomeAirport();
+  }, []);
+
+  async function loadHomeAirport() {
+    try {
+      const saved = await storageService.getHomeAirport();
+      setHomeAirport(saved);
+    } catch (error) {
+      console.error('Failed to load home airport', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleSelectAirport = useCallback(
+    async (airport: Airport) => {
+      const previousAirport = homeAirport;
+
+      // Optimistically update UI
+      setHomeAirport(airport);
+
+      try {
+        await storageService.saveHomeAirport(airport);
+        // Only close modal when persistence succeeds
+        setIsModalVisible(false);
+      } catch (error) {
+        console.error('Failed to save home airport', error);
+        // Revert optimistic update on error to keep UI consistent
+        setHomeAirport(previousAirport ?? null);
+      }
+    },
+    [homeAirport]
+  );
+
+  const openModal = useCallback(() => setIsModalVisible(true), []);
+  const closeModal = useCallback(() => setIsModalVisible(false), []);
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText>Loading...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <View style={styles.header}>
+        <ThemedText type="title">TravelBlock</ThemedText>
+        <ThemedText type="subtitle">Ready for Departure</ThemedText>
+      </View>
+
+      <View style={styles.content}>
+        {homeAirport ? (
+          <View style={styles.airportCard}>
+            <View style={styles.airportIcon}>
+              <IconSymbol name="house.fill" size={32} color="#0a7ea4" />
+            </View>
+            <View style={styles.airportInfo}>
+              <ThemedText type="defaultSemiBold">Home Base</ThemedText>
+              <ThemedText>{homeAirport.name}</ThemedText>
+              <ThemedText type="small" style={styles.subText}>
+                {homeAirport.city}, {homeAirport.country} ({homeAirport.icao})
+              </ThemedText>
+            </View>
+            <Pressable onPress={openModal} style={styles.editButton}>
+              <IconSymbol name="pencil" size={20} color="#687076" />
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <IconSymbol name="airplane.departure" size={64} color="#687076" style={{ marginBottom: 16 }} />
+            <ThemedText type="subtitle" style={{ textAlign: 'center' }}>Set Your Home Base</ThemedText>
+            <ThemedText style={styles.emptyText}>
+              Choose your starting airport to begin your focus journey.
+            </ThemedText>
+            <Pressable onPress={openModal} style={styles.button}>
+              <ThemedText type="defaultSemiBold" style={{ color: '#fff' }}>Select Airport</ThemedText>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      <SelectAirportModal
+        visible={isModalVisible}
+        onClose={closeModal}
+        onSelectAirport={handleSelectAirport}
+        title="Select Home Base"
+      />
+    </ThemedView>
+  );
+}

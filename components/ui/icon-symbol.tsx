@@ -18,6 +18,9 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'airplane.departure': 'flight-takeoff',
+  'pencil': 'edit',
+  'book.fill': 'menu-book',
 } as IconMapping;
 
 /**

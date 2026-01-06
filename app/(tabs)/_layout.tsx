@@ -7,7 +7,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
- * Renders the app's bottom tab navigator with Home and Explore tabs.
+ * Renders the app's bottom tab navigator with Home and Logbook tabs.
  *
  * The navigator uses the current color scheme to set the active tint, hides the header,
  * and uses a haptic-enabled tab button. Each tab provides a title and an icon.

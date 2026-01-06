@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, PressableProps, StyleSheet, ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -10,6 +10,7 @@ interface ButtonProps extends Omit<PressableProps, 'style'> {
   variant?: 'primary' | 'secondary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   style?: ViewStyle;
+  testID?: string;
 }
 
 const styles = StyleSheet.create({
@@ -26,29 +27,35 @@ const styles = StyleSheet.create({
   },
 });
 
-export function Button({ title, variant = 'primary', size = 'md', style, disabled, ...props }: ButtonProps) {
+export function Button({ title, variant = 'primary', size = 'md', style, disabled, testID, ...props }: ButtonProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const sizeStyles = {
-    sm: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md },
-    md: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg },
-    lg: { paddingVertical: Spacing.lg, paddingHorizontal: Spacing.xl },
-  };
+  const sizeStyles = useMemo(
+    () => ({
+      sm: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md },
+      md: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg },
+      lg: { paddingVertical: Spacing.lg, paddingHorizontal: Spacing.xl },
+    }),
+    []
+  );
 
-  const variantStyles = {
-    primary: {
-      backgroundColor: colors.primary,
-    },
-    secondary: {
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    ghost: {
-      backgroundColor: 'transparent',
-    },
-  };
+  const variantStyles = useMemo(
+    () => ({
+      primary: {
+        backgroundColor: colors.primary,
+      },
+      secondary: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: colors.border,
+      },
+      ghost: {
+        backgroundColor: 'transparent',
+      },
+    }),
+    [colors]
+  );
 
   const textColors = {
     primary: '#FFFFFF',
@@ -65,11 +72,11 @@ export function Button({ title, variant = 'primary', size = 'md', style, disable
       disabled && styles.disabled,
       style,
     ],
-    [size, variant, disabled, style, colors, sizeStyles, variantStyles]
+    [size, variant, disabled, style, sizeStyles, variantStyles]
   );
 
   return (
-    <Pressable style={getButtonStyle} disabled={disabled} {...props}>
+    <Pressable style={getButtonStyle} disabled={disabled} testID={testID} {...props}>
       <ThemedText
         style={{
           color: disabled ? colors.textTertiary : textColors[variant],

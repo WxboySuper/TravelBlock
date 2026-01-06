@@ -28,17 +28,18 @@ const styles = StyleSheet.create({
   },
 });
 
-export function EmptyLogbook() {
+export function EmptyLogbook(): React.JSX.Element {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
+    <View style={styles.container} testID="EmptyLogbook.Root">
+      <View style={styles.iconContainer} testID="EmptyLogbook.IconContainer">
         <IconSymbol name="book.fill" size={72} color={colors.textTertiary} />
       </View>
       <View style={styles.textContainer}>
         <ThemedText
+          testID="EmptyLogbook.Title"
           style={[
             styles.title,
             {
@@ -50,6 +51,7 @@ export function EmptyLogbook() {
           No Flights Logged
         </ThemedText>
         <ThemedText
+          testID="EmptyLogbook.Description"
           style={[
             styles.description,
             {

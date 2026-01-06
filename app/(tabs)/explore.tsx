@@ -23,14 +23,14 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function ExploreScreen() {
+export default function ExploreScreen(): React.JSX.Element {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.container} testID="explore-root">
       <View style={styles.contentContainer}>
-        <View style={styles.header}>
+        <View style={styles.header} testID="explore-header">
           <ThemedText
             style={{
               fontSize: Typography.fontSize.xxxl,

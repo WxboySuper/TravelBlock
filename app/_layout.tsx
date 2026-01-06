@@ -29,8 +29,9 @@ export default function RootLayout() {
     async function startup() {
       try {
         await initStore();
-      } catch {
-        // ignore init failures during startup
+      } catch (error) {
+        console.error('Failed to initialize persistent store', error);
+        // TODO: Consider surfacing a fallback UI if store init fails
       }
     }
 

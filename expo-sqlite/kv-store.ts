@@ -194,6 +194,12 @@ export async function removeItem(opts: { key: string }): Promise<void> {
 
 export function setItemSync(opts: { key: string; value: string }): void {
   cache.set(opts.key, opts.value);
+  // Schedule background write to SQLite if available
+  if (db) {
+    execSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [opts.key, opts.value]).catch((err) => {
+      console.warn('setItemSync: background write to SQLite failed', err);
+    });
+  }
 }
 
 export function getItemSync(opts: { key: string }): string | null {
@@ -208,23 +214,22 @@ export function getItemSync(opts: { key: string }): string | null {
 export async function initStore(): Promise<void> {
   await initSqliteIfNeeded();
   // Ensure AsyncStorage is available so it's ready as a fallback
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-async-storage/async-storage');
-    asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
-    if (asyncStorage) {
-      // migrate any existing cache into AsyncStorage to avoid data loss
-      for (const [k, v] of Array.from(cache.entries())) {
-        try {
-          if (asyncStorage.setItem) await asyncStorage.setItem(k, v);
-        } catch (_) {
-          // ignore individual failures
-        }
+  const asModule = loadAsyncStorageOnce();
+  if (asModule?.setItem) {
+    // migrate any existing cache into AsyncStorage to avoid data loss
+    const successfulKeys: string[] = [];
+    for (const [k, v] of Array.from(cache.entries())) {
+      try {
+        await asModule.setItem(k, v);
+        successfulKeys.push(k);
+      } catch (err) {
+        console.warn(`Failed to migrate key ${k} to AsyncStorage`, err);
       }
-      if (cache.size > 0) cache.clear();
     }
-  } catch (_) {
-    // not available
+    // Only remove successfully migrated keys
+    for (const k of successfulKeys) {
+      cache.delete(k);
+    }
   }
 }
 

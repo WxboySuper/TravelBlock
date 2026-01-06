@@ -27,8 +27,9 @@ export function HomeHeader() {
   const greeting = getGreeting();
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="home-header-container">
       <ThemedText
+        testID="home-header-greeting"
         style={[
           styles.greeting,
           {
@@ -42,6 +43,7 @@ export function HomeHeader() {
         {greeting}
       </ThemedText>
       <ThemedText
+        testID="home-header-title"
         style={{
           fontSize: Typography.fontSize.xxxl,
           fontWeight: Typography.fontWeight.bold,

@@ -33,11 +33,12 @@ export function StatusBar() {
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.surface }]}>
-      <View style={styles.container}>
-      <View style={styles.left}>
-        <View style={[styles.dot, { backgroundColor: colors.success }]} />
-        <ThemedText
+    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.surface }]} testID="statusbar-safearea">
+      <View style={styles.container} testID="statusbar-container">
+        <View style={styles.left} testID="statusbar-left">
+          <View style={[styles.dot, { backgroundColor: colors.success }]} testID="statusbar-dot" />
+          <ThemedText
+            testID="statusbar-label"
           style={{
             fontSize: Typography.fontSize.xs,
             color: colors.textSecondary,
@@ -47,6 +48,7 @@ export function StatusBar() {
         </ThemedText>
       </View>
       <ThemedText
+        testID="statusbar-version"
         style={{
           fontSize: Typography.fontSize.xs,
           color: colors.textTertiary,

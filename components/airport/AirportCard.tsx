@@ -91,7 +91,7 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
       {/* Header - "Home Base" label */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={[styles.iconBadge, { backgroundColor: `${colors.primary}15` }]}>
+          <View style={[styles.iconBadge, { backgroundColor: `${colors.primary}1A` }]}>
             <IconSymbol name="house.fill" size={20} color={colors.primary} />
           </View>
           <ThemedText
@@ -106,7 +106,12 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
           </ThemedText>
         </View>
         {showEdit && onEdit && (
-          <Pressable onPress={onEdit} style={styles.editButton} hitSlop={8}>
+          <Pressable 
+            onPress={onEdit} 
+            style={styles.editButton} 
+            hitSlop={8}
+            accessibilityLabel="Edit airport"
+            testID="airport-card-edit-button">
             <IconSymbol name="pencil" size={18} color={colors.icon} />
           </Pressable>
         )}
@@ -177,7 +182,9 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
           <Pressable
             onPress={onClear}
             style={[styles.clearButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            hitSlop={8}>
+            hitSlop={8}
+            accessibilityLabel="Clear home base"
+            testID="airport-card-clear-button">
             <ThemedText style={[styles.clearButtonText, { color: colors.error }]}>Clear</ThemedText>
           </Pressable>
         )}

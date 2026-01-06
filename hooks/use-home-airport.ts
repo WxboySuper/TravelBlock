@@ -40,7 +40,7 @@ export function useHomeAirport() {
         await storageService.saveHomeAirport(airport);
       } catch (error) {
         console.error('Failed to save home airport', error);
-        setHomeAirport(previousAirport ?? null);
+        setHomeAirport(previousAirport);
         Alert.alert('Save failed', 'Unable to save home airport');
         throw error;
       }
@@ -58,6 +58,7 @@ export function useHomeAirport() {
       console.error('Failed to clear home airport', error);
       setHomeAirport(previousAirport);
       Alert.alert('Clear failed', 'Unable to clear home airport');
+      throw error;
     }
   }, [homeAirport, setHomeAirport]);
 

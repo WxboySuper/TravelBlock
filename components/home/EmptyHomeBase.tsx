@@ -39,12 +39,13 @@ export function EmptyHomeBase({ onSelectAirport }: EmptyHomeBaseProps) {
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
+    <View style={styles.container} testID="empty-home-root">
+      <View style={styles.iconContainer} testID="empty-home-icon">
         <IconSymbol name="airplane.departure" size={72} color={colors.textTertiary} />
       </View>
       <View style={styles.textContainer}>
         <ThemedText
+          testID="empty-home-title"
           style={[
             styles.title,
             {
@@ -56,6 +57,7 @@ export function EmptyHomeBase({ onSelectAirport }: EmptyHomeBaseProps) {
           Set Your Home Base
         </ThemedText>
         <ThemedText
+          testID="empty-home-description"
           style={[
             styles.description,
             {
@@ -67,7 +69,7 @@ export function EmptyHomeBase({ onSelectAirport }: EmptyHomeBaseProps) {
           Choose your starting airport to begin your focus journey
         </ThemedText>
       </View>
-      <Button title="Select Airport" onPress={onSelectAirport} size="lg" />
+      <Button title="Select Airport" onPress={onSelectAirport} size="lg" testID="empty-home-select-airport-button" />
     </View>
   );
 }

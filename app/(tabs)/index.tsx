@@ -30,9 +30,20 @@ export default function HomeScreen() {
   }
 
   const handleSelectAirport = async (airport: Airport) => {
+    const previousAirport = homeAirport;
+
+    // Optimistically update UI
     setHomeAirport(airport);
-    await storageService.saveHomeAirport(airport);
-    setIsModalVisible(false);
+
+    try {
+      await storageService.saveHomeAirport(airport);
+      // Only close modal when persistence succeeds
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error('Failed to save home airport', error);
+      // Revert optimistic update on error to keep UI consistent
+      setHomeAirport(previousAirport ?? null);
+    }
   };
 
   if (isLoading) {

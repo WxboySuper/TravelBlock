@@ -1,5 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Airport } from '../types/airport';
+// Use Expo's SQLite-based KV store. The package exposes the same simple
+// get/set/remove primitives we need via the `expo-sqlite/kv-store` entrypoint.
+import * as KV from 'expo-sqlite/kv-store';
 
 /**
  * Keys used for storage operations.
@@ -17,7 +19,7 @@ export const storageService = {
    */
   async saveHomeAirport(airport: Airport): Promise<void> {
     try {
-      await AsyncStorage.setItem(StorageKey.HOME_AIRPORT, JSON.stringify(airport));
+      await KV.setItem(StorageKey.HOME_AIRPORT, JSON.stringify(airport));
     } catch (error) {
       console.error('Error saving home airport:', error);
       throw error;
@@ -29,7 +31,7 @@ export const storageService = {
    */
   async getHomeAirport(): Promise<Airport | null> {
     try {
-      const data = await AsyncStorage.getItem(StorageKey.HOME_AIRPORT);
+      const data = await KV.getItem(StorageKey.HOME_AIRPORT);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.error('Error getting home airport:', error);
@@ -42,7 +44,7 @@ export const storageService = {
    */
   async clearHomeAirport(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(StorageKey.HOME_AIRPORT);
+      await KV.removeItem(StorageKey.HOME_AIRPORT);
     } catch (error) {
       console.error('Error clearing home airport:', error);
     }

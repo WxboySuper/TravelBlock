@@ -1,13 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { storageService, StorageKey } from '../../services/storageService';
+import * as AsyncStorage from 'expo-sqlite/kv-store';
+import { StorageKey, storageService } from '../../services/storageService';
 import { Airport } from '../../types/airport';
 
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () => ({
+// Mock the Expo SQLite KV store entrypoint used by the app
+jest.mock('expo-sqlite/kv-store', () => ({
   setItem: jest.fn(),
   getItem: jest.fn(),
   removeItem: jest.fn(),
-}));
+}), { virtual: true });
 
 describe('storageService', () => {
   const mockAirport: Airport = {

@@ -1,4 +1,5 @@
-import { clearCache } from '../../services/airportService';
+// clearCache is imported dynamically after resetting modules to ensure
+// it references the fresh module instance.
 
 describe('airportService edge branches', () => {
   it('works when String.prototype.normalize is not available', async () => {
@@ -10,10 +11,12 @@ describe('airportService edge branches', () => {
     try {
       // remove normalize
       proto.normalize = undefined;
-      // Clear cache and require the service to run load path
+      // Clear cache and require the service to run load path. Import both
+      // `loadAirports` and `clearCache` dynamically so they reference the
+      // freshly loaded module instance after `jest.resetModules()`.
       jest.resetModules();
-      const { loadAirports } = await import('../../services/airportService');
-      clearCache();
+      const { loadAirports, clearCache } = await import('../../services/airportService');
+      await clearCache();
       const data = await loadAirports();
       expect(data).toBeDefined();
       expect(Object.keys(data).length).toBeGreaterThan(0);
@@ -42,17 +45,23 @@ describe('airportService edge branches', () => {
       },
     }));
 
-    const { loadAirports } = await import('../../services/airportService');
-    clearCache();
-    const data = await loadAirports();
-    // Should have loaded the mocked key
-    expect(data).toHaveProperty('MIXED');
+    try {
+      const { loadAirports, clearCache } = await import('../../services/airportService');
+      await clearCache();
+      const data = await loadAirports();
+      // Should have loaded the mocked key
+      expect(data).toHaveProperty('MIXED');
 
-    const mixed = (data as unknown as Record<string, unknown>)['MIXED'] as Record<string, unknown>;
-    // The loader should produce normalized __lc* fields as strings
-    expect(typeof mixed['__lcName']).toBe('string');
-    expect(typeof mixed['__lcCity']).toBe('string');
-    // IATA numeric should be coerced to string in __lcIata
-    expect(typeof mixed['__lcIata']).toBe('string');
+      const mixed = (data as unknown as Record<string, unknown>)['MIXED'] as Record<string, unknown>;
+      // The loader should produce normalized __lc* fields as strings
+      expect(typeof mixed['__lcName']).toBe('string');
+      expect(typeof mixed['__lcCity']).toBe('string');
+      // IATA numeric should be coerced to string in __lcIata
+      expect(typeof mixed['__lcIata']).toBe('string');
+    } finally {
+      // Remove the manual mock and reset module registry so other tests are unaffected
+      jest.dontMock('../../data/airports.json');
+      jest.resetModules();
+    }
   });
 });

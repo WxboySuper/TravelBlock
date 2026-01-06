@@ -39,7 +39,7 @@ describe('airportScoring computeScore branches', () => {
     expect(score).toBeLessThan(1000);
   });
 
-  it('returns 0 for empty IATA and scores name substring', () => {
+  it('scores name substring when IATA is empty', () => {
     const airport: Airport = {
       icao: 'ZZZZ',
       iata: '',

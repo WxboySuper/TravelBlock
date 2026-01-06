@@ -82,7 +82,7 @@ export function AirportSearchBar({  value,
   }, [onChangeText, onClear]);
 
   return (
-    <ThemedView style={styles.container} testID="airport-search-bar">      {/* Search icon */}
+    <ThemedView style={styles.container} testID="airport-search-bar">{/* Search icon */}
       <ThemedText type="defaultSemiBold">🔍</ThemedText>
 
       {/* Search input */}

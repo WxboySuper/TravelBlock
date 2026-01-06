@@ -1,123 +1,149 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet, Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { storageService } from '@/services/storageService';
+import type { Airport } from '@/types/airport';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
-
-/**
- * Home screen for the tabs root that displays a parallax header and introductory content.
- *
- * Renders a parallax-scrolling layout containing a header image, a welcome title with waving
- * illustration, and three informational step sections (try editing the app, explore a modal with
- * actions, and reset the project).
- *
- * @returns A React element representing the home screen layout with its header and step content.
- */
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        {Platform.OS === 'ios' ? (
-          <Link href="/modal">
-            <Link.Trigger>
-              <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-            </Link.Trigger>
-            <Link.Preview />
-            <Link.Menu>
-              <Link.MenuAction title="Action" icon="cube" onPress={handleAction} />
-              <Link.MenuAction title="Share" icon="square.and.arrow.up" onPress={handleShare} />
-              <Link.Menu title="More" icon="ellipsis">
-                <Link.MenuAction
-                  title="Delete"
-                  icon="trash"
-                  destructive
-                  onPress={handleDelete}
-                />
-              </Link.Menu>
-            </Link.Menu>
-          </Link>
-        ) : (
-          <Link href="/modal">
-            <Link.Trigger>
-              <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-            </Link.Trigger>
-          </Link>
-        )}
+  const [homeAirport, setHomeAirport] = useState<Airport | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-        <ThemedText>
-          {"Tap the Explore tab to learn more about what's included in this starter app."}
-        </ThemedText>
+  useEffect(() => {
+    loadHomeAirport();
+  }, []);
+
+  async function loadHomeAirport() {
+    try {
+      const saved = await storageService.getHomeAirport();
+      setHomeAirport(saved);
+    } catch (error) {
+      console.error('Failed to load home airport', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleSelectAirport = async (airport: Airport) => {
+    setHomeAirport(airport);
+    await storageService.saveHomeAirport(airport);
+    setIsModalVisible(false);
+  };
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText>Loading...</ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {"When you're ready, run "}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <View style={styles.header}>
+        <ThemedText type="title">TravelBlock</ThemedText>
+        <ThemedText type="subtitle">Ready for Departure</ThemedText>
+      </View>
+
+      <View style={styles.content}>
+        {homeAirport ? (
+          <View style={styles.airportCard}>
+            <View style={styles.airportIcon}>
+              <IconSymbol name="house.fill" size={32} color="#0a7ea4" />
+            </View>
+            <View style={styles.airportInfo}>
+              <ThemedText type="defaultSemiBold">Home Base</ThemedText>
+              <ThemedText>{homeAirport.name}</ThemedText>
+              <ThemedText type="small" style={styles.subText}>
+                {homeAirport.city}, {homeAirport.country} ({homeAirport.icao})
+              </ThemedText>
+            </View>
+            <TouchableOpacity onPress={() => setIsModalVisible(true)} style={styles.editButton}>
+              <IconSymbol name="pencil" size={20} color="#687076" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <IconSymbol name="airplane.departure" size={64} color="#687076" style={{ marginBottom: 16 }} />
+            <ThemedText type="subtitle" style={{ textAlign: 'center' }}>Set Your Home Base</ThemedText>
+            <ThemedText style={styles.emptyText}>
+              Choose your starting airport to begin your focus journey.
+            </ThemedText>
+            <TouchableOpacity
+              onPress={() => setIsModalVisible(true)}
+              style={styles.button}
+            >
+              <ThemedText type="defaultSemiBold" style={{ color: '#fff' }}>Select Airport</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      <SelectAirportModal
+        visible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        onSelectAirport={handleSelectAirport}
+        title="Select Home Base"
+      />
+    </ThemedView>
   );
 }
 
-function handleAction() {
-  Alert.alert('Action pressed');
-}
-
-function handleShare() {
-  Alert.alert('Share pressed');
-}
-
-function handleDelete() {
-  Alert.alert('Delete pressed');
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 60,
+  },
+  header: {
+    marginBottom: 40,
+  },
+  content: {
+    flex: 1,
+  },
+  airportCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(10, 126, 164, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(10, 126, 164, 0.1)',
+  },
+  airportIcon: {
+    marginRight: 16,
+  },
+  airportInfo: {
+    flex: 1,
+  },
+  subText: {
+    color: '#687076',
+    marginTop: 2,
+  },
+  editButton: {
+    padding: 8,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 100,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#687076',
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  button: {
+    backgroundColor: '#0a7ea4',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+});

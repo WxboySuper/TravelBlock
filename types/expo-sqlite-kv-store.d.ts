@@ -13,7 +13,9 @@ declare module 'expo-sqlite/kv-store' {
     multiRemove(keys: string[]): Promise<void>;
     clear(): Promise<void>;
     getAllKeys(): Promise<string[]>;
+    // mergeItem supports both forms for flexibility
     mergeItem(opts: { key: string; value: string }): Promise<void>;
+    mergeItem(key: string, value: string): Promise<void>;
 
     // Sync API (added by expo-sqlite/kv-store as convenience)
     setItemSync(key: string, value: string): void;
@@ -28,6 +30,8 @@ declare module 'expo-sqlite/kv-store' {
   export function multiRemove(keys: string[]): Promise<void>;
   export function clear(): Promise<void>;
   export function getAllKeys(): Promise<string[]>;
+  // mergeItem supports both positional and options-object forms
+  export function mergeItem(opts: { key: string; value: string }): Promise<void>;
   export function mergeItem(key: string, value: string): Promise<void>;
 
   // Sync methods support both positional and options-object forms

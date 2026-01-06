@@ -1,45 +1,58 @@
 import { StyleSheet, View } from 'react-native';
 
+import { EmptyLogbook } from '@/components/logbook/EmptyLogbook';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    paddingTop: 60,
+  },
+  contentContainer: {
+    flex: 1,
+    padding: Spacing.lg,
   },
   header: {
-    marginBottom: 40,
+    paddingTop: Spacing.xxl,
+    paddingBottom: Spacing.lg,
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 100,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#687076',
-    marginTop: 8,
+  subtitle: {
+    marginTop: Spacing.xs,
   },
 });
 
 export default function ExploreScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="title">Logbook</ThemedText>
-        <ThemedText type="subtitle">Your Flight History</ThemedText>
-      </View>
-      
-      <View style={styles.emptyState}>
-        <IconSymbol name="book.fill" size={64} color="#687076" style={{ marginBottom: 16 }} />
-        <ThemedText type="subtitle">No Flights Logged</ThemedText>
-        <ThemedText style={styles.emptyText}>
-          Complete focus sessions to see your flight history here.
-        </ThemedText>
+      <View style={styles.contentContainer}>
+        <View style={styles.header}>
+          <ThemedText
+            style={{
+              fontSize: Typography.fontSize.xxxl,
+              fontWeight: Typography.fontWeight.bold,
+              color: colors.text,
+              letterSpacing: -1,
+            }}>
+            Logbook
+          </ThemedText>
+          <ThemedText
+            style={[
+              styles.subtitle,
+              {
+                fontSize: Typography.fontSize.base,
+                color: colors.textSecondary,
+              },
+            ]}>
+            Your Flight History
+          </ThemedText>
+        </View>
+
+        <EmptyLogbook />
       </View>
     </ThemedView>
   );

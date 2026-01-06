@@ -8,7 +8,8 @@ jest.mock('../../expo-sqlite/kv-store', () => ({
 }), { virtual: true });
 
 import { setItem, getItem, removeItem } from '../../expo-sqlite/kv-store';
-import { StorageKey, storageService } from '../../services/storageService';
+import { storageService } from '../../services/storageService';
+import { StorageKey } from '../../types/storage';
 import type { Airport } from '../../types/airport';
 
 describe('storageService', () => {

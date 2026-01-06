@@ -1,14 +1,8 @@
 import type { Airport } from '../types/airport';
+import { StorageKey } from '../types/storage';
 // Use Expo's SQLite-based KV store. The package exposes the same simple
 // get/set/remove primitives we need via the `expo-sqlite/kv-store` entrypoint.
 import { setItem, getItem, removeItem } from '../expo-sqlite/kv-store';
-
-/**
- * Keys used for storage operations.
- */
-export enum StorageKey {
-  HOME_AIRPORT = 'travelblock_home_airport',
-}
 
 /**
  * Service for local data persistence using AsyncStorage.

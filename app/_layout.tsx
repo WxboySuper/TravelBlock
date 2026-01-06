@@ -5,6 +5,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useEffect } from 'react';
+import { initStore } from '@/expo-sqlite/kv-store';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -20,6 +22,12 @@ export const unstable_settings = {
  */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    // initialize persistent store early so native SQLite is ready before
+    // UI interactions that may save the home airport.
+    void initStore();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

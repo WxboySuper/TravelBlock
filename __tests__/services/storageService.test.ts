@@ -33,10 +33,10 @@ describe('storageService', () => {
   describe('saveHomeAirport', () => {
     it('should save the airport to KV store', async () => {
       await storageService.saveHomeAirport(mockAirport);
-      expect(setItem).toHaveBeenCalledWith(
-        StorageKey.HOME_AIRPORT,
-        JSON.stringify(mockAirport)
-      );
+      expect(setItem).toHaveBeenCalledWith({
+        key: StorageKey.HOME_AIRPORT,
+        value: JSON.stringify(mockAirport),
+      });
     });
 
     it('should throw an error and log if saving fails', async () => {
@@ -57,7 +57,7 @@ describe('storageService', () => {
       
       const result = await storageService.getHomeAirport();
       
-      expect(getItem).toHaveBeenCalledWith(StorageKey.HOME_AIRPORT);
+      expect(getItem).toHaveBeenCalledWith({ key: StorageKey.HOME_AIRPORT });
       expect(result).toEqual(mockAirport);
     });
 
@@ -85,7 +85,7 @@ describe('storageService', () => {
   describe('clearHomeAirport', () => {
     it('should remove the airport from AsyncStorage', async () => {
       await storageService.clearHomeAirport();
-      expect(removeItem).toHaveBeenCalledWith(StorageKey.HOME_AIRPORT);
+      expect(removeItem).toHaveBeenCalledWith({ key: StorageKey.HOME_AIRPORT });
     });
 
     it('should log if removal fails', async () => {

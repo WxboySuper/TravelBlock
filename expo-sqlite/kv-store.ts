@@ -5,17 +5,8 @@
 const DB_NAME = 'travelblock.db';
 const TABLE_NAME = 'kv_store';
 
-type SqliteTx = {
-  executeSql: (
-    sql: string,
-    params?: unknown[],
-    success?: (tx: unknown, result: unknown) => void,
-    error?: (tx: unknown, err: unknown) => boolean | undefined
-  ) => void;
-};
-type SqliteDB = {
-  transaction: (fn: (tx: SqliteTx) => void, error?: (err: unknown) => void, success?: () => void) => void;
-};
+import { createTableIfNeeded, migrateCacheToDbIfNeeded, performSqliteInit, SqliteDB, SqliteTx, tryQuickSqliteInitSync } from './sqlite-helpers';
+
 let db: SqliteDB | null = null;
 let initPromise: Promise<void> | null = null;
 // Track which backend is currently being used (for diagnostics).
@@ -33,10 +24,28 @@ type AsyncStorageLike = {
 // runtime reference to AsyncStorage (may be null)
 let asyncStorage: AsyncStorageLike | null = null;
 
-type ExpoSqliteModule = {
-  openDatabase?: (name: string) => SqliteDB;
-  openDatabaseSync?: (name: string) => SqliteDB;
-};
+function quickSqliteInit(): void {
+  try {
+    const opened = tryQuickSqliteInitSync(DB_NAME);
+    if (opened) db = opened;
+  } catch {
+    // ignore
+  }
+}
+
+function loadAsyncStorageOnce(): AsyncStorageLike | null {
+  if (asyncStorage) return asyncStorage;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod: unknown = require('@react-native-async-storage/async-storage');
+    asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
+    return asyncStorage;
+  } catch {
+    return null;
+  }
+}
+
+// cache migration and table creation are handled by helpers in sqlite-helpers.ts
 
 function execSql<T = unknown>(sql: string, params: unknown[] = []): Promise<T> {
   if (!db || typeof db.transaction !== 'function') {
@@ -75,77 +84,31 @@ function initSqliteIfNeeded(): Promise<void> {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    try {
       // Lazily require to avoid Metro/route-analysis errors when native modules
       // are not available during bundling.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const required: unknown = require('expo-sqlite');
-      const sqliteMod = required as ExpoSqliteModule;
-      if (sqliteMod && typeof sqliteMod.openDatabase === 'function') {
-        const openFn = sqliteMod.openDatabase;
-        const opened = typeof openFn === 'function' ? openFn(DB_NAME) : null;
-        if (opened && typeof opened.transaction === 'function') {
-          db = opened as SqliteDB;
-          // attempt to create table but don't block on failure
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            execSql(`CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (key TEXT PRIMARY KEY NOT NULL, value TEXT)`);
-          } catch (_) {
-            // ignore
-          }
-          // migrate cache
-          if (cache.size > 0 && db) {
-            const entries = Array.from(cache.entries());
-            await new Promise<void>((resolve, reject) => {
-              (db as SqliteDB).transaction((tx: SqliteTx) => {
-                for (const [k, v] of entries) {
-                  tx.executeSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [k, v]);
-                }
-              }, (err: unknown) => reject(err), () => resolve());
-            });
-            cache.clear();
-          }
-        } else {
-          // eslint-disable-next-line no-console
-          console.warn('expo-sqlite: openDatabase returned an object without transaction(); skipping SQLite initialization');
-          db = null;
+      try {
+        const opened = performSqliteInit(required as import('./sqlite-helpers').ExpoSqliteModule, DB_NAME);
+        if (opened) {
+          db = opened;
+          await createTableIfNeeded(db, TABLE_NAME);
+          await migrateCacheToDbIfNeeded(db, Array.from(cache.entries()), TABLE_NAME);
         }
+      } finally {
+        initPromise = null;
       }
-    } catch (e) {
-      // SQLite not available; keep using in-memory cache
-      db = null;
-    } finally {
-      initPromise = null;
-    }
   })();
 
   return initPromise;
 }
 
-export async function setItem(key: string, value: string): Promise<void> {
-  // Try a quick init path so we attempt to use SQLite immediately when possible
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const maybeSqlite: unknown = require('expo-sqlite');
-    const sqliteMod = maybeSqlite as ExpoSqliteModule;
-    if (sqliteMod && !db) {
-      const openSync = sqliteMod.openDatabaseSync;
-      const open = sqliteMod.openDatabase;
-      const opened = typeof openSync === 'function'
-        ? openSync(DB_NAME)
-        : (typeof open === 'function' ? open(DB_NAME) : null);
-      if (opened && typeof opened.transaction === 'function') {
-        db = opened as SqliteDB;
-      } else {
-        // eslint-disable-next-line no-console
-        console.warn('expo-sqlite: quick init returned DB without transaction(); will fallback to in-memory');
-        db = null;
-      }
-    }
-  } catch (e) {
-    // ignore and fall back to init path
-  }
+// performSqliteInit is provided by sqlite-helpers and imported above
 
+export async function setItem(opts: { key: string; value: string }): Promise<void> {
+  const { key, value } = opts;
+  // Try a quick init path so we attempt to use SQLite immediately when possible
+  quickSqliteInit();
   await initSqliteIfNeeded();
   if (db) {
     backend = 'sqlite';
@@ -154,87 +117,63 @@ export async function setItem(key: string, value: string): Promise<void> {
   }
 
   // Try AsyncStorage as a persistent fallback
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod: unknown = require('@react-native-async-storage/async-storage');
-    asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
-    if (asyncStorage?.setItem) {
-      backend = 'asyncstorage';
-      await asyncStorage.setItem(key, value);
-      return;
-    }
-  } catch (_) {
-    // fall through to memory
+  const asModule = loadAsyncStorageOnce();
+  if (asModule?.setItem) {
+    backend = 'asyncstorage';
+    await asModule.setItem(key, value);
+    return;
   }
 
   backend = 'memory';
   cache.set(key, value);
 }
 
-export async function getItem(key: string): Promise<string | null> {
-  try {
-    // attempt quick init so we can read from SQLite immediately
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const maybeSqlite: unknown = require('expo-sqlite');
-    const sqliteMod = maybeSqlite as ExpoSqliteModule;
-    if (sqliteMod && !db) {
-      const openSync = sqliteMod.openDatabaseSync;
-      const open = sqliteMod.openDatabase;
-      const opened = typeof openSync === 'function'
-        ? openSync(DB_NAME)
-        : (typeof open === 'function' ? open(DB_NAME) : null);
-      if (opened && typeof opened.transaction === 'function') db = opened as SqliteDB;
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  await initSqliteIfNeeded();
-  if (db) {
+export async function getItem(arg: string | { key: string }): Promise<string | null> {
+  const key = typeof arg === 'string' ? arg : arg.key;
+  const sqliteVal = await getFromSqlite({ key });
+  if (sqliteVal !== null) {
     backend = 'sqlite';
-    type SqlResult = { rows?: { length: number; _array?: Array<Record<string, unknown>> } };
-    const res = await execSql<SqlResult>(`SELECT value FROM ${TABLE_NAME} WHERE key = ?`, [key]);
-    const rows = res.rows;
-    if (!rows || rows.length === 0) return null;
-    return rows._array?.[0]?.value as string | null ?? null;
+    return sqliteVal;
   }
 
-  // Try AsyncStorage
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod: unknown = require('@react-native-async-storage/async-storage');
-    asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
-    if (asyncStorage?.getItem) {
-      backend = 'asyncstorage';
-      const asyncResult = await asyncStorage.getItem(key);
-      return asyncResult;
-    }
-  } catch (_) {
-    // ignore
+  const asVal = await getFromAsyncStorage({ key });
+  if (asVal !== null) {
+    backend = 'asyncstorage';
+    return asVal;
   }
 
+  return getFromMemory({ key });
+}
+
+async function getFromSqlite(opts: { key: string }): Promise<string | null> {
+  const { key } = opts;
+  quickSqliteInit();
+  await initSqliteIfNeeded();
+  if (!db) return null;
+  type SqlResult = { rows?: { length: number; _array?: Array<Record<string, unknown>> } };
+  const res = await execSql<SqlResult>(`SELECT value FROM ${TABLE_NAME} WHERE key = ?`, [key]);
+  const rows = res.rows;
+  if (!rows || rows.length === 0) return null;
+  return rows._array?.[0]?.value as string | null ?? null;
+}
+
+async function getFromAsyncStorage(opts: { key: string }): Promise<string | null> {
+  const { key } = opts;
+  const asModule = loadAsyncStorageOnce();
+  if (!asModule?.getItem) return null;
+  return await asModule.getItem(key);
+}
+
+function getFromMemory(opts: { key: string }): string | null {
+  const { key } = opts;
   backend = 'memory';
   const value = cache.get(key);
   return value === undefined ? null : value;
 }
 
-export async function removeItem(key: string): Promise<void> {
-  try {
-    // attempt quick init so we can remove from SQLite immediately
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const maybeSqlite: unknown = require('expo-sqlite');
-    const sqliteMod = maybeSqlite as ExpoSqliteModule;
-    if (sqliteMod && !db) {
-      const openSync = sqliteMod.openDatabaseSync;
-      const open = sqliteMod.openDatabase;
-      db = typeof openSync === 'function'
-        ? openSync(DB_NAME)
-        : (typeof open === 'function' ? open(DB_NAME) : null) as SqliteDB | null;
-    }
-  } catch (e) {
-    // ignore
-  }
-
+export async function removeItem(opts: { key: string }): Promise<void> {
+  const { key } = opts;
+  quickSqliteInit();
   await initSqliteIfNeeded();
   if (db) {
     backend = 'sqlite';
@@ -242,29 +181,23 @@ export async function removeItem(key: string): Promise<void> {
     return;
   }
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod: unknown = require('@react-native-async-storage/async-storage');
-    asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
-    if (asyncStorage?.removeItem) {
-      backend = 'asyncstorage';
-      await asyncStorage.removeItem(key);
-      return;
-    }
-  } catch (_) {
-    // ignore
+  const asModule = loadAsyncStorageOnce();
+  if (asModule?.removeItem) {
+    backend = 'asyncstorage';
+    await asModule.removeItem(key);
+    return;
   }
 
   backend = 'memory';
   cache.delete(key);
 }
 
-export function setItemSync(_key: string, _value: string): void {
-  cache.set(_key, _value);
+export function setItemSync(opts: { key: string; value: string }): void {
+  cache.set(opts.key, opts.value);
 }
 
-export function getItemSync(_key: string): string | null {
-  return cache.get(_key) ?? null;
+export function getItemSync(opts: { key: string }): string | null {
+  return cache.get(opts.key) ?? null;
 }
 
 /**

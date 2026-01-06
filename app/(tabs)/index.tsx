@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, Alert } from 'react-native';
 
 import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
 import { ThemedText } from '@/components/themed-text';
@@ -68,19 +68,21 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadHomeAirport();
+    let mounted = true;
+    (async () => {
+      try {
+        const saved = await storageService.getHomeAirport();
+        if (mounted) setHomeAirport(saved);
+      } catch (error) {
+        console.error('Failed to load home airport', error);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
-
-  async function loadHomeAirport() {
-    try {
-      const saved = await storageService.getHomeAirport();
-      setHomeAirport(saved);
-    } catch (error) {
-      console.error('Failed to load home airport', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   const handleSelectAirport = useCallback(
     async (airport: Airport) => {
@@ -97,6 +99,13 @@ export default function HomeScreen() {
         console.error('Failed to save home airport', error);
         // Revert optimistic update on error to keep UI consistent
         setHomeAirport(previousAirport ?? null);
+        // Show user-visible feedback about the failure
+        try {
+          const message = error instanceof Error ? error.message : String(error);
+          Alert.alert('Save failed', `Unable to save home airport. ${message}`);
+        } catch (e) {
+          // ignore any Alert errors
+        }
       }
     },
     [homeAirport]

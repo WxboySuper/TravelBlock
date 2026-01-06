@@ -10,12 +10,18 @@ import type { Airport } from '@/types/airport';
 interface AirportCardProps {
   airport: Airport;
   onEdit?: () => void;
+  onClear?: () => void;
   showEdit?: boolean;
 }
 
 const styles = StyleSheet.create({
   card: {
     padding: Spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
   },
   header: {
     flexDirection: 'row',
@@ -57,14 +63,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Spacing.md,
     borderTopWidth: 1,
+    marginTop: Spacing.md,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  clearButton: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+  },
+  clearButtonText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semibold,
   },
 });
 
-export function AirportCard({ airport, onEdit, showEdit = true }: AirportCardProps) {
+export function AirportCard({ airport, onEdit, onClear, showEdit = true }: AirportCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -140,18 +158,28 @@ export function AirportCard({ airport, onEdit, showEdit = true }: AirportCardPro
               fontSize: Typography.fontSize.sm,
               color: colors.textSecondary,
               marginLeft: Spacing.xs,
+              flex: 1,
             }}>
             {airport.city}, {airport.state || airport.country}
           </ThemedText>
+          {airport.elevation !== undefined && (
+            <ThemedText
+              style={{
+                fontSize: Typography.fontSize.xs,
+                color: colors.textTertiary,
+                marginRight: Spacing.md,
+              }}>
+              {airport.elevation} ft
+            </ThemedText>
+          )}
         </View>
-        {airport.elevation !== undefined && (
-          <ThemedText
-            style={{
-              fontSize: Typography.fontSize.xs,
-              color: colors.textTertiary,
-            }}>
-            {airport.elevation} ft
-          </ThemedText>
+        {onClear && (
+          <Pressable
+            onPress={onClear}
+            style={[styles.clearButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            hitSlop={8}>
+            <ThemedText style={[styles.clearButtonText, { color: colors.error }]}>Clear</ThemedText>
+          </Pressable>
         )}
       </View>
     </Card>

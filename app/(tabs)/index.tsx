@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { AirportCard } from '@/components/airport/AirportCard';
 import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
@@ -10,7 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { storageService } from '@/services/storageService';
+import { useHomeAirport } from '@/hooks/use-home-airport';
 import type { Airport } from '@/types/airport';
 
 const styles = StyleSheet.create({
@@ -28,49 +28,21 @@ const styles = StyleSheet.create({
 });
 
 export default function HomeScreen() {
-  const [homeAirport, setHomeAirport] = useState<Airport | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { homeAirport, isLoading, handleSelectAirport, handleClearHomeBase } = useHomeAirport();
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const saved = await storageService.getHomeAirport();
-        if (mounted) setHomeAirport(saved);
-      } catch (error) {
-        console.error('Failed to load home airport', error);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const handleSelectAirport = useCallback(
+  const handleSelect = useCallback(
     async (airport: Airport) => {
-      const previousAirport = homeAirport;
-      setHomeAirport(airport);
-
       try {
-        await storageService.saveHomeAirport(airport);
+        await handleSelectAirport(airport);
         setIsModalVisible(false);
-      } catch (error) {
-        console.error('Failed to save home airport', error);
-        setHomeAirport(previousAirport ?? null);
-        try {
-          const message = error instanceof Error ? error.message : String(error);
-          Alert.alert('Save failed', `Unable to save home airport. ${message}`);
-        } catch (e) {
-          // ignore any Alert errors
-        }
+      } catch {
+        // Error already handled in hook
       }
     },
-    [homeAirport]
+    [handleSelectAirport]
   );
 
   const openModal = useCallback(() => setIsModalVisible(true), []);
@@ -79,6 +51,7 @@ export default function HomeScreen() {
   if (isLoading) {
     return (
       <ThemedView style={styles.container}>
+        <StatusBar />
         <View style={styles.contentContainer}>
           <HomeHeader />
           <ThemedText
@@ -103,7 +76,7 @@ export default function HomeScreen() {
 
         <View style={styles.airportSection}>
           {homeAirport ? (
-            <AirportCard airport={homeAirport} onEdit={openModal} />
+            <AirportCard airport={homeAirport} onEdit={openModal} onClear={handleClearHomeBase} />
           ) : (
             <EmptyHomeBase onSelectAirport={openModal} />
           )}
@@ -113,7 +86,7 @@ export default function HomeScreen() {
       <SelectAirportModal
         visible={isModalVisible}
         onClose={closeModal}
-        onSelectAirport={handleSelectAirport}
+        onSelectAirport={handleSelect}
         title="Select Home Base"
       />
     </ThemedView>

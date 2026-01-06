@@ -1,10 +1,14 @@
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const styles = StyleSheet.create({
+  safeArea: {
+    paddingTop: 0,
+  },
   container: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
@@ -29,7 +33,8 @@ export function StatusBar() {
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+      <View style={styles.container}>
       <View style={styles.left}>
         <View style={[styles.dot, { backgroundColor: colors.success }]} />
         <ThemedText
@@ -48,6 +53,7 @@ export function StatusBar() {
         }}>
         v0.3.0
       </ThemedText>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }

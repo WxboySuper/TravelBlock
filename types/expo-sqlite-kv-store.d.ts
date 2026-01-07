@@ -13,13 +13,12 @@ declare module 'expo-sqlite/kv-store' {
     multiRemove(keys: string[]): Promise<void>;
     clear(): Promise<void>;
     getAllKeys(): Promise<string[]>;
-    // mergeItem supports both forms for flexibility
-    mergeItem(opts: { key: string; value: string }): Promise<void>;
-    mergeItem(key: string, value: string): Promise<void>;
+    // mergeItem supports both options-object and positional forms
+    mergeItem(arg: { key: string; value: string } | string, value?: string): Promise<void>;
 
     // Sync API (added by expo-sqlite/kv-store as convenience)
-    setItemSync(key: string, value: string): void;
-    getItemSync(key: string): string | null;
+    setItemSync(arg: { key: string; value: string } | string, value?: string): void;
+    getItemSync(arg: { key: string } | string): string | null;
   }
   // Named exports for convenience and compatibility with different import styles
   export function setItem(opts: { key: string; value: string }): Promise<void>;
@@ -30,15 +29,12 @@ declare module 'expo-sqlite/kv-store' {
   export function multiRemove(keys: string[]): Promise<void>;
   export function clear(): Promise<void>;
   export function getAllKeys(): Promise<string[]>;
-  // mergeItem supports both positional and options-object forms
-  export function mergeItem(opts: { key: string; value: string }): Promise<void>;
-  export function mergeItem(key: string, value: string): Promise<void>;
+  // mergeItem supports both options-object and positional forms
+  export function mergeItem(arg: { key: string; value: string } | string, value?: string): Promise<void>;
 
-  // Sync methods support both positional and options-object forms
-  export function setItemSync(opts: { key: string; value: string }): void;
-  export function setItemSync(key: string, value: string): void;
-  export function getItemSync(opts: { key: string }): string | null;
-  export function getItemSync(key: string): string | null;
+  // Sync methods accept either an options-object or positional args
+  export function setItemSync(arg: { key: string; value: string } | string, value?: string): void;
+  export function getItemSync(arg: { key: string } | string): string | null;
 
   declare const Storage: KVStorage;
   export default Storage;

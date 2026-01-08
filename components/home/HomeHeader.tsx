@@ -21,7 +21,7 @@ function getGreeting(): string {
   return 'Good Evening';
 }
 
-export function HomeHeader() {
+export function HomeHeader(): React.JSX.Element {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const greeting = getGreeting();

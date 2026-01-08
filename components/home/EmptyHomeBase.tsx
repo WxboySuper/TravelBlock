@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 
+import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -34,7 +34,7 @@ interface EmptyHomeBaseProps {
   onSelectAirport: () => void;
 }
 
-export function EmptyHomeBase({ onSelectAirport }: EmptyHomeBaseProps) {
+export function EmptyHomeBase({ onSelectAirport }: EmptyHomeBaseProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 

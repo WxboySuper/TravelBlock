@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { APP_VERSION } from '@/constants/app';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -28,7 +29,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export function StatusBar() {
+export function StatusBar(): React.JSX.Element {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -53,7 +54,7 @@ export function StatusBar() {
           fontSize: Typography.fontSize.xs,
           color: colors.textTertiary,
         }}>
-        v0.3.0
+        {`v${APP_VERSION}`}
       </ThemedText>
       </View>
     </SafeAreaView>

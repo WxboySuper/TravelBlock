@@ -213,6 +213,11 @@ export function getItemSync(opts: { key: string }): string | null {
  */
 export async function initStore(): Promise<void> {
   await initSqliteIfNeeded();
+  // If SQLite is active we've already migrated the in-memory cache into DB
+  // inside initSqliteIfNeeded (via migrateCacheToDbIfNeeded). Only attempt
+  // to write entries into AsyncStorage if SQLite is NOT active.
+  if (db) return;
+
   // Ensure AsyncStorage is available so it's ready as a fallback
   const asModule = loadAsyncStorageOnce();
   if (asModule?.setItem) {

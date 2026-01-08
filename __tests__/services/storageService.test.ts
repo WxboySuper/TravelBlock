@@ -7,10 +7,9 @@ jest.mock('../../expo-sqlite/kv-store', () => ({
   removeItem: jest.fn(),
 }), { virtual: true });
 
-import { setItem, getItem, removeItem } from '../../expo-sqlite/kv-store';
+import { getItem, removeItem, setItem } from '../../expo-sqlite/kv-store';
 import { storageService } from '../../services/storageService';
 import { StorageKey } from '../../types/storage';
-import type { Airport } from '../../types/airport';
 
 describe('storageService', () => {
   const mockAirport = {
@@ -83,7 +82,7 @@ describe('storageService', () => {
   });
 
   describe('clearHomeAirport', () => {
-    it('should remove the airport from AsyncStorage', async () => {
+    it('should remove the airport from storage', async () => {
       await storageService.clearHomeAirport();
       expect(removeItem).toHaveBeenCalledWith({ key: StorageKey.HOME_AIRPORT });
     });

@@ -2,10 +2,13 @@ import type { Airport } from '../types/airport';
 import { StorageKey } from '../types/storage';
 // Use Expo's SQLite-based KV store. The package exposes the same simple
 // get/set/remove primitives we need via the `expo-sqlite/kv-store` entrypoint.
-import { setItem, getItem, removeItem } from '../expo-sqlite/kv-store';
+import { getItem, removeItem, setItem } from '../expo-sqlite/kv-store';
 
 /**
- * Service for local data persistence using AsyncStorage.
+ * Service for local data persistence using `expo-sqlite/kv-store`.
+ *
+ * Primary backend: SQLite (via expo-sqlite/kv-store). AsyncStorage and an
+ * in-memory Map are used as fallbacks when SQLite is unavailable.
  */
 export const storageService = {
   /**

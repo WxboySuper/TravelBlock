@@ -6,12 +6,12 @@ import type { Coordinates } from '@/utils/distance';
 import { calculateDistance, calculateDistanceKm } from '@/utils/distance';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AirportListItem } from './AirportListItem';
@@ -240,12 +240,12 @@ type ModalHeaderProps = {
  * @param closeTestID - Test identifier for the close button (default 'modal-close-button')
  * @returns The header React element containing the title and close button
  */
-export function ModalHeader({ title, onClose, closeTestID = 'modal-close-button' }: ModalHeaderProps): ReactElement {
+export function ModalHeader({ title, onClose, closeTestID = 'modal-close-button' }: ModalHeaderProps): React.JSX.Element {
   const backgroundColor = useThemeColor({ light: '#fff', dark: '#1E293B' }, 'background');
-  const borderColor = useThemeColor({ light: '#E2E8F0', dark: '#334155' }, 'text');
-  
+  const borderBottomColor = useThemeColor({ light: '#E2E8F0', dark: '#334155' }, 'text');
+
   return (
-    <View style={[styles.headerContainer, { backgroundColor, borderBottomColor: borderColor }]}>
+    <View style={[styles.headerContainer, { backgroundColor, borderBottomColor }]}>
       <ThemedText type="title" style={styles.headerTitle}>
         {title}
       </ThemedText>

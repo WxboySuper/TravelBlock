@@ -35,7 +35,7 @@ export default function RootLayout() {
       }
     }
 
-    void startup();
+    startup();
   }, []);
 
   return (

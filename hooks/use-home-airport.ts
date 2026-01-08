@@ -33,8 +33,11 @@ export function useHomeAirport() {
 
   const handleSelectAirport = useCallback(
     async (airport: Airport) => {
-      const previousAirport = homeAirport;
-      setHomeAirport(airport);
+      let previousAirport: Airport | null = null;
+      setHomeAirport((prev) => {
+        previousAirport = prev;
+        return airport;
+      });
 
       try {
         await storageService.saveHomeAirport(airport);
@@ -45,12 +48,15 @@ export function useHomeAirport() {
         throw error;
       }
     },
-    [homeAirport, setHomeAirport]
+    [setHomeAirport]
   );
 
   const handleClearHomeBase = useCallback(async () => {
-    const previousAirport = homeAirport;
-    setHomeAirport(null);
+    let previousAirport: Airport | null = null;
+    setHomeAirport((prev) => {
+      previousAirport = prev;
+      return null;
+    });
 
     try {
       await storageService.clearHomeAirport();
@@ -60,7 +66,7 @@ export function useHomeAirport() {
       Alert.alert('Clear failed', 'Unable to clear home airport');
       throw error;
     }
-  }, [homeAirport, setHomeAirport]);
+  }, [setHomeAirport]);
 
   return {
     homeAirport,

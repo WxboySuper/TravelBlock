@@ -9,8 +9,12 @@ import { createTableIfNeeded, migrateCacheToDbIfNeeded, performSqliteInit, Sqlit
 
 let db: SqliteDB | null = null;
 let initPromise: Promise<void> | null = null;
-// Track which backend is currently being used (for diagnostics).
-let backend: 'sqlite' | 'asyncstorage' | 'memory' | 'unknown' = 'unknown';
+// Track backend state: `writeBackend` reflects the active persistent
+// write backend (used by `getActiveBackend`). `lastOperationBackend`
+// reflects the backend used by the most recent operation (reads or writes)
+// for per-operation diagnostics. Reads must not mutate `writeBackend`.
+let lastOperationBackend: 'sqlite' | 'asyncstorage' | 'memory' | 'unknown' = 'unknown';
+let writeBackend: 'sqlite' | 'asyncstorage' | 'memory' | 'unknown' = 'unknown';
 
 // In-memory fallback cache used until SQLite is initialized or when unavailable.
 const cache = new Map<string, string>();
@@ -115,7 +119,7 @@ export async function setItem(opts: { key: string; value: string }): Promise<voi
   quickSqliteInit();
   await initSqliteIfNeeded();
   if (db) {
-    backend = 'sqlite';
+    writeBackend = 'sqlite';
     await execSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [key, value]);
     // keep in-memory cache in sync with persistent write so synchronous reads succeed
     cache.set(key, value);
@@ -125,12 +129,12 @@ export async function setItem(opts: { key: string; value: string }): Promise<voi
   // Try AsyncStorage as a persistent fallback
   const asModule = loadAsyncStorageOnce();
   if (asModule?.setItem) {
-    backend = 'asyncstorage';
+    writeBackend = 'asyncstorage';
     await asModule.setItem(key, value);
     return;
   }
 
-  backend = 'memory';
+  writeBackend = 'memory';
   cache.set(key, value);
 }
 
@@ -138,13 +142,13 @@ export async function getItem(arg: string | { key: string }): Promise<string | n
   const key = typeof arg === 'string' ? arg : arg.key;
   const sqliteVal = await getFromSqlite({ key });
   if (sqliteVal !== null) {
-    backend = 'sqlite';
+    lastOperationBackend = 'sqlite';
     return sqliteVal;
   }
 
   const asVal = await getFromAsyncStorage({ key });
   if (asVal !== null) {
-    backend = 'asyncstorage';
+    lastOperationBackend = 'asyncstorage';
     return asVal;
   }
 
@@ -172,7 +176,7 @@ async function getFromAsyncStorage(opts: { key: string }): Promise<string | null
 
 function getFromMemory(opts: { key: string }): string | null {
   const { key } = opts;
-  backend = 'memory';
+  lastOperationBackend = 'memory';
   const value = cache.get(key);
   return value === undefined ? null : value;
 }
@@ -182,7 +186,7 @@ export async function removeItem(opts: { key: string }): Promise<void> {
   quickSqliteInit();
   await initSqliteIfNeeded();
   if (db) {
-    backend = 'sqlite';
+    writeBackend = 'sqlite';
     await execSql(`DELETE FROM ${TABLE_NAME} WHERE key = ?`, [key]);
     // evict from cache after successful DB deletion
     cache.delete(key);
@@ -191,24 +195,36 @@ export async function removeItem(opts: { key: string }): Promise<void> {
 
   const asModule = loadAsyncStorageOnce();
   if (asModule?.removeItem) {
-    backend = 'asyncstorage';
+    writeBackend = 'asyncstorage';
     await asModule.removeItem(key);
     // ensure cache cleared even when using AsyncStorage backend
     cache.delete(key);
     return;
   }
 
-  backend = 'memory';
+  writeBackend = 'memory';
   cache.delete(key);
 }
 
 export function setItemSync(opts: { key: string; value: string }): void {
   cache.set(opts.key, opts.value);
-  // Schedule background write to SQLite if available
+  // Schedule background write to persistent storage if available.
+  // Prefer SQLite when available, otherwise fall back to AsyncStorage.
+  const asModule = loadAsyncStorageOnce();
   if (db) {
+    writeBackend = 'sqlite';
     execSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [opts.key, opts.value]).catch((err) => {
+      // eslint-disable-next-line no-console
       console.warn('setItemSync: background write to SQLite failed', err);
     });
+  } else if (asModule?.setItem) {
+    writeBackend = 'asyncstorage';
+    asModule.setItem(opts.key, opts.value).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('setItemSync: background write to AsyncStorage failed', err);
+    });
+  } else {
+    writeBackend = 'memory';
   }
 }
 
@@ -324,7 +340,12 @@ export async function initStore(): Promise<void> {
 
 // Expose which backend is active for diagnostics or tests.
 export function getActiveBackend(): 'sqlite' | 'asyncstorage' | 'memory' | 'unknown' {
-  return backend;
+  return writeBackend;
+}
+
+// Return the backend used by the most recent operation (read or write).
+export function getLastOperationBackend(): 'sqlite' | 'asyncstorage' | 'memory' | 'unknown' {
+  return lastOperationBackend;
 }
 
 export default {
@@ -333,4 +354,7 @@ export default {
   removeItem,
   setItemSync,
   getItemSync,
+  mergeItem,
+  initStore,
+  getActiveBackend,
 };

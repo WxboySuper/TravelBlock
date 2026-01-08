@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, View, ViewProps } from 'react-native';
+import { StyleSheet, View, ViewProps, StyleProp, ViewStyle } from 'react-native';
 
 import { BorderRadius, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -21,19 +21,33 @@ export function Card({ style, variant = 'default', children, testID, ...props }:
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const combinedStyles = useMemo(() => {
-    const base = [styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }];
+  const combinedStyles = useMemo<StyleProp<ViewStyle>>(() => {
+    const base: StyleProp<ViewStyle>[] = [
+      styles.card,
+      ({ backgroundColor: colors.cardBackground, borderColor: colors.cardBorder } as ViewStyle),
+    ];
+
     if (variant === 'elevated') {
-      base.push({
+      // The dynamic elevated style uses runtime color tokens; cast to ViewStyle
+      // to satisfy TypeScript while avoiding broad `any` usage.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const elevatedStyle = ({
         shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 1,
         shadowRadius: 8,
         elevation: 2,
-      } as any);
+      } as ViewStyle);
+      base.push(elevatedStyle);
     }
-    if (style) base.push(style as any);
-    return base;
+
+    if (style) {
+      // style may be a number, object, or array; treat as StyleProp<ViewStyle>
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      base.push(style as StyleProp<ViewStyle>);
+    }
+
+    return (base as unknown) as StyleProp<ViewStyle>;
   }, [variant, colors, style]);
 
   return (

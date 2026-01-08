@@ -82,22 +82,26 @@ function execSql<T = unknown>(sql: string, params: unknown[] = []): Promise<T> {
 function initSqliteIfNeeded(): Promise<void> {
   if (db) return Promise.resolve();
   if (initPromise) return initPromise;
-
   initPromise = (async () => {
-      // Lazily require to avoid Metro/route-analysis errors when native modules
-      // are not available during bundling.
+    // Lazily require to avoid Metro/route-analysis errors when native modules
+    // are not available during bundling. Place the require inside the try
+    // so synchronous throws from native module loading are caught and
+    // cause initPromise to be cleared for retry.
+    try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const required: unknown = require('expo-sqlite');
-      try {
-        const opened = performSqliteInit(required as import('./sqlite-helpers').ExpoSqliteModule, DB_NAME);
-        if (opened) {
-          db = opened;
-          await createTableIfNeeded(db, TABLE_NAME);
-          await migrateCacheToDbIfNeeded(db, Array.from(cache.entries()), TABLE_NAME);
-        }
-      } finally {
-        initPromise = null;
+      const opened = performSqliteInit(required as import('./sqlite-helpers').ExpoSqliteModule, DB_NAME);
+      if (opened) {
+        db = opened;
+        await createTableIfNeeded(db, TABLE_NAME);
+        await migrateCacheToDbIfNeeded(db, Array.from(cache.entries()), TABLE_NAME);
       }
+      // leave initPromise set on success so callers can await the same promise
+    } catch (err) {
+      // clear initPromise on failure so future callers can retry
+      initPromise = null;
+      throw err;
+    }
   })();
 
   return initPromise;
@@ -113,6 +117,8 @@ export async function setItem(opts: { key: string; value: string }): Promise<voi
   if (db) {
     backend = 'sqlite';
     await execSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [key, value]);
+    // keep in-memory cache in sync with persistent write so synchronous reads succeed
+    cache.set(key, value);
     return;
   }
 
@@ -178,6 +184,8 @@ export async function removeItem(opts: { key: string }): Promise<void> {
   if (db) {
     backend = 'sqlite';
     await execSql(`DELETE FROM ${TABLE_NAME} WHERE key = ?`, [key]);
+    // evict from cache after successful DB deletion
+    cache.delete(key);
     return;
   }
 
@@ -185,6 +193,8 @@ export async function removeItem(opts: { key: string }): Promise<void> {
   if (asModule?.removeItem) {
     backend = 'asyncstorage';
     await asModule.removeItem(key);
+    // ensure cache cleared even when using AsyncStorage backend
+    cache.delete(key);
     return;
   }
 
@@ -204,6 +214,80 @@ export function setItemSync(opts: { key: string; value: string }): void {
 
 export function getItemSync(opts: { key: string }): string | null {
   return cache.get(opts.key) ?? null;
+}
+
+// mergeItem: accepts either (key, value) or ({ key, value })
+// Helper: normalize arguments into { key, incoming }
+function normalizeMergeArgs(arg: string | { key: string; value: string }, value?: string): { key: string; incoming?: string } {
+  if (typeof arg === 'string') {
+    // Only return incoming when the caller provided a valid second parameter.
+    if (typeof value === 'string') {
+      return { key: arg, incoming: value };
+    }
+    return { key: arg };
+  }
+  return { key: arg.key, incoming: arg.value };
+}
+
+// Helper: safely parse JSON returning null on failure
+function tryParseJson(s: string | null): unknown {
+  if (s === null) return null;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+// Helper: identify plain (non-null, non-array) objects at runtime
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v);
+}
+
+// Helper: merge two JSON-parsable objects shallowly; returns merged JSON string or null if not mergeable
+function shallowMergeJsonStrings(existing: string | null, incoming: string): string | null {
+  const existingObj = tryParseJson(existing);
+  const incomingObj = tryParseJson(incoming);
+  if (isPlainObject(existingObj) && isPlainObject(incomingObj)) {
+    const merged = Object.assign({}, existingObj, incomingObj);
+    return JSON.stringify(merged);
+  }
+  return null;
+}
+
+export async function mergeItem(arg: string | { key: string; value: string }, value?: string): Promise<void> {
+  const { key, incoming } = normalizeMergeArgs(arg, value);
+  if (!key || typeof incoming !== 'string') {
+    throw new TypeError('mergeItem requires a key and a string value');
+  }
+
+  // Attempt to merge when possible; otherwise replace the value
+  try {
+    const existing = await getItem({ key });
+    const merged = shallowMergeJsonStrings(existing, incoming);
+    const toStore = merged ?? incoming;
+    await setItem({ key, value: toStore });
+  } catch (err) {
+    // On merge error: log the original error, then attempt a fallback
+    // replace. If the fallback write fails, log both errors and rethrow
+    // so callers can observe the failure.
+    // eslint-disable-next-line no-console
+    console.error('mergeItem: merge failed, attempting replacement', { key, err });
+    try {
+      await setItem({ key, value: incoming });
+      // replacement succeeded; return normally
+      return;
+    } catch (fallbackErr) {
+      // eslint-disable-next-line no-console
+      console.error('mergeItem: fallback setItem failed', { key, err, fallbackErr });
+      // Throw an aggregated error so callers are aware of both failures
+      throw new Error(
+        `mergeItem failed for key ${key}: merge error: ${String(err)}; fallback setItem error: ${String(
+          fallbackErr
+        )}`
+      );
+    }
+  }
 }
 
 /**

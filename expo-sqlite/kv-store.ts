@@ -120,6 +120,7 @@ export async function setItem(opts: { key: string; value: string }): Promise<voi
   await initSqliteIfNeeded();
   if (db) {
     writeBackend = 'sqlite';
+    lastOperationBackend = 'sqlite';
     await execSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [key, value]);
     // keep in-memory cache in sync with persistent write so synchronous reads succeed
     cache.set(key, value);
@@ -130,11 +131,13 @@ export async function setItem(opts: { key: string; value: string }): Promise<voi
   const asModule = loadAsyncStorageOnce();
   if (asModule?.setItem) {
     writeBackend = 'asyncstorage';
+    lastOperationBackend = 'asyncstorage';
     await asModule.setItem(key, value);
     return;
   }
 
   writeBackend = 'memory';
+  lastOperationBackend = 'memory';
   cache.set(key, value);
 }
 
@@ -187,6 +190,7 @@ export async function removeItem(opts: { key: string }): Promise<void> {
   await initSqliteIfNeeded();
   if (db) {
     writeBackend = 'sqlite';
+    lastOperationBackend = 'sqlite';
     await execSql(`DELETE FROM ${TABLE_NAME} WHERE key = ?`, [key]);
     // evict from cache after successful DB deletion
     cache.delete(key);
@@ -196,6 +200,7 @@ export async function removeItem(opts: { key: string }): Promise<void> {
   const asModule = loadAsyncStorageOnce();
   if (asModule?.removeItem) {
     writeBackend = 'asyncstorage';
+    lastOperationBackend = 'asyncstorage';
     await asModule.removeItem(key);
     // ensure cache cleared even when using AsyncStorage backend
     cache.delete(key);
@@ -203,28 +208,35 @@ export async function removeItem(opts: { key: string }): Promise<void> {
   }
 
   writeBackend = 'memory';
+  lastOperationBackend = 'memory';
   cache.delete(key);
 }
 
 export function setItemSync(opts: { key: string; value: string }): void {
+  // Attempt a quick SQLite init so the sync-path can opportunistically
+  // write to SQLite if available. No await here — just trigger the init.
+  quickSqliteInit();
   cache.set(opts.key, opts.value);
   // Schedule background write to persistent storage if available.
   // Prefer SQLite when available, otherwise fall back to AsyncStorage.
   const asModule = loadAsyncStorageOnce();
   if (db) {
     writeBackend = 'sqlite';
+    lastOperationBackend = 'sqlite';
     execSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [opts.key, opts.value]).catch((err) => {
       // eslint-disable-next-line no-console
       console.warn('setItemSync: background write to SQLite failed', err);
     });
   } else if (asModule?.setItem) {
     writeBackend = 'asyncstorage';
+    lastOperationBackend = 'asyncstorage';
     asModule.setItem(opts.key, opts.value).catch((err) => {
       // eslint-disable-next-line no-console
       console.warn('setItemSync: background write to AsyncStorage failed', err);
     });
   } else {
     writeBackend = 'memory';
+    lastOperationBackend = 'memory';
   }
 }
 

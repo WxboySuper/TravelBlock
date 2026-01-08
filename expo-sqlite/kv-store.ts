@@ -115,8 +115,6 @@ function initSqliteIfNeeded(): Promise<void> {
 
 export async function setItem(opts: { key: string; value: string }): Promise<void> {
   const { key, value } = opts;
-  // Try a quick init path so we attempt to use SQLite immediately when possible
-  quickSqliteInit();
   await initSqliteIfNeeded();
   if (db) {
     writeBackend = 'sqlite';
@@ -133,6 +131,8 @@ export async function setItem(opts: { key: string; value: string }): Promise<voi
     writeBackend = 'asyncstorage';
     lastOperationBackend = 'asyncstorage';
     await asModule.setItem(key, value);
+    // ensure synchronous reads observe the newly-written value
+    cache.set(key, value);
     return;
   }
 

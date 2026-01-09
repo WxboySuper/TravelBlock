@@ -241,7 +241,9 @@ export function setItemSync(opts: { key: string; value: string }): void {
 }
 
 export function getItemSync(opts: { key: string }): string | null {
-  return cache.get(opts.key) ?? null;
+  const value = cache.get(opts.key);
+  lastOperationBackend = 'memory';
+  return value ?? null;
 }
 
 // mergeItem: accepts either (key, value) or ({ key, value })
@@ -369,4 +371,5 @@ export default {
   mergeItem,
   initStore,
   getActiveBackend,
+  getLastOperationBackend,
 };

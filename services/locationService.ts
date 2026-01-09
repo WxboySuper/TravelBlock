@@ -12,7 +12,12 @@
  * @module services/locationService
  */
 
-import * as Location from 'expo-location';
+import {
+  requestForegroundPermissionsAsync,
+  getForegroundPermissionsAsync,
+  getCurrentPositionAsync,
+  Accuracy,
+} from 'expo-location';
 import type { Airport } from '../types/airport';
 import type { Coordinates } from '../types/location';
 import { loadAirports } from './airportService';
@@ -42,7 +47,7 @@ import { calculateDistance } from '../utils/distance';
  */
 export async function requestLocationPermission(): Promise<boolean> {
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
+    const { status } = await requestForegroundPermissionsAsync();
     return status === 'granted';
   } catch (error) {
     console.error('Error requesting location permission:', error);
@@ -69,7 +74,7 @@ export async function requestLocationPermission(): Promise<boolean> {
  */
 export async function hasLocationPermission(): Promise<boolean> {
   try {
-    const { status } = await Location.getForegroundPermissionsAsync();
+    const { status } = await getForegroundPermissionsAsync();
     return status === 'granted';
   } catch (error) {
     console.error('Error checking location permission:', error);
@@ -108,8 +113,8 @@ export async function getCurrentLocation(): Promise<Coordinates | null> {
     }
 
     // Get current position with reasonable accuracy
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
+    const location = await getCurrentPositionAsync({
+      accuracy: Accuracy.Balanced,
     });
 
     return {

@@ -25,7 +25,12 @@ jest.mock('../../services/airportService', () => ({
   loadAirports: jest.fn(),
 }));
 
-import * as Location from 'expo-location';
+import {
+  requestForegroundPermissionsAsync,
+  getForegroundPermissionsAsync,
+  getCurrentPositionAsync,
+  Accuracy,
+} from 'expo-location';
 import {
   requestLocationPermission,
   hasLocationPermission,
@@ -35,6 +40,14 @@ import {
 import { loadAirports } from '../../services/airportService';
 import type { Airport } from '../../types/airport';
 import type { Coordinates } from '../../types/location';
+
+// Provide a `Location` object for backwards-compatible test references
+const Location = {
+  requestForegroundPermissionsAsync,
+  getForegroundPermissionsAsync,
+  getCurrentPositionAsync,
+  Accuracy,
+};
 
 describe('Location Service', () => {
   // Mock airports for testing
@@ -393,9 +406,10 @@ describe('Location Service', () => {
       });
       const location = await getCurrentLocation();
       expect(location).toBeDefined();
+      if (!location) throw new Error('Expected location to be defined');
 
       // Step 3: Find nearest airport
-      const nearest = await getNearestAirport(location!);
+      const nearest = await getNearestAirport(location);
       expect(nearest).toBeDefined();
       expect(nearest?.icao).toBe('KJFK');
     });

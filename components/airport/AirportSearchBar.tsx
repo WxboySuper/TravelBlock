@@ -1,36 +1,33 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { Colors, BorderRadius, Spacing, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCallback } from 'react';
-import {
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  type TextInputProps,
-} from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, type TextInputProps } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
   },
   input: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    fontSize: 16,
-    minHeight: 40,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    fontSize: Typography.fontSize.base,
+    minHeight: 48,
+    borderWidth: 1,
   },
   clearButton: {
-    padding: 4,
+    padding: Spacing.sm,
   },
   clearButtonText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '300',
   },
 });
 
@@ -57,24 +54,15 @@ export interface AirportSearchBarProps extends Omit<TextInputProps, 'value'> {
  * @param props - Additional TextInput props forwarded to the underlying TextInput
  * @returns A React element representing the airport search bar
  */
-export function AirportSearchBar({  value,
+export function AirportSearchBar({
+  value,
   onChangeText,
   onClear,
   placeholder = 'Search airports...',
   ...props
 }: AirportSearchBarProps) {
-  const inputBackgroundColor = useThemeColor(
-    { light: '#f5f5f5', dark: '#333' },
-    'background'
-  );
-  const textColor = useThemeColor(
-    { light: '#000', dark: '#fff' },
-    'text'
-  );
-  const placeholderColor = useThemeColor(
-    { light: '#999', dark: '#666' },
-    'text'
-  );
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const handleClear = useCallback(() => {
     onChangeText('');
@@ -82,8 +70,9 @@ export function AirportSearchBar({  value,
   }, [onChangeText, onClear]);
 
   return (
-    <ThemedView style={styles.container} testID="airport-search-bar">{/* Search icon */}
-      <ThemedText type="defaultSemiBold">🔍</ThemedText>
+    <ThemedView style={styles.container} testID="airport-search-bar">
+      {/* Search icon */}
+      <ThemedText style={{ fontSize: Typography.fontSize.lg }}>🔍</ThemedText>
 
       {/* Search input */}
       <TextInput
@@ -91,12 +80,13 @@ export function AirportSearchBar({  value,
         style={[
           styles.input,
           {
-            backgroundColor: inputBackgroundColor,
-            color: textColor,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            borderColor: colors.border,
           },
         ]}
         placeholder={placeholder}
-        placeholderTextColor={placeholderColor}
+        placeholderTextColor={colors.textTertiary}
         value={value}
         onChangeText={onChangeText}
         clearButtonMode="never"
@@ -110,9 +100,8 @@ export function AirportSearchBar({  value,
           onPress={handleClear}
           testID="airport-search-clear"
           accessibilityLabel="Clear search"
-          accessibilityHint="Clears the search input"
-        >
-          <ThemedText style={styles.clearButtonText}>×</ThemedText>
+          accessibilityHint="Clears the search input">
+          <ThemedText style={[styles.clearButtonText, { color: colors.textTertiary }]}>×</ThemedText>
         </TouchableOpacity>
       )}
     </ThemedView>

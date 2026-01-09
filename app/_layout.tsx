@@ -4,7 +4,9 @@ import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { initStore } from '@/expo-sqlite/kv-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useEffect } from 'react';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -20,6 +22,21 @@ export const unstable_settings = {
  */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    // initialize persistent store early so native SQLite is ready before
+    // UI interactions that may save the home airport.
+    async function startup() {
+      try {
+        await initStore();
+      } catch (error) {
+        console.error('Failed to initialize persistent store', error);
+        // TODO: Consider surfacing a fallback UI if store init fails
+      }
+    }
+
+    startup();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

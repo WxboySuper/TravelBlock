@@ -6,12 +6,12 @@ import type { Coordinates } from '@/utils/distance';
 import { calculateDistance, calculateDistanceKm } from '@/utils/distance';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AirportListItem } from './AirportListItem';
@@ -34,18 +34,34 @@ type SelectAirportModalProps = {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 18 },
-  closeButton: { padding: 8 },
-  closeButtonText: { fontSize: 18 },
+  headerTitle: { 
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  closeButton: { 
+    padding: 8,
+    borderRadius: 8,
+  },
+  closeButtonText: { 
+    fontSize: 24,
+    fontWeight: '300',
+  },
   listContainer: { flex: 1 },
-  resultCountText: { paddingHorizontal: 16, paddingVertical: 6 },
+  resultCountText: { 
+    paddingHorizontal: 20, 
+    paddingVertical: 12,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 12 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
@@ -224,9 +240,12 @@ type ModalHeaderProps = {
  * @param closeTestID - Test identifier for the close button (default 'modal-close-button')
  * @returns The header React element containing the title and close button
  */
-export function ModalHeader({ title, onClose, closeTestID = 'modal-close-button' }: ModalHeaderProps): ReactElement {
+export function ModalHeader({ title, onClose, closeTestID = 'modal-close-button' }: ModalHeaderProps): React.JSX.Element {
+  const backgroundColor = useThemeColor({ light: '#fff', dark: '#1E293B' }, 'background');
+  const borderBottomColor = useThemeColor({ light: '#E2E8F0', dark: '#334155' }, 'text');
+
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, { backgroundColor, borderBottomColor }]}>
       <ThemedText type="title" style={styles.headerTitle}>
         {title}
       </ThemedText>

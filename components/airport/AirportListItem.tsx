@@ -1,50 +1,53 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { BorderRadius, Colors, Spacing, Typography } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { AirportWithDistance } from '@/types/airport';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useCallback } from 'react';
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  ViewProps,
-} from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ViewProps } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   touchable: {
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
   },
   contentRow: {
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 2,
+    marginBottom: Spacing.xs,
   },
   airportCode: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
   },
   distance: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
   },
   airportName: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    marginBottom: Spacing.xs,
   },
   secondaryInfo: {
-    fontSize: 13,
-    opacity: 0.7,
+    fontSize: Typography.fontSize.sm,
   },
 });
 
@@ -98,14 +101,13 @@ export interface AirportListItemProps extends ViewProps {
 export function AirportListItem({
   airport,
   onPress,
-  showDistance = airport.distance !== undefined,  distanceUnit = 'mi',
+  showDistance = airport.distance !== undefined,
+  distanceUnit = 'mi',
   style,
   ...props
 }: AirportListItemProps) {
-  const borderColor = useThemeColor(
-    { light: '#e0e0e0', dark: '#444' },
-    'text'
-  );
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const handlePress = useCallback(async () => {
     // Trigger haptic feedback on press
@@ -119,50 +121,45 @@ export function AirportListItem({
   }, [airport, onPress]);
 
   const { icao, iata, name, city, country, distance } = airport;
-  const distanceText = showDistance && distance !== undefined
-    ? `${distance.toFixed(1)} ${distanceUnit}`
-    : null;
+  const distanceText = showDistance && distance !== undefined ? `${distance.toFixed(1)} ${distanceUnit}` : null;
 
   return (
-    <ThemedView
+    <ThemedView 
       style={[
-        styles.container,
-        { borderBottomColor: borderColor },
-        style,
-      ]}
-      {...props}
-    >
+        styles.container, 
+        { 
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        }, 
+        style
+      ]} 
+      {...props}>
       <TouchableOpacity
         style={styles.touchable}
         onPress={handlePress}
         activeOpacity={0.6}
         testID={`airport-item-${icao}`}
         accessibilityLabel={`${name}, ${city}, ${country}`}
-        accessibilityHint={distanceText ? `Distance: ${distanceText}` : undefined}
-      >
+        accessibilityHint={distanceText ? `Distance: ${distanceText}` : undefined}>
         {/* Header row: ICAO code + distance */}
         <View style={styles.header}>
-          <ThemedText type="defaultSemiBold" style={styles.airportCode}>
+          <ThemedText style={[styles.airportCode, { color: colors.text }]}>
             {icao}
             {iata && ` · ${iata}`}
           </ThemedText>
           {distanceText && (
-            <ThemedText type="defaultSemiBold" style={styles.distance}>
-              {distanceText}
-            </ThemedText>
+            <ThemedText style={[styles.distance, { color: colors.textSecondary }]}>{distanceText}</ThemedText>
           )}
         </View>
 
         {/* Airport name */}
         <View style={styles.contentRow}>
-          <ThemedText type="defaultSemiBold" style={styles.airportName}>
-            {name}
-          </ThemedText>
+          <ThemedText style={[styles.airportName, { color: colors.text }]}>{name}</ThemedText>
         </View>
 
         {/* City and country */}
         <View style={styles.contentRow}>
-          <ThemedText style={styles.secondaryInfo}>
+          <ThemedText style={[styles.secondaryInfo, { color: colors.textSecondary }]}>
             {city}, {country}
           </ThemedText>
         </View>

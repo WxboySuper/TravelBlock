@@ -430,6 +430,11 @@ describe('Location Service', () => {
       expect(location).toBeNull();
 
       // Try to find nearest without coords - should fail
+      // Ensure the permission check inside getNearestAirport/getCurrentLocation
+      // also returns denied by providing a second mock for getForegroundPermissionsAsync
+      (Location.getForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({
+        status: 'denied',
+      });
       const nearest = await getNearestAirport();
       expect(nearest).toBeNull();
     });
@@ -463,11 +468,8 @@ describe('Location Service', () => {
 
       const result = await getCurrentLocation();
 
-      // Should return the coordinates even if NaN (error handling in distance calc)
-      expect(result).toEqual({
-        lat: NaN,
-        lon: -74.0060,
-      });
+      // Non-finite coordinates should be treated as unavailable
+      expect(result).toBeNull();
     });
 
     it('should handle permission status with unexpected value', async () => {

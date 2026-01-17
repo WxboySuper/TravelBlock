@@ -23,6 +23,66 @@ import type { Coordinates } from '../types/location';
 import { loadAirports } from './airportService';
 import { calculateDistance } from '../utils/distance';
 
+// Helper: validate a numeric coordinate is finite
+function isFiniteNumber(n: unknown): n is number {
+  return typeof n === 'number' && Number.isFinite(n);
+}
+
+// Helper: fetch current position and return validated coordinates or null
+async function fetchCurrentPositionSafe(): Promise<Coordinates | null> {
+  try {
+    const location = await getCurrentPositionAsync({ accuracy: Accuracy.Balanced });
+    const lat = location?.coords?.latitude;
+    const lon = location?.coords?.longitude;
+    if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
+      console.warn('fetchCurrentPositionSafe: non-finite coordinates received', {
+        hasLat: isFiniteNumber(lat),
+        hasLon: isFiniteNumber(lon),
+      });
+      return null;
+    }
+    return { lat, lon };
+  } catch (err) {
+    console.error('fetchCurrentPositionSafe: error fetching position', err);
+    return null;
+  }
+}
+
+// Helper: compute distance to an airport if both coordinates are valid, otherwise null
+function computeDistanceToAirport(search: Coordinates, airport: Airport): number | null {
+  const lat = airport.lat;
+  const lon = airport.lon;
+  if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
+    // eslint-disable-next-line no-console
+    console.warn('Skipping airport with invalid coordinates', airport);
+    return null;
+  }
+  const distance = calculateDistance(search, { lat, lon });
+  return Number.isFinite(distance) ? distance : null;
+}
+
+// Helper: find nearest airport for already-validated search coordinates
+async function findNearestAirportForCoordinates(searchCoords: Coordinates): Promise<Airport | null> {
+  const airports = await loadAirports();
+  const airportArray = Object.values(airports);
+  if (airportArray.length === 0) {
+    console.warn('No airports available in database');
+    return null;
+  }
+
+  let nearest: Airport | null = null;
+  let min = Infinity;
+  for (const airport of airportArray) {
+    const distance = computeDistanceToAirport(searchCoords, airport);
+    if (distance === null) continue;
+    if (distance < min) {
+      min = distance;
+      nearest = airport;
+    }
+  }
+  return nearest;
+}
+
 /**
  * Requests permission to access the device's location.
  *
@@ -105,22 +165,16 @@ export async function hasLocationPermission(): Promise<boolean> {
  */
 export async function getCurrentLocation(): Promise<Coordinates | null> {
   try {
-    // Check permission first
+    // Check permission first; bail out early if not granted
     const hasPermission = await hasLocationPermission();
     if (!hasPermission) {
       console.warn('Location permission not granted');
       return null;
     }
 
-    // Get current position with reasonable accuracy
-    const location = await getCurrentPositionAsync({
-      accuracy: Accuracy.Balanced,
-    });
-
-    return {
-      lat: location.coords.latitude,
-      lon: location.coords.longitude,
-    };
+    // Delegate to the safe fetch helper which performs validation and
+    // handles native errors.
+    return await fetchCurrentPositionSafe();
   } catch (error) {
     console.error('Error getting current location:', error);
     return null;
@@ -165,34 +219,14 @@ export async function getNearestAirport(
       return null;
     }
 
-    // Load airport data
-    const airports = await loadAirports();
-    const airportArray = Object.values(airports);
-
-    if (airportArray.length === 0) {
-      console.warn('No airports available in database');
+    // Validate provided/search coordinates are finite numbers.
+    if (!Number.isFinite(searchCoords.lat) || !Number.isFinite(searchCoords.lon)) {
+      console.warn('Invalid search coordinates for airport search', searchCoords);
       return null;
     }
 
-    // Find nearest airport by calculating distance to each
-    let nearestAirport: Airport | null = null;
-    let minDistance = Infinity;
-
-    for (const airport of airportArray) {
-      const airportCoords: Coordinates = {
-        lat: airport.lat,
-        lon: airport.lon,
-      };
-
-      const distance = calculateDistance(searchCoords, airportCoords);
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestAirport = airport;
-      }
-    }
-
-    return nearestAirport;
+    // Delegate airport loading and nearest selection to helper
+    return await findNearestAirportForCoordinates(searchCoords);
   } catch (error) {
     console.error('Error finding nearest airport:', error);
     return null;

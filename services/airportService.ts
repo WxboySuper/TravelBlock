@@ -18,7 +18,6 @@
 
 import { Airport, AirportData } from '../types/airport';
 import { Coordinates, calculateDistance } from '../utils/distance';
-import { computeScore } from './airportScoring';
 
 // Normalize strings for search: unicode decomposition without diacritics
 function normalizeForSearch(s: string): string {
@@ -161,7 +160,48 @@ export function searchAirports(query: string): Airport[] {
   const results: Array<{ airport: InternalAirport; score: number }> = [];
 
   for (const airport of airportArray) {
-    const score = computeScore(airport, searchTerm);
+    // Inline scoring logic to avoid function overhead and object allocation
+    // Original logic: computeScore -> getLcFields -> scoreIcao/Iata/Name/City
+    let score = 0;
+
+    // Score ICAO
+    const lcIcao = airport.__lcIcao;
+    if (lcIcao === searchTerm) {
+      score += 1000;
+    } else if (lcIcao.startsWith(searchTerm)) {
+      score += 500;
+    }
+
+    // Score IATA
+    const lcIata = airport.__lcIata;
+    if (lcIata) {
+      if (lcIata === searchTerm) {
+        score += 900;
+      } else if (lcIata.startsWith(searchTerm)) {
+        score += 450;
+      }
+    }
+
+    // Score Name
+    const lcName = airport.__lcName;
+    if (lcName) {
+      if (lcName.startsWith(searchTerm)) {
+        score += 300;
+      } else if (lcName.includes(searchTerm)) {
+        score += 100;
+      }
+    }
+
+    // Score City
+    const lcCity = airport.__lcCity;
+    if (lcCity) {
+      if (lcCity.startsWith(searchTerm)) {
+        score += 250;
+      } else if (lcCity.includes(searchTerm)) {
+        score += 80;
+      }
+    }
+
     if (score > 0) {
       results.push({ airport, score });
     }

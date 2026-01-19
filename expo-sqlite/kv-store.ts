@@ -337,7 +337,12 @@ export async function initStore(): Promise<void> {
   if (asModule?.setItem) {
     // migrate any existing cache into AsyncStorage to avoid data loss
     const successfulKeys: string[] = [];
-    for (const [k, v] of Array.from(cache.entries())) {
+    const keys = Array.from(cache.keys());
+    for (const k of keys) {
+      const v = cache.get(k);
+      if (v === undefined) {
+        continue;
+      }
       try {
         await asModule.setItem(k, v);
         successfulKeys.push(k);

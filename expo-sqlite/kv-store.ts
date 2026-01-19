@@ -2,10 +2,10 @@
 // Lazily initializes SQLite at runtime and migrates any in-memory cache
 // into SQLite once available. Uses a simple async API: setItem/getItem/removeItem.
 
+import { createTableIfNeeded, migrateCacheToDbIfNeeded, performSqliteInit, SqliteDB, SqliteTx, tryQuickSqliteInitSync } from './sqlite-helpers';
+
 const DB_NAME = 'travelblock.db';
 const TABLE_NAME = 'kv_store';
-
-import { createTableIfNeeded, migrateCacheToDbIfNeeded, performSqliteInit, SqliteDB, SqliteTx, tryQuickSqliteInitSync } from './sqlite-helpers';
 
 let db: SqliteDB | null = null;
 let initPromise: Promise<void> | null = null;
@@ -23,6 +23,7 @@ type AsyncStorageLike = {
   getItem?: (key: string) => Promise<string | null>;
   setItem?: (key: string, value: string) => Promise<void>;
   removeItem?: (key: string) => Promise<void>;
+  multiSet?: (keyValuePairs: string[][]) => Promise<void>;
 };
 
 // runtime reference to AsyncStorage (may be null)
@@ -40,7 +41,7 @@ function quickSqliteInit(): void {
 function loadAsyncStorageOnce(): AsyncStorageLike | null {
   if (asyncStorage) return asyncStorage;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+
     const mod: unknown = require('@react-native-async-storage/async-storage');
     asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
     return asyncStorage;
@@ -54,7 +55,7 @@ function loadAsyncStorageOnce(): AsyncStorageLike | null {
 function execSql<T = unknown>(sql: string, params: unknown[] = []): Promise<T> {
   if (!db || typeof db.transaction !== 'function') {
     if (db && typeof db.transaction !== 'function') {
-      // eslint-disable-next-line no-console
+
       console.warn('expo-sqlite: opened DB does not support transactions; falling back to in-memory cache');
       db = null;
     }
@@ -92,7 +93,7 @@ function initSqliteIfNeeded(): Promise<void> {
     // so synchronous throws from native module loading are caught and
     // cause initPromise to be cleared for retry.
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
       const required: unknown = require('expo-sqlite');
       const opened = performSqliteInit(required as import('./sqlite-helpers').ExpoSqliteModule, DB_NAME);
       if (opened) {
@@ -163,7 +164,7 @@ async function getFromSqlite(opts: { key: string }): Promise<string | null> {
   quickSqliteInit();
   await initSqliteIfNeeded();
   if (!db) return null;
-  type SqlResult = { rows?: { length: number; _array?: Array<Record<string, unknown>> } };
+  type SqlResult = { rows?: { length: number; _array?: Record<string, unknown>[] } };
   const res = await execSql<SqlResult>(`SELECT value FROM ${TABLE_NAME} WHERE key = ?`, [key]);
   const rows = res.rows;
   if (!rows || rows.length === 0) return null;
@@ -224,14 +225,14 @@ export function setItemSync(opts: { key: string; value: string }): void {
     writeBackend = 'sqlite';
     lastOperationBackend = 'sqlite';
     execSql(`INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?)`, [opts.key, opts.value]).catch((err) => {
-      // eslint-disable-next-line no-console
+
       console.warn('setItemSync: background write to SQLite failed', err);
     });
   } else if (asModule?.setItem) {
     writeBackend = 'asyncstorage';
     lastOperationBackend = 'asyncstorage';
     asModule.setItem(opts.key, opts.value).catch((err) => {
-      // eslint-disable-next-line no-console
+
       console.warn('setItemSync: background write to AsyncStorage failed', err);
     });
   } else {
@@ -301,14 +302,14 @@ export async function mergeItem(arg: string | { key: string; value: string }, va
     // On merge error: log the original error, then attempt a fallback
     // replace. If the fallback write fails, log both errors and rethrow
     // so callers can observe the failure.
-    // eslint-disable-next-line no-console
+
     console.error('mergeItem: merge failed, attempting replacement', { key, err });
     try {
       await setItem({ key, value: incoming });
       // replacement succeeded; return normally
       return;
     } catch (fallbackErr) {
-      // eslint-disable-next-line no-console
+
       console.error('mergeItem: fallback setItem failed', { key, err, fallbackErr });
       // Throw an aggregated error so callers are aware of both failures
       throw new Error(
@@ -336,6 +337,23 @@ export async function initStore(): Promise<void> {
   const asModule = loadAsyncStorageOnce();
   if (asModule?.setItem) {
     // migrate any existing cache into AsyncStorage to avoid data loss
+    // Prefer multiSet if available for batched I/O performance
+    if (asModule.multiSet) {
+      try {
+        const entries = Array.from(cache.entries());
+        if (entries.length > 0) {
+          await asModule.multiSet(entries);
+          for (const [k] of entries) {
+            cache.delete(k);
+          }
+        }
+        return;
+      } catch (err) {
+        console.warn('Failed to migrate cache using multiSet; falling back to individual setItem', err);
+        // Fall through to iterative approach
+      }
+    }
+
     const successfulKeys: string[] = [];
     for (const [k, v] of Array.from(cache.entries())) {
       try {

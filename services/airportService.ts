@@ -145,30 +145,36 @@ function stripInternal(internal: InternalAirport): Airport {
  * const heathrow = searchAirports("Heathrow");
  * ```
  */
-// Helper to compute score without object allocation or nested function calls
+// Helper: Score based on exact match or prefix match
+function scoreExactOrPrefix(text: string, term: string, exactPts: number, prefixPts: number): number {
+  if (text === term) return exactPts;
+  if (text.startsWith(term)) return prefixPts;
+  return 0;
+}
+
+// Helper: Score based on prefix match or substring match
+function scorePrefixOrContains(text: string, term: string, prefixPts: number, containsPts: number): number {
+  if (text.startsWith(term)) return prefixPts;
+  if (text.includes(term)) return containsPts;
+  return 0;
+}
+
+// Helper to compute score without object allocation
 function calculateRelevanceScore(airport: InternalAirport, searchTerm: string): number {
   let score = 0;
 
-  // Score ICAO
-  const lcIcao = airport.__lcIcao;
-  score += (lcIcao === searchTerm) ? 1000 : (lcIcao.startsWith(searchTerm) ? 500 : 0);
+  score += scoreExactOrPrefix(airport.__lcIcao, searchTerm, 1000, 500);
 
-  // Score IATA
-  const lcIata = airport.__lcIata;
-  if (lcIata) {
-    score += (lcIata === searchTerm) ? 900 : (lcIata.startsWith(searchTerm) ? 450 : 0);
+  if (airport.__lcIata) {
+    score += scoreExactOrPrefix(airport.__lcIata, searchTerm, 900, 450);
   }
 
-  // Score Name
-  const lcName = airport.__lcName;
-  if (lcName) {
-    score += lcName.startsWith(searchTerm) ? 300 : (lcName.includes(searchTerm) ? 100 : 0);
+  if (airport.__lcName) {
+    score += scorePrefixOrContains(airport.__lcName, searchTerm, 300, 100);
   }
 
-  // Score City
-  const lcCity = airport.__lcCity;
-  if (lcCity) {
-    score += lcCity.startsWith(searchTerm) ? 250 : (lcCity.includes(searchTerm) ? 80 : 0);
+  if (airport.__lcCity) {
+    score += scorePrefixOrContains(airport.__lcCity, searchTerm, 250, 80);
   }
 
   return score;

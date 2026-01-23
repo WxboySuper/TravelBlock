@@ -166,40 +166,24 @@ export function searchAirports(query: string): Airport[] {
 
     // Score ICAO
     const lcIcao = airport.__lcIcao;
-    if (lcIcao === searchTerm) {
-      score += 1000;
-    } else if (lcIcao.startsWith(searchTerm)) {
-      score += 500;
-    }
+    score += (lcIcao === searchTerm) ? 1000 : (lcIcao.startsWith(searchTerm) ? 500 : 0);
 
     // Score IATA
     const lcIata = airport.__lcIata;
     if (lcIata) {
-      if (lcIata === searchTerm) {
-        score += 900;
-      } else if (lcIata.startsWith(searchTerm)) {
-        score += 450;
-      }
+      score += (lcIata === searchTerm) ? 900 : (lcIata.startsWith(searchTerm) ? 450 : 0);
     }
 
     // Score Name
     const lcName = airport.__lcName;
     if (lcName) {
-      if (lcName.startsWith(searchTerm)) {
-        score += 300;
-      } else if (lcName.includes(searchTerm)) {
-        score += 100;
-      }
+      score += lcName.startsWith(searchTerm) ? 300 : (lcName.includes(searchTerm) ? 100 : 0);
     }
 
     // Score City
     const lcCity = airport.__lcCity;
     if (lcCity) {
-      if (lcCity.startsWith(searchTerm)) {
-        score += 250;
-      } else if (lcCity.includes(searchTerm)) {
-        score += 80;
-      }
+      score += lcCity.startsWith(searchTerm) ? 250 : (lcCity.includes(searchTerm) ? 80 : 0);
     }
 
     if (score > 0) {

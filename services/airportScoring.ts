@@ -66,21 +66,11 @@ function scoreCity(lcCity: string, searchTerm: string): number {
  */
 export function computeScore(airport: Airport, searchTerm: string): number {
   const normalizedSearch = searchTerm.toLowerCase();
-  const { lcIcao, lcIata, lcName, lcCity } = getLcFields(airport);
-  return scoreIcao(lcIcao, normalizedSearch) + scoreIata(lcIata, normalizedSearch) + scoreName(lcName, normalizedSearch) + scoreCity(lcCity, normalizedSearch);
-}
 
-/**
- * Provide lowercase canonical ICAO, IATA, name, and city fields for an airport, preferring precomputed `__lc*` values.
- *
- * @param airport - The airport object to extract fields from
- * @returns An object with `lcIcao`, `lcIata`, `lcName`, and `lcCity` — each a lowercase string taken from the corresponding `__lc*` field when it is a string, or derived from the airport's `icao`, `iata`, `name`, or `city` property coerced to string and lowercased otherwise.
- */
-function getLcFields(airport: Airport) {
   const lcIcao = typeof airport.__lcIcao === 'string' ? airport.__lcIcao : String(airport.icao ?? '').toLowerCase();
   const lcIata = typeof airport.__lcIata === 'string' ? airport.__lcIata : String(airport.iata ?? '').toLowerCase();
   const lcName = typeof airport.__lcName === 'string' ? airport.__lcName : String(airport.name ?? '').toLowerCase();
   const lcCity = typeof airport.__lcCity === 'string' ? airport.__lcCity : String(airport.city ?? '').toLowerCase();
 
-  return { lcIcao, lcIata, lcName, lcCity };
+  return scoreIcao(lcIcao, normalizedSearch) + scoreIata(lcIata, normalizedSearch) + scoreName(lcName, normalizedSearch) + scoreCity(lcCity, normalizedSearch);
 }

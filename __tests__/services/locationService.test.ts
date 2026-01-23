@@ -240,7 +240,7 @@ describe('Location Service', () => {
       const result = await getCurrentLocation();
 
       expect(result).toBeNull();
-      expect(console.error).toHaveBeenCalledWith('Error getting current location:', error);
+      expect(console.error).toHaveBeenCalledWith('fetchCurrentPositionSafe: error fetching position', error);
     });
 
     it('should handle permission check errors', async () => {

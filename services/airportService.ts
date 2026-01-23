@@ -145,6 +145,35 @@ function stripInternal(internal: InternalAirport): Airport {
  * const heathrow = searchAirports("Heathrow");
  * ```
  */
+// Helper to compute score without object allocation or nested function calls
+function calculateRelevanceScore(airport: InternalAirport, searchTerm: string): number {
+  let score = 0;
+
+  // Score ICAO
+  const lcIcao = airport.__lcIcao;
+  score += (lcIcao === searchTerm) ? 1000 : (lcIcao.startsWith(searchTerm) ? 500 : 0);
+
+  // Score IATA
+  const lcIata = airport.__lcIata;
+  if (lcIata) {
+    score += (lcIata === searchTerm) ? 900 : (lcIata.startsWith(searchTerm) ? 450 : 0);
+  }
+
+  // Score Name
+  const lcName = airport.__lcName;
+  if (lcName) {
+    score += lcName.startsWith(searchTerm) ? 300 : (lcName.includes(searchTerm) ? 100 : 0);
+  }
+
+  // Score City
+  const lcCity = airport.__lcCity;
+  if (lcCity) {
+    score += lcCity.startsWith(searchTerm) ? 250 : (lcCity.includes(searchTerm) ? 80 : 0);
+  }
+
+  return score;
+}
+
 export function searchAirports(query: string): Airport[] {
   if (!airportArray) {
     // Return empty array if data not loaded
@@ -160,32 +189,7 @@ export function searchAirports(query: string): Airport[] {
   const results: Array<{ airport: InternalAirport; score: number }> = [];
 
   for (const airport of airportArray) {
-    // Inline scoring logic to avoid function overhead and object allocation
-    // Original logic: computeScore -> getLcFields -> scoreIcao/Iata/Name/City
-    let score = 0;
-
-    // Score ICAO
-    const lcIcao = airport.__lcIcao;
-    score += (lcIcao === searchTerm) ? 1000 : (lcIcao.startsWith(searchTerm) ? 500 : 0);
-
-    // Score IATA
-    const lcIata = airport.__lcIata;
-    if (lcIata) {
-      score += (lcIata === searchTerm) ? 900 : (lcIata.startsWith(searchTerm) ? 450 : 0);
-    }
-
-    // Score Name
-    const lcName = airport.__lcName;
-    if (lcName) {
-      score += lcName.startsWith(searchTerm) ? 300 : (lcName.includes(searchTerm) ? 100 : 0);
-    }
-
-    // Score City
-    const lcCity = airport.__lcCity;
-    if (lcCity) {
-      score += lcCity.startsWith(searchTerm) ? 250 : (lcCity.includes(searchTerm) ? 80 : 0);
-    }
-
+    const score = calculateRelevanceScore(airport, searchTerm);
     if (score > 0) {
       results.push({ airport, score });
     }

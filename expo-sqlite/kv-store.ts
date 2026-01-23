@@ -98,7 +98,7 @@ function initSqliteIfNeeded(): Promise<void> {
       if (opened) {
         db = opened;
         await createTableIfNeeded(db, TABLE_NAME);
-        await migrateCacheToDbIfNeeded(db, Array.from(cache.entries()), TABLE_NAME);
+        await migrateCacheToDbIfNeeded(db, cache, TABLE_NAME);
       }
       // leave initPromise set on success so callers can await the same promise
     } catch (err) {

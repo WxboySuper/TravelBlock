@@ -84,3 +84,28 @@ function getLcFields(airport: Airport) {
 
   return { lcIcao, lcIata, lcName, lcCity };
 }
+
+/**
+ * Interface representing an airport with precomputed lowercase fields for optimized search.
+ * This matches the internal structure used in airportService.
+ */
+export interface PrecomputedAirport {
+  __lcIcao: string;
+  __lcIata: string;
+  __lcName: string;
+  __lcCity: string;
+}
+
+/**
+ * Optimized scoring function that uses precomputed fields to avoid allocation.
+ *
+ * @param airport - The airport object with precomputed __lc fields
+ * @param normalizedSearch - The search term, already normalized to lowercase
+ * @returns Numeric relevance score
+ */
+export function computeScoreOptimized(airport: PrecomputedAirport, normalizedSearch: string): number {
+  return scoreIcao(airport.__lcIcao, normalizedSearch) +
+         scoreIata(airport.__lcIata, normalizedSearch) +
+         scoreName(airport.__lcName, normalizedSearch) +
+         scoreCity(airport.__lcCity, normalizedSearch);
+}

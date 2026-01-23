@@ -16,7 +16,7 @@ describe('airportScoring computeScore branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, { term: 'KXYZ' });
+    const score = computeScore(airport, { term: 'kxyz' }); // Lowercase search term required
     expect(score).toBeGreaterThanOrEqual(1000);
   });
 
@@ -34,7 +34,7 @@ describe('airportScoring computeScore branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, { term: 'KABC' });
+    const score = computeScore(airport, { term: 'kabc' }); // Lowercase search term required
     expect(score).toBeGreaterThanOrEqual(500);
     expect(score).toBeLessThan(1000);
   });

@@ -158,15 +158,30 @@ export function searchAirports(query: string): Airport[] {
 
   // Normalize search term for consistent matching
   const searchTerm = normalizeForSearch(query.trim()).toLowerCase();
+  const results = filterAndScoreAirports(airportArray, searchTerm);
+
+  return sortAndMapResults(results);
+}
+
+function filterAndScoreAirports(
+  airports: InternalAirport[],
+  searchTerm: string
+): Array<{ airport: InternalAirport; score: number }> {
   const results: Array<{ airport: InternalAirport; score: number }> = [];
 
-  for (const airport of airportArray) {
+  for (const airport of airports) {
     const score = computeScore(airport, searchTerm);
     if (score > 0) {
       results.push({ airport, score });
     }
   }
 
+  return results;
+}
+
+function sortAndMapResults(
+  results: Array<{ airport: InternalAirport; score: number }>
+): Airport[] {
   // Sort by score (descending) and return public Airport objects (strip internals)
   return results
     .sort((a, b) => b.score - a.score)

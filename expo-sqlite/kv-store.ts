@@ -98,7 +98,7 @@ function initSqliteIfNeeded(): Promise<void> {
       if (opened) {
         db = opened;
         await createTableIfNeeded(db, TABLE_NAME);
-        await migrateCacheToDbIfNeeded(db, Array.from(cache.entries()), TABLE_NAME);
+        await migrateCacheToDbIfNeeded(db, cache, TABLE_NAME);
       }
       // leave initPromise set on success so callers can await the same promise
     } catch (err) {
@@ -337,17 +337,17 @@ export async function initStore(): Promise<void> {
   if (asModule?.setItem) {
     // migrate any existing cache into AsyncStorage to avoid data loss
     const successfulKeys: string[] = [];
-    for (const [k, v] of Array.from(cache.entries())) {
+    for (const [key, value] of cache) {
       try {
-        await asModule.setItem(k, v);
-        successfulKeys.push(k);
+        await asModule.setItem(key, value);
+        successfulKeys.push(key);
       } catch (err) {
-        console.warn(`Failed to migrate key ${k} to AsyncStorage`, err);
+        console.warn(`Failed to migrate key ${key} to AsyncStorage`, err);
       }
     }
     // Only remove successfully migrated keys
-    for (const k of successfulKeys) {
-      cache.delete(k);
+    for (const key of successfulKeys) {
+      cache.delete(key);
     }
   }
 }

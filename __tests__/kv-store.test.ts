@@ -1,5 +1,5 @@
 
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
 // Mock expo-sqlite to avoid loading the real module which is ESM
 jest.mock('expo-sqlite', () => ({}), { virtual: true });
@@ -13,10 +13,10 @@ jest.mock('../expo-sqlite/sqlite-helpers', () => ({
 }));
 
 // We need to manage the mock for async-storage
-const mockSetItem = jest.fn();
-const mockMultiSet = jest.fn();
-const mockGetItem = jest.fn();
-const mockRemoveItem = jest.fn();
+const mockSetItem = jest.fn<(key: string, value: string) => Promise<void>>();
+const mockMultiSet = jest.fn<(keyValuePairs: string[][]) => Promise<void>>();
+const mockGetItem = jest.fn<(key: string) => Promise<string | null>>();
+const mockRemoveItem = jest.fn<(key: string) => Promise<void>>();
 
 describe('KV Store Migration', () => {
   let kvStore: typeof import('../expo-sqlite/kv-store');
@@ -30,10 +30,10 @@ describe('KV Store Migration', () => {
     mockRemoveItem.mockReset();
 
     // Default implementations
-    mockSetItem.mockImplementation(async () => {});
-    mockMultiSet.mockImplementation(async () => {});
-    (mockGetItem as any).mockResolvedValue(null);
-    (mockRemoveItem as any).mockResolvedValue(undefined);
+    mockSetItem.mockResolvedValue(undefined);
+    mockMultiSet.mockResolvedValue(undefined);
+    mockGetItem.mockResolvedValue(null);
+    mockRemoveItem.mockResolvedValue(undefined);
   });
 
   it('uses multiSet for migration when available', async () => {
@@ -90,7 +90,7 @@ describe('KV Store Migration', () => {
     await kvStore.setItem({ key: 'k2', value: 'v2' });
 
     // 4. Mock async-storage to be available but multiSet fails
-    (mockMultiSet as any).mockRejectedValueOnce(new Error('Batch failed'));
+    mockMultiSet.mockRejectedValueOnce(new Error('Batch failed'));
     jest.doMock('@react-native-async-storage/async-storage', () => ({
       default: {
         setItem: mockSetItem,

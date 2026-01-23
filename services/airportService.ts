@@ -158,10 +158,11 @@ export function searchAirports(query: string): Airport[] {
 
   // Normalize search term for consistent matching
   const searchTerm = normalizeForSearch(query.trim()).toLowerCase();
+  const searchQuery = { term: searchTerm };
   const results: Array<{ airport: InternalAirport; score: number }> = [];
 
   for (const airport of airportArray) {
-    const score = computeScoreOptimized(airport, searchTerm);
+    const score = computeScoreOptimized(airport, searchQuery);
     if (score > 0) {
       results.push({ airport, score });
     }

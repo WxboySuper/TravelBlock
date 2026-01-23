@@ -16,7 +16,7 @@ describe('airportScoring extra branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'tst');
+    const score = computeScore(airport, { term: 'tst' });
     expect(score).toBeGreaterThanOrEqual(900);
   });
 
@@ -34,7 +34,7 @@ describe('airportScoring extra branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'tst');
+    const score = computeScore(airport, { term: 'tst' });
     expect(score).toBeGreaterThanOrEqual(450);
     expect(score).toBeLessThan(900);
   });
@@ -53,7 +53,7 @@ describe('airportScoring extra branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'great');
+    const score = computeScore(airport, { term: 'great' });
     expect(score).toBeGreaterThanOrEqual(300);
   });
 
@@ -71,7 +71,7 @@ describe('airportScoring extra branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'vely');
+    const score = computeScore(airport, { term: 'vely' });
     // city includes -> should get at least 80 from city score
     expect(score).toBeGreaterThanOrEqual(80);
     expect(score).toBeLessThan(250);

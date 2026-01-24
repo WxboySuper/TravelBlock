@@ -69,6 +69,10 @@ export function loadAirports(): Promise<AirportData> {
   const normalized: Record<string, InternalAirport> = {};
 
   for (const key in rawData) {
+    if (!Object.prototype.hasOwnProperty.call(rawData, key)) {
+      continue;
+    }
+
     const airport = rawData[key];
     const icaoKey = String(key).trim().toUpperCase();
 

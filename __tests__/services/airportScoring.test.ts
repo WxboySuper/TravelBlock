@@ -16,7 +16,7 @@ describe('airportScoring computeScore branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'KXYZ');
+    const score = computeScore(airport, { term: 'kxyz' }); // Lowercase search term required
     expect(score).toBeGreaterThanOrEqual(1000);
   });
 
@@ -34,7 +34,7 @@ describe('airportScoring computeScore branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'KABC');
+    const score = computeScore(airport, { term: 'kabc' }); // Lowercase search term required
     expect(score).toBeGreaterThanOrEqual(500);
     expect(score).toBeLessThan(1000);
   });
@@ -53,7 +53,7 @@ describe('airportScoring computeScore branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'great');
+    const score = computeScore(airport, { term: 'great' });
     // name includes 'great' so should get at least the substring name score (100)
     expect(score).toBeGreaterThanOrEqual(100);
   });
@@ -72,7 +72,7 @@ describe('airportScoring computeScore branches', () => {
       tz: 'UTC',
     };
 
-    const scorePrefix = computeScore(airport, 'metro');
+    const scorePrefix = computeScore(airport, { term: 'metro' });
     // city startsWith -> 250 should be contributed
     expect(scorePrefix).toBeGreaterThanOrEqual(250);
   });
@@ -95,7 +95,7 @@ describe('airportScoring computeScore branches', () => {
       __lcCity: 'precity',
     };
 
-    const score = computeScore(airport, 'pre');
+    const score = computeScore(airport, { term: 'pre' });
     // precomputed fields should allow matching and yield a positive score
     expect(score).toBeGreaterThan(0);
   });

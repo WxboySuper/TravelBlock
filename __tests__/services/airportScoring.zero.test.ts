@@ -16,7 +16,7 @@ describe('airportScoring zero branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'zzzzzz');
+    const score = computeScore(airport, { term: 'zzzzzz' });
     expect(score).toBe(0);
   });
 
@@ -34,14 +34,14 @@ describe('airportScoring zero branches', () => {
       tz: 'UTC',
     };
 
-    const score = computeScore(airport, 'anything');
+    const score = computeScore(airport, { term: 'anything' });
     expect(score).toBe(0);
   });
 
   it('handles missing fields (undefined) without throwing', () => {
     // Omit icao/iata/name/city properties entirely to hit the nullish fallback
     const airport = {} as unknown as Airport;
-    const score = computeScore(airport, 'anything');
+    const score = computeScore(airport, { term: 'anything' });
     expect(score).toBe(0);
   });
 });

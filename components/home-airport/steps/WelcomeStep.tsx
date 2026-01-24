@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { StyleSheet, View, Image } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface WelcomeStepProps {
   onNext: () => void;
@@ -41,7 +41,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           Welcome to TravelBlock
         </ThemedText>
         <ThemedText style={styles.description}>
-          Your personal aviation companion. Let's get you set up in just a few steps.
+          Your personal aviation companion. Let&apos;s get you set up in just a few steps.
         </ThemedText>
       </View>
       <View style={styles.buttonContainer}>

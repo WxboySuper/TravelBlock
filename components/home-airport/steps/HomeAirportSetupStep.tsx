@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getNearestAirport, hasLocationPermission } from '@/services/locationService';
 import { Airport, AirportWithDistance } from '@/types/airport';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface HomeAirportSetupStepProps {
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     borderWidth: 1,
-    borderColor: '#ccc', // Will be overridden by theme usually, but keeping simple for now
+    borderColor: '#ccc',
     borderStyle: 'dashed',
     borderRadius: 12,
     padding: 24,
@@ -46,27 +46,29 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: 12,
   },
+  placeholderText: {
+    marginBottom: 12,
+  },
+  changeButton: {
+    marginTop: 12,
+  },
 });
 
-export function HomeAirportSetupStep({
-  selectedAirport,
-  onSelectAirport,
-  onNext,
-  onBack
-}: HomeAirportSetupStepProps) {
-  const [modalVisible, setModalVisible] = useState(false);
+function useAirportSuggestion(
+  selectedAirport: Airport | null,
+  onSelectAirport: (airport: Airport | AirportWithDistance) => void
+) {
   const [suggesting, setSuggesting] = useState(false);
 
-  // Attempt to suggest nearest airport if permissions granted and none selected
   useEffect(() => {
     let mounted = true;
-    async function checkLocationAndSuggest() {
-      if (selectedAirport) return;
 
+    // Split logic to reduce complexity
+    const suggest = async () => {
       const granted = await hasLocationPermission();
-      if (!granted) return;
+      if (!granted || !mounted) return;
 
-      if (mounted) setSuggesting(true);
+      setSuggesting(true);
       try {
         const nearest = await getNearestAirport();
         if (nearest && mounted && !selectedAirport) {
@@ -77,10 +79,35 @@ export function HomeAirportSetupStep({
       } finally {
         if (mounted) setSuggesting(false);
       }
+    };
+
+    if (!selectedAirport) {
+      suggest();
     }
-    checkLocationAndSuggest();
+
     return () => { mounted = false; };
-  }, []); // Run once on mount
+  }, []); // Only run on mount
+
+  return suggesting;
+}
+
+export function HomeAirportSetupStep({
+  selectedAirport,
+  onSelectAirport,
+  onNext,
+  onBack
+}: HomeAirportSetupStepProps) {
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const suggesting = useAirportSuggestion(selectedAirport, onSelectAirport);
+
+  const handleOpenModal = useCallback(() => {
+    setModalVisible(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setModalVisible(false);
+  }, []);
 
   return (
     <ThemedView style={styles.container}>
@@ -97,18 +124,18 @@ export function HomeAirportSetupStep({
             <AirportCard airport={selectedAirport} />
             <Button
               title="Change Airport"
-              onPress={() => setModalVisible(true)}
+              onPress={handleOpenModal}
               variant="secondary"
               size="sm"
-              style={{ marginTop: 12 }}
+              style={styles.changeButton}
             />
           </View>
         ) : (
           <View style={styles.placeholder}>
-            <ThemedText style={{ marginBottom: 12 }}>No airport selected</ThemedText>
+            <ThemedText style={styles.placeholderText}>No airport selected</ThemedText>
             <Button
               title={suggesting ? "Finding nearest..." : "Select Airport"}
-              onPress={() => setModalVisible(true)}
+              onPress={handleOpenModal}
               disabled={suggesting}
             />
           </View>
@@ -132,7 +159,7 @@ export function HomeAirportSetupStep({
 
       <SelectAirportModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={handleCloseModal}
         onSelectAirport={onSelectAirport}
         title="Search Home Airport"
       />

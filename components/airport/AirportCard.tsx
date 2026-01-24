@@ -181,6 +181,7 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
 
   const handleEdit = useCallback(() => {
     if (!onEdit) return;
+    // Run haptics on all platforms (Android-first design)
     impactAsync(ImpactFeedbackStyle.Light).catch(() => {
       // Ignore if haptics are not available
     });
@@ -189,6 +190,7 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
 
   const handleClear = useCallback(() => {
     if (!onClear) return;
+    // Run haptics on all platforms (Android-first design)
     impactAsync(ImpactFeedbackStyle.Light).catch(() => {
       // Ignore if haptics are not available
     });

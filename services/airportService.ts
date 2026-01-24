@@ -18,7 +18,7 @@
 
 import { Airport, AirportData } from '../types/airport';
 import { Coordinates, calculateDistance } from '../utils/distance';
-import { computeScore } from './airportScoring';
+import { computeScoreOptimized } from './airportScoring';
 
 // Normalize strings for search: unicode decomposition without diacritics
 function normalizeForSearch(s: string): string {
@@ -158,10 +158,11 @@ export function searchAirports(query: string): Airport[] {
 
   // Normalize search term for consistent matching
   const searchTerm = normalizeForSearch(query.trim()).toLowerCase();
+  const searchQuery = { term: searchTerm };
   const results: Array<{ airport: InternalAirport; score: number }> = [];
 
   for (const airport of airportArray) {
-    const score = computeScore(airport, searchTerm);
+    const score = computeScoreOptimized(airport, searchQuery);
     if (score > 0) {
       results.push({ airport, score });
     }

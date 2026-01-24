@@ -84,63 +84,121 @@ const styles = StyleSheet.create({
   },
 });
 
+function AirportCardHeader({ onEdit, showEdit }: { onEdit?: () => void; showEdit: boolean }) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerLeft}>
+        <View style={[styles.iconBadge, { backgroundColor: `${colors.primary}1A` }]}>
+          <IconSymbol name="house.fill" size={20} color={colors.primary} />
+        </View>
+        <ThemedText
+          style={{
+            fontSize: Typography.fontSize.sm,
+            fontWeight: Typography.fontWeight.medium,
+            color: colors.textSecondary,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
+          }}>
+          Home Base
+        </ThemedText>
+      </View>
+      {showEdit && onEdit && (
+        <TouchableOpacity
+          onPress={onEdit}
+          style={styles.editButton}
+          hitSlop={8}
+          activeOpacity={0.6}
+          accessibilityLabel="Edit airport"
+          testID="airport-card-edit-button">
+          <IconSymbol name="pencil" size={18} color={colors.icon} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+function AirportCardFooter({
+  city,
+  country,
+  state,
+  elevation,
+  onClear,
+}: {
+  city: string;
+  country: string;
+  state?: string;
+  elevation?: number;
+  onClear?: () => void;
+}) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  return (
+    <View style={[styles.footer, { borderTopColor: colors.borderLight }]}>
+      <View style={styles.locationRow}>
+        <IconSymbol name="location.fill" size={14} color={colors.textTertiary} />
+        <ThemedText
+          style={{
+            fontSize: Typography.fontSize.sm,
+            color: colors.textSecondary,
+            marginLeft: Spacing.xs,
+            flex: 1,
+          }}>
+          {city}, {state || country}
+        </ThemedText>
+        {elevation !== undefined && (
+          <ThemedText
+            style={{
+              fontSize: Typography.fontSize.xs,
+              color: colors.textTertiary,
+              marginRight: Spacing.md,
+            }}>
+            {elevation} ft
+          </ThemedText>
+        )}
+      </View>
+      {onClear && (
+        <TouchableOpacity
+          onPress={onClear}
+          style={[styles.clearButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+          hitSlop={8}
+          activeOpacity={0.6}
+          accessibilityLabel="Clear home base"
+          testID="airport-card-clear-button">
+          <ThemedText style={[styles.clearButtonText, { color: colors.error }]}>Clear</ThemedText>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 export function AirportCard({ airport, onEdit, onClear, showEdit = true }: AirportCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const handleEdit = useCallback(async () => {
+  const handleEdit = useCallback(() => {
     if (!onEdit) return;
-    try {
-      await impactAsync(ImpactFeedbackStyle.Light);
-    } catch {
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => {
       // Ignore if haptics are not available
-    }
+    });
     onEdit();
   }, [onEdit]);
 
-  const handleClear = useCallback(async () => {
+  const handleClear = useCallback(() => {
     if (!onClear) return;
-    try {
-      await impactAsync(ImpactFeedbackStyle.Light);
-    } catch {
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => {
       // Ignore if haptics are not available
-    }
+    });
     onClear();
   }, [onClear]);
 
   return (
     <Card variant="elevated" style={styles.card}>
-      {/* Header - "Home Base" label */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.iconBadge, { backgroundColor: `${colors.primary}1A` }]}>
-            <IconSymbol name="house.fill" size={20} color={colors.primary} />
-          </View>
-          <ThemedText
-            style={{
-              fontSize: Typography.fontSize.sm,
-              fontWeight: Typography.fontWeight.medium,
-              color: colors.textSecondary,
-              letterSpacing: 0.5,
-              textTransform: 'uppercase',
-            }}>
-            Home Base
-          </ThemedText>
-        </View>
-        {showEdit && onEdit && (
-          <TouchableOpacity
-            onPress={handleEdit}
-            style={styles.editButton}
-            hitSlop={8}
-            activeOpacity={0.6}
-            accessibilityLabel="Edit airport"
-            testID="airport-card-edit-button">
-            <IconSymbol name="pencil" size={18} color={colors.icon} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <AirportCardHeader onEdit={onEdit ? handleEdit : undefined} showEdit={showEdit} />
 
-      {/* Airport Code and Name */}
       <View style={styles.mainContent}>
         <View style={styles.codeContainer}>
           <ThemedText
@@ -177,42 +235,13 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
         </ThemedText>
       </View>
 
-      {/* Location Details */}
-      <View style={[styles.footer, { borderTopColor: colors.borderLight }]}>
-        <View style={styles.locationRow}>
-          <IconSymbol name="location.fill" size={14} color={colors.textTertiary} />
-          <ThemedText
-            style={{
-              fontSize: Typography.fontSize.sm,
-              color: colors.textSecondary,
-              marginLeft: Spacing.xs,
-              flex: 1,
-            }}>
-            {airport.city}, {airport.state || airport.country}
-          </ThemedText>
-          {airport.elevation !== undefined && (
-            <ThemedText
-              style={{
-                fontSize: Typography.fontSize.xs,
-                color: colors.textTertiary,
-                marginRight: Spacing.md,
-              }}>
-              {airport.elevation} ft
-            </ThemedText>
-          )}
-        </View>
-        {onClear && (
-          <TouchableOpacity
-            onPress={handleClear}
-            style={[styles.clearButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            hitSlop={8}
-            activeOpacity={0.6}
-            accessibilityLabel="Clear home base"
-            testID="airport-card-clear-button">
-            <ThemedText style={[styles.clearButtonText, { color: colors.error }]}>Clear</ThemedText>
-          </TouchableOpacity>
-        )}
-      </View>
+      <AirportCardFooter
+        city={airport.city}
+        country={airport.country}
+        state={airport.state}
+        elevation={airport.elevation}
+        onClear={onClear ? handleClear : undefined}
+      />
     </Card>
   );
 }

@@ -68,7 +68,12 @@ export function loadAirports(): Promise<AirportData> {
   // Normalize keys to uppercase and precompute lowercase/normalized search fields
   const normalized: Record<string, InternalAirport> = {};
 
-  for (const [key, airport] of Object.entries(rawData)) {
+  for (const key in rawData) {
+    if (!Object.prototype.hasOwnProperty.call(rawData, key)) {
+      continue;
+    }
+
+    const airport = rawData[key];
     const icaoKey = String(key).trim().toUpperCase();
 
     // Defensive defaults

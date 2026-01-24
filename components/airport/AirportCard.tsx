@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -86,6 +87,15 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const handlePress = async (callback: () => void) => {
+    try {
+      await impactAsync(ImpactFeedbackStyle.Light);
+    } catch {
+      // Ignore if haptics are not available
+    }
+    callback();
+  };
+
   return (
     <Card variant="elevated" style={styles.card}>
       {/* Header - "Home Base" label */}
@@ -106,14 +116,15 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
           </ThemedText>
         </View>
         {showEdit && onEdit && (
-          <Pressable 
-            onPress={onEdit} 
-            style={styles.editButton} 
+          <TouchableOpacity
+            onPress={() => handlePress(onEdit)}
+            style={styles.editButton}
             hitSlop={8}
+            activeOpacity={0.6}
             accessibilityLabel="Edit airport"
             testID="airport-card-edit-button">
             <IconSymbol name="pencil" size={18} color={colors.icon} />
-          </Pressable>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -179,14 +190,15 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
           )}
         </View>
         {onClear && (
-          <Pressable
-            onPress={onClear}
+          <TouchableOpacity
+            onPress={() => handlePress(onClear)}
             style={[styles.clearButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
             hitSlop={8}
+            activeOpacity={0.6}
             accessibilityLabel="Clear home base"
             testID="airport-card-clear-button">
             <ThemedText style={[styles.clearButtonText, { color: colors.error }]}>Clear</ThemedText>
-          </Pressable>
+          </TouchableOpacity>
         )}
       </View>
     </Card>

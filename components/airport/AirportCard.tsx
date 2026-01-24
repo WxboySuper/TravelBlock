@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 
@@ -87,14 +88,25 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const handlePress = async (callback: () => void) => {
+  const handleEdit = useCallback(async () => {
+    if (!onEdit) return;
     try {
       await impactAsync(ImpactFeedbackStyle.Light);
     } catch {
       // Ignore if haptics are not available
     }
-    callback();
-  };
+    onEdit();
+  }, [onEdit]);
+
+  const handleClear = useCallback(async () => {
+    if (!onClear) return;
+    try {
+      await impactAsync(ImpactFeedbackStyle.Light);
+    } catch {
+      // Ignore if haptics are not available
+    }
+    onClear();
+  }, [onClear]);
 
   return (
     <Card variant="elevated" style={styles.card}>
@@ -117,7 +129,7 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
         </View>
         {showEdit && onEdit && (
           <TouchableOpacity
-            onPress={() => handlePress(onEdit)}
+            onPress={handleEdit}
             style={styles.editButton}
             hitSlop={8}
             activeOpacity={0.6}
@@ -191,7 +203,7 @@ export function AirportCard({ airport, onEdit, onClear, showEdit = true }: Airpo
         </View>
         {onClear && (
           <TouchableOpacity
-            onPress={() => handlePress(onClear)}
+            onPress={handleClear}
             style={[styles.clearButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
             hitSlop={8}
             activeOpacity={0.6}

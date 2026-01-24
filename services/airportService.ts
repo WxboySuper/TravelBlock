@@ -151,7 +151,7 @@ function stripInternal(internal: InternalAirport): Airport {
  * const heathrow = searchAirports("Heathrow");
  * ```
  */
-export function searchAirports(query: string): Airport[] {
+export function searchAirports(query: string, limit = 500): Airport[] {
   if (!airportArray) {
     // Return empty array if data not loaded
     return [];
@@ -173,9 +173,10 @@ export function searchAirports(query: string): Airport[] {
     }
   }
 
-  // Sort by score (descending) and return public Airport objects (strip internals)
+  // Sort by score (descending), limit results, and return public Airport objects (strip internals)
   return results
     .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
     .map((result) => stripInternal(result.airport));
 }
 

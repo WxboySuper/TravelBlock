@@ -335,38 +335,50 @@ export async function initStore(): Promise<void> {
 
   // Ensure AsyncStorage is available so it's ready as a fallback
   const asModule = loadAsyncStorageOnce();
-  if (asModule?.setItem) {
-    // migrate any existing cache into AsyncStorage to avoid data loss
-    // Prefer multiSet if available for batched I/O performance
-    if (asModule.multiSet) {
-      try {
-        const entries = Array.from(cache.entries());
-        if (entries.length > 0) {
-          await asModule.multiSet(entries);
-          for (const [k] of entries) {
-            cache.delete(k);
-          }
-        }
-        return;
-      } catch (err) {
-        console.warn('Failed to migrate cache using multiSet; falling back to individual setItem', err);
-        // Fall through to iterative approach
-      }
-    }
+  if (!asModule?.setItem) return;
 
-    const successfulKeys: string[] = [];
-    for (const [k, v] of Array.from(cache.entries())) {
-      try {
-        await asModule.setItem(k, v);
-        successfulKeys.push(k);
-      } catch (err) {
-        console.warn(`Failed to migrate key ${k} to AsyncStorage`, err);
+  // migrate any existing cache into AsyncStorage to avoid data loss
+  const entries = Array.from(cache.entries());
+  if (entries.length === 0) return;
+
+  // Prefer multiSet if available for batched I/O performance
+  if (await migrateViaMultiSet(asModule, entries)) {
+    return;
+  }
+
+  await migrateViaSetItem(asModule, entries);
+}
+
+async function migrateViaMultiSet(asModule: AsyncStorageLike, entries: [string, string][]): Promise<boolean> {
+  if (!asModule.multiSet) return false;
+  try {
+    if (entries.length > 0) {
+      await asModule.multiSet(entries);
+      for (const [k] of entries) {
+        cache.delete(k);
       }
     }
-    // Only remove successfully migrated keys
-    for (const k of successfulKeys) {
-      cache.delete(k);
+    return true;
+  } catch (err) {
+    console.warn('Failed to migrate cache using multiSet; falling back to individual setItem', err);
+    return false;
+  }
+}
+
+async function migrateViaSetItem(asModule: AsyncStorageLike, entries: [string, string][]): Promise<void> {
+  if (!asModule.setItem) return;
+  const successfulKeys: string[] = [];
+  for (const [k, v] of entries) {
+    try {
+      await asModule.setItem(k, v);
+      successfulKeys.push(k);
+    } catch (err) {
+      console.warn(`Failed to migrate key ${k} to AsyncStorage`, err);
     }
+  }
+  // Only remove successfully migrated keys
+  for (const k of successfulKeys) {
+    cache.delete(k);
   }
 }
 

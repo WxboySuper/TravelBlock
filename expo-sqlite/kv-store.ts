@@ -2,10 +2,10 @@
 // Lazily initializes SQLite at runtime and migrates any in-memory cache
 // into SQLite once available. Uses a simple async API: setItem/getItem/removeItem.
 
+import { createTableIfNeeded, migrateCacheToDbIfNeeded, performSqliteInit, SqliteDB, SqliteTx, tryQuickSqliteInitSync } from './sqlite-helpers';
+
 const DB_NAME = 'travelblock.db';
 const TABLE_NAME = 'kv_store';
-
-import { createTableIfNeeded, migrateCacheToDbIfNeeded, performSqliteInit, SqliteDB, SqliteTx, tryQuickSqliteInitSync } from './sqlite-helpers';
 
 let db: SqliteDB | null = null;
 let initPromise: Promise<void> | null = null;
@@ -23,6 +23,7 @@ type AsyncStorageLike = {
   getItem?: (key: string) => Promise<string | null>;
   setItem?: (key: string, value: string) => Promise<void>;
   removeItem?: (key: string) => Promise<void>;
+  multiSet?: (keyValuePairs: string[][]) => Promise<void>;
 };
 
 // runtime reference to AsyncStorage (may be null)
@@ -163,7 +164,7 @@ async function getFromSqlite(opts: { key: string }): Promise<string | null> {
   quickSqliteInit();
   await initSqliteIfNeeded();
   if (!db) return null;
-  type SqlResult = { rows?: { length: number; _array?: Array<Record<string, unknown>> } };
+  type SqlResult = { rows?: { length: number; _array?: Record<string, unknown>[] } };
   const res = await execSql<SqlResult>(`SELECT value FROM ${TABLE_NAME} WHERE key = ?`, [key]);
   const rows = res.rows;
   if (!rows || rows.length === 0) return null;
@@ -334,21 +335,50 @@ export async function initStore(): Promise<void> {
 
   // Ensure AsyncStorage is available so it's ready as a fallback
   const asModule = loadAsyncStorageOnce();
-  if (asModule?.setItem) {
-    // migrate any existing cache into AsyncStorage to avoid data loss
-    const successfulKeys: string[] = [];
-    for (const [key, value] of cache) {
-      try {
-        await asModule.setItem(key, value);
-        successfulKeys.push(key);
-      } catch (err) {
-        console.warn(`Failed to migrate key ${key} to AsyncStorage`, err);
+  if (!asModule?.setItem) return;
+
+  // migrate any existing cache into AsyncStorage to avoid data loss
+  const entries = Array.from(cache.entries());
+  if (entries.length === 0) return;
+
+  // Prefer multiSet if available for batched I/O performance
+  if (await migrateViaMultiSet(asModule, entries)) {
+    return;
+  }
+
+  await migrateViaSetItem(asModule, entries);
+}
+
+async function migrateViaMultiSet(asModule: AsyncStorageLike, entries: [string, string][]): Promise<boolean> {
+  if (!asModule.multiSet) return false;
+  try {
+    if (entries.length > 0) {
+      await asModule.multiSet(entries);
+      for (const [k] of entries) {
+        cache.delete(k);
       }
     }
-    // Only remove successfully migrated keys
-    for (const key of successfulKeys) {
-      cache.delete(key);
+    return true;
+  } catch (err) {
+    console.warn('Failed to migrate cache using multiSet; falling back to individual setItem', err);
+    return false;
+  }
+}
+
+async function migrateViaSetItem(asModule: AsyncStorageLike, entries: [string, string][]): Promise<void> {
+  if (!asModule.setItem) return;
+  const successfulKeys: string[] = [];
+  for (const [k, v] of entries) {
+    try {
+      await asModule.setItem(k, v);
+      successfulKeys.push(k);
+    } catch (err) {
+      console.warn(`Failed to migrate key ${k} to AsyncStorage`, err);
     }
+  }
+  // Only remove successfully migrated keys
+  for (const k of successfulKeys) {
+    cache.delete(k);
   }
 }
 

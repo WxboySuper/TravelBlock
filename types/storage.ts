@@ -28,6 +28,12 @@ export enum StorageKey {
    * Value: JSON-serialized Airport object
    */
   HOME_AIRPORT = 'travelblock_home_airport',
+
+  /**
+   * Key for tracking if the user has completed the onboarding flow.
+   * Value: "true" | "false"
+   */
+  HAS_COMPLETED_ONBOARDING = 'travelblock_has_completed_onboarding',
 }
 
 /**

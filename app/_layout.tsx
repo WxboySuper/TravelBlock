@@ -6,7 +6,9 @@ import 'react-native-reanimated';
 
 import { initStore } from '@/expo-sqlite/kv-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useEffect } from 'react';
+import { storageService } from '@/services/storageService';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -22,6 +24,8 @@ export const unstable_settings = {
  */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     // initialize persistent store early so native SQLite is ready before
@@ -29,14 +33,25 @@ export default function RootLayout() {
     async function startup() {
       try {
         await initStore();
+
+        // Check onboarding status
+        const hasCompleted = await storageService.getOnboardingCompleted();
+        if (!hasCompleted) {
+          router.replace('/first-run');
+        }
       } catch (error) {
-        console.error('Failed to initialize persistent store', error);
-        // TODO: Consider surfacing a fallback UI if store init fails
+        console.error('Failed to initialize persistent store or check onboarding', error);
+      } finally {
+        setIsReady(true);
       }
     }
 
     startup();
   }, []);
+
+  if (!isReady) {
+    return null; // or a Splash Screen
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -44,6 +59,7 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="first-run" options={{ headerShown: false }} />
         </Stack>
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       </ThemeProvider>

@@ -1,6 +1,6 @@
 /**
  * Unit tests for airport service.
- * 
+ *
  * These tests verify the functionality of the airport service including:
  * - Lazy loading and caching
  * - Search operations
@@ -16,237 +16,239 @@ import {
   getAirportsWithinDistance,
   loadAirports,
   searchAirports,
-} from '../../services/airportService';
-import { Coordinates } from '../../utils/distance';
+} from "../../services/airportService";
+import { Coordinates } from "../../utils/distance";
 
-describe('Airport Service', () => {
+describe("Airport Service", () => {
   // Clear cache before each test to ensure clean state
   beforeEach(() => {
     clearCache();
   });
 
-  describe('loadAirports', () => {
-    it('should load airport data successfully', async () => {
+  describe("loadAirports", () => {
+    it("should load airport data successfully", async () => {
       const airports = await loadAirports();
-      
+
       expect(airports).toBeDefined();
-      expect(typeof airports).toBe('object');
+      expect(typeof airports).toBe("object");
       expect(Object.keys(airports).length).toBeGreaterThan(0);
     });
 
-    it('should return cached data on subsequent calls', async () => {
+    it("should return cached data on subsequent calls", async () => {
       const firstLoad = await loadAirports();
       const secondLoad = await loadAirports();
-      
+
       // Should return the same reference (cached)
       expect(firstLoad).toBe(secondLoad);
     });
 
-    it('should load airports with correct structure', async () => {
+    it("should load airports with correct structure", async () => {
       const airports = await loadAirports();
       const firstAirport = Object.values(airports)[0];
-      
-      expect(firstAirport).toHaveProperty('icao');
-      expect(firstAirport).toHaveProperty('iata');
-      expect(firstAirport).toHaveProperty('name');
-      expect(firstAirport).toHaveProperty('city');
-      expect(firstAirport).toHaveProperty('state');
-      expect(firstAirport).toHaveProperty('country');
-      expect(firstAirport).toHaveProperty('elevation');
-      expect(firstAirport).toHaveProperty('lat');
-      expect(firstAirport).toHaveProperty('lon');
-      expect(firstAirport).toHaveProperty('tz');
+
+      expect(firstAirport).toHaveProperty("icao");
+      expect(firstAirport).toHaveProperty("iata");
+      expect(firstAirport).toHaveProperty("name");
+      expect(firstAirport).toHaveProperty("city");
+      expect(firstAirport).toHaveProperty("state");
+      expect(firstAirport).toHaveProperty("country");
+      expect(firstAirport).toHaveProperty("elevation");
+      expect(firstAirport).toHaveProperty("lat");
+      expect(firstAirport).toHaveProperty("lon");
+      expect(firstAirport).toHaveProperty("tz");
     });
 
-    it('should load a significant number of airports', async () => {
+    it("should load a significant number of airports", async () => {
       const airports = await loadAirports();
       const count = Object.keys(airports).length;
-      
+
       // Should have at least 20,000 airports (dataset has ~29,000)
       expect(count).toBeGreaterThan(20000);
     });
   });
 
-  describe('searchAirports', () => {
+  describe("searchAirports", () => {
     beforeEach(async () => {
       await loadAirports();
     });
 
-    it('should return empty array for empty query', () => {
-      expect(searchAirports('')).toEqual([]);
-      expect(searchAirports('   ')).toEqual([]);
+    it("should return empty array for empty query", () => {
+      expect(searchAirports("")).toEqual([]);
+      expect(searchAirports("   ")).toEqual([]);
     });
 
-    it('should return empty array when data not loaded', () => {
+    it("should return empty array when data not loaded", () => {
       clearCache();
-      expect(searchAirports('KJFK')).toEqual([]);
+      expect(searchAirports("KJFK")).toEqual([]);
     });
 
-    it('should find airport by exact ICAO code', () => {
-      const results = searchAirports('KJFK');
-      
+    it("should find airport by exact ICAO code", () => {
+      const results = searchAirports("KJFK");
+
       expect(results.length).toBeGreaterThan(0);
-      const jfk = results.find((a) => a.icao === 'KJFK');
+      const jfk = results.find((a) => a.icao === "KJFK");
       expect(jfk).toBeDefined();
-      expect(jfk?.name).toContain('Kennedy');
+      expect(jfk?.name).toContain("Kennedy");
     });
 
-    it('should find airports by IATA code', () => {
-      const results = searchAirports('LAX');
-      
+    it("should find airports by IATA code", () => {
+      const results = searchAirports("LAX");
+
       expect(results.length).toBeGreaterThan(0);
-      const lax = results.find((a) => a.iata === 'LAX');
+      const lax = results.find((a) => a.iata === "LAX");
       expect(lax).toBeDefined();
-      expect(lax?.city).toBe('Los Angeles');
+      expect(lax?.city).toBe("Los Angeles");
     });
 
-    it('should find airports by city name', () => {
-      const results = searchAirports('London');
-      
+    it("should find airports by city name", () => {
+      const results = searchAirports("London");
+
       expect(results.length).toBeGreaterThan(0);
       // Should find multiple London airports
-      const londonAirports = results.filter((a) => a.city.toLowerCase().includes('london'));
+      const londonAirports = results.filter((a) =>
+        a.city.toLowerCase().includes("london"),
+      );
       expect(londonAirports.length).toBeGreaterThan(0);
     });
 
-    it('should find airports by airport name', () => {
-      const results = searchAirports('London Heathrow');
-      
+    it("should find airports by airport name", () => {
+      const results = searchAirports("London Heathrow");
+
       expect(results.length).toBeGreaterThan(0);
-      const heathrow = results.find((a) => a.icao === 'EGLL');
+      const heathrow = results.find((a) => a.icao === "EGLL");
       expect(heathrow).toBeDefined();
-      expect(heathrow?.name).toContain('Heathrow');
+      expect(heathrow?.name).toContain("Heathrow");
     });
 
-    it('should be case-insensitive', () => {
-      const upperResults = searchAirports('KJFK');
-      const lowerResults = searchAirports('kjfk');
-      const mixedResults = searchAirports('KjFk');
-      
+    it("should be case-insensitive", () => {
+      const upperResults = searchAirports("KJFK");
+      const lowerResults = searchAirports("kjfk");
+      const mixedResults = searchAirports("KjFk");
+
       expect(upperResults.length).toBe(lowerResults.length);
       expect(upperResults.length).toBe(mixedResults.length);
       expect(upperResults[0].icao).toBe(lowerResults[0].icao);
     });
 
-    it('should prioritize exact matches over partial matches', () => {
-      const results = searchAirports('LAX');
-      
+    it("should prioritize exact matches over partial matches", () => {
+      const results = searchAirports("LAX");
+
       // First result should be the exact IATA match
-      expect(results[0].iata).toBe('LAX');
+      expect(results[0].iata).toBe("LAX");
     });
 
-    it('should handle partial searches', () => {
-      const results = searchAirports('New York');
-      
+    it("should handle partial searches", () => {
+      const results = searchAirports("New York");
+
       expect(results.length).toBeGreaterThan(0);
       // Should find JFK, LaGuardia, Newark, etc.
-      const hasJFK = results.some((a) => a.icao === 'KJFK');
+      const hasJFK = results.some((a) => a.icao === "KJFK");
       expect(hasJFK).toBe(true);
     });
 
-    it('should handle special characters in search', () => {
+    it("should handle special characters in search", () => {
       const results = searchAirports("O'Hare");
-      
+
       expect(results.length).toBeGreaterThan(0);
       const ohare = results.find((a) => a.name.includes("O'Hare"));
       expect(ohare).toBeDefined();
     });
 
-    it('should return results in reasonable time', () => {
+    it("should return results in reasonable time", () => {
       const startTime = Date.now();
-      searchAirports('Los Angeles');
+      searchAirports("Los Angeles");
       const endTime = Date.now();
-      
+
       // Should complete in less than 100ms
       expect(endTime - startTime).toBeLessThan(100);
     });
   });
 
-  describe('getAirportsWithinDistance', () => {
+  describe("getAirportsWithinDistance", () => {
     beforeEach(async () => {
       await loadAirports();
     });
 
-    it('should return empty array when data not loaded', () => {
+    it("should return empty array when data not loaded", () => {
       clearCache();
-      const origin: Coordinates = { lat: 40.7128, lon: -74.0060 };
+      const origin: Coordinates = { lat: 40.7128, lon: -74.006 };
       expect(getAirportsWithinDistance(origin, 50)).toEqual([]);
     });
 
-    it('should find airports within specified distance', () => {
+    it("should find airports within specified distance", () => {
       // New York City coordinates
-      const nycCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
-      
+      const nycCoords: Coordinates = { lat: 40.7128, lon: -74.006 };
+
       const nearbyAirports = getAirportsWithinDistance(nycCoords, 50);
-      
+
       expect(nearbyAirports.length).toBeGreaterThan(0);
       // Should include JFK, LaGuardia, Newark
-      const hasJFK = nearbyAirports.some((a) => a.icao === 'KJFK');
-      const hasLGA = nearbyAirports.some((a) => a.icao === 'KLGA');
+      const hasJFK = nearbyAirports.some((a) => a.icao === "KJFK");
+      const hasLGA = nearbyAirports.some((a) => a.icao === "KLGA");
       expect(hasJFK || hasLGA).toBe(true);
     });
 
-    it('should return airports within specified distance', () => {
-      const nycCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
+    it("should return airports within specified distance", () => {
+      const nycCoords: Coordinates = { lat: 40.7128, lon: -74.006 };
       const nearbyAirports = getAirportsWithinDistance(nycCoords, 100);
-      
+
       expect(nearbyAirports.length).toBeGreaterThan(1);
       expect(nearbyAirports[0]).toBeDefined();
     });
-    it('should return empty array when no airports within range', () => {
+    it("should return empty array when no airports within range", () => {
       // Middle of the Pacific Ocean
       const oceanCoords: Coordinates = { lat: 0, lon: -140 };
-      
+
       const nearbyAirports = getAirportsWithinDistance(oceanCoords, 10);
-      
+
       // Should find very few or no airports
       expect(nearbyAirports.length).toBeLessThan(5);
     });
 
-    it('should handle zero distance (exact location)', () => {
+    it("should handle zero distance (exact location)", () => {
       // Use JFK's exact coordinates
       const jfkCoords: Coordinates = { lat: 40.63980103, lon: -73.77890015 };
-      
+
       const airports = getAirportsWithinDistance(jfkCoords, 0.1);
-      
+
       // Should find at least JFK itself
       expect(airports.length).toBeGreaterThan(0);
     });
 
-    it('should handle large distance values', () => {
-      const nycCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
-      
+    it("should handle large distance values", () => {
+      const nycCoords: Coordinates = { lat: 40.7128, lon: -74.006 };
+
       // 500 miles should cover a large area
       const airports = getAirportsWithinDistance(nycCoords, 500);
-      
+
       expect(airports.length).toBeGreaterThan(100);
     });
   });
 
-  describe('getAirportByICAO', () => {
+  describe("getAirportByICAO", () => {
     beforeEach(async () => {
       await loadAirports();
     });
 
-    it('should return null when data not loaded', () => {
+    it("should return null when data not loaded", () => {
       clearCache();
-      expect(getAirportByICAO('KJFK')).toBeNull();
+      expect(getAirportByICAO("KJFK")).toBeNull();
     });
 
-    it('should find airport by exact ICAO code', () => {
-      const jfk = getAirportByICAO('KJFK');
-      
+    it("should find airport by exact ICAO code", () => {
+      const jfk = getAirportByICAO("KJFK");
+
       expect(jfk).toBeDefined();
-      expect(jfk?.icao).toBe('KJFK');
-      expect(jfk?.iata).toBe('JFK');
-      expect(jfk?.name).toContain('Kennedy');
+      expect(jfk?.icao).toBe("KJFK");
+      expect(jfk?.iata).toBe("JFK");
+      expect(jfk?.name).toContain("Kennedy");
     });
 
-    it('should be case-insensitive', () => {
-      const upper = getAirportByICAO('KJFK');
-      const lower = getAirportByICAO('kjfk');
-      const mixed = getAirportByICAO('KjFk');
-      
+    it("should be case-insensitive", () => {
+      const upper = getAirportByICAO("KJFK");
+      const lower = getAirportByICAO("kjfk");
+      const mixed = getAirportByICAO("KjFk");
+
       expect(upper).toBeDefined();
       expect(lower).toBeDefined();
       expect(mixed).toBeDefined();
@@ -254,193 +256,230 @@ describe('Airport Service', () => {
       expect(upper?.icao).toBe(mixed?.icao);
     });
 
-    it('should return null for non-existent ICAO code', () => {
-      const result = getAirportByICAO('XXXX');
+    it("should return null for non-existent ICAO code", () => {
+      const result = getAirportByICAO("XXXX");
       expect(result).toBeNull();
     });
 
-    it('should find various international airports', () => {
-      const heathrow = getAirportByICAO('EGLL');
-      const charlesDeGaulle = getAirportByICAO('LFPG');
-      const narita = getAirportByICAO('RJAA');
-      
+    it("should find various international airports", () => {
+      const heathrow = getAirportByICAO("EGLL");
+      const charlesDeGaulle = getAirportByICAO("LFPG");
+      const narita = getAirportByICAO("RJAA");
+
       expect(heathrow).toBeDefined();
-      expect(heathrow?.name).toContain('Heathrow');
-      
+      expect(heathrow?.name).toContain("Heathrow");
+
       expect(charlesDeGaulle).toBeDefined();
-      expect(charlesDeGaulle?.city).toBe('Paris');
-      
+      expect(charlesDeGaulle?.city).toBe("Paris");
+
       expect(narita).toBeDefined();
-      expect(narita?.city).toBe('Tokyo');
+      expect(narita?.city).toBe("Tokyo");
     });
 
-    it('should handle airports with empty IATA codes', async () => {
+    it("should handle airports with empty IATA codes", async () => {
       // Find any airport with empty IATA
       const airports = await loadAirports();
       const airportWithoutIATA = Object.values(airports).find((a) => !a.iata);
-      
+
       if (airportWithoutIATA) {
         const found = getAirportByICAO(airportWithoutIATA.icao);
         expect(found).toBeDefined();
-        expect(found?.iata).toBe('');
+        expect(found?.iata).toBe("");
       }
     });
 
-    it('should perform O(1) lookup (fast)', () => {
+    it("should perform O(1) lookup (fast)", () => {
       const startTime = Date.now();
       for (let i = 0; i < 1000; i++) {
-        getAirportByICAO('KJFK');
+        getAirportByICAO("KJFK");
       }
       const endTime = Date.now();
-      
+
       // 1000 lookups should complete in well under 100ms
       expect(endTime - startTime).toBeLessThan(100);
     });
   });
 
-  describe('getAirportsByCountry', () => {
+  describe("getAirportsByCountry", () => {
     beforeEach(async () => {
       await loadAirports();
     });
 
-    it('should return empty array when data not loaded', () => {
+    it("should return empty array when data not loaded", () => {
       clearCache();
-      expect(getAirportsByCountry('US')).toEqual([]);
+      expect(getAirportsByCountry("US")).toEqual([]);
     });
 
-    it('should find all airports in a country', () => {
-      const usAirports = getAirportsByCountry('US');
-      
+    it("should find all airports in a country", () => {
+      const usAirports = getAirportsByCountry("US");
+
       expect(usAirports.length).toBeGreaterThan(0);
       // US should have thousands of airports
       expect(usAirports.length).toBeGreaterThan(1000);
-      
+
       // All should have country code "US"
       usAirports.forEach((airport) => {
-        expect(airport.country).toBe('US');
+        expect(airport.country).toBe("US");
       });
     });
 
-    it('should be case-insensitive', () => {
-      const upperResults = getAirportsByCountry('US');
-      const lowerResults = getAirportsByCountry('us');
-      const mixedResults = getAirportsByCountry('Us');
-      
+    it("should be case-insensitive", () => {
+      const upperResults = getAirportsByCountry("US");
+      const lowerResults = getAirportsByCountry("us");
+      const mixedResults = getAirportsByCountry("Us");
+
       expect(upperResults.length).toBe(lowerResults.length);
       expect(upperResults.length).toBe(mixedResults.length);
     });
 
-    it('should handle various countries', () => {
-      const ukAirports = getAirportsByCountry('GB');
-      const frenchAirports = getAirportsByCountry('FR');
-      const japanAirports = getAirportsByCountry('JP');
-      
+    it("should handle various countries", () => {
+      const ukAirports = getAirportsByCountry("GB");
+      const frenchAirports = getAirportsByCountry("FR");
+      const japanAirports = getAirportsByCountry("JP");
+
       expect(ukAirports.length).toBeGreaterThan(0);
       expect(frenchAirports.length).toBeGreaterThan(0);
       expect(japanAirports.length).toBeGreaterThan(0);
-      
+
       // Verify country codes
-      ukAirports.forEach((a) => expect(a.country).toBe('GB'));
-      frenchAirports.forEach((a) => expect(a.country).toBe('FR'));
-      japanAirports.forEach((a) => expect(a.country).toBe('JP'));
+      ukAirports.forEach((a) => expect(a.country).toBe("GB"));
+      frenchAirports.forEach((a) => expect(a.country).toBe("FR"));
+      japanAirports.forEach((a) => expect(a.country).toBe("JP"));
     });
 
-    it('should return empty array for invalid country code', () => {
-      const results = getAirportsByCountry('XX');
+    it("should return empty array for invalid country code", () => {
+      const results = getAirportsByCountry("XX");
       expect(results).toEqual([]);
     });
 
-    it('should return empty array for empty country code', () => {
-      const results = getAirportsByCountry('');
+    it("should return empty array for empty country code", () => {
+      const results = getAirportsByCountry("");
       expect(results).toEqual([]);
     });
   });
 
-  describe('Performance', () => {
+  describe("Performance", () => {
     beforeEach(async () => {
       await loadAirports();
     });
 
-    it('should load airports in reasonable time', async () => {
+    it("should load airports in reasonable time", async () => {
       clearCache();
-      
+
       const startTime = Date.now();
       await loadAirports();
       const endTime = Date.now();
-      
+
       // Initial load should complete in less than 500ms
       expect(endTime - startTime).toBeLessThan(500);
     });
 
-    it('should handle multiple concurrent searches efficiently', () => {
+    it("should handle multiple concurrent searches efficiently", () => {
       const startTime = Date.now();
-      
-      searchAirports('New York');
-      searchAirports('Los Angeles');
-      searchAirports('London');
-      searchAirports('Tokyo');
-      searchAirports('Paris');
-      
+
+      searchAirports("New York");
+      searchAirports("Los Angeles");
+      searchAirports("London");
+      searchAirports("Tokyo");
+      searchAirports("Paris");
+
       const endTime = Date.now();
-      
+
       // All searches should complete quickly
       expect(endTime - startTime).toBeLessThan(200);
     });
 
-    it('should cache results effectively', async () => {
+    it("should cache results effectively", async () => {
       clearCache();
-      
+
       const firstLoadTime = Date.now();
       await loadAirports();
       const firstLoadEnd = Date.now();
-      
+
       const secondLoadTime = Date.now();
       await loadAirports();
       const secondLoadEnd = Date.now();
-      
+
       const firstDuration = firstLoadEnd - firstLoadTime;
       const secondDuration = secondLoadEnd - secondLoadTime;
-      
+
       // Cached load should be much faster (< 1ms)
       expect(secondDuration).toBeLessThan(firstDuration);
       expect(secondDuration).toBeLessThan(5);
     });
   });
 
-  describe('Edge Cases', () => {
+  describe("Edge Cases", () => {
     beforeEach(async () => {
       await loadAirports();
     });
 
-    it('should handle searches with numbers', () => {
-      const results = searchAirports('00AK');
+    it("should handle searches with numbers", () => {
+      const results = searchAirports("00AK");
       expect(results.length).toBeGreaterThan(0);
     });
 
-    it('should handle searches with hyphens', () => {
+    it("should handle searches with hyphens", () => {
       // Some airport names or cities might have hyphens
-      const results = searchAirports('-');
+      const results = searchAirports("-");
       // Should return results or empty array without error
       expect(Array.isArray(results)).toBe(true);
     });
 
-    it('should handle very long search queries', () => {
-      const longQuery = 'a'.repeat(100);
+    it("should handle very long search queries", () => {
+      const longQuery = "a".repeat(100);
       const results = searchAirports(longQuery);
       // Should return empty or small array without error
       expect(Array.isArray(results)).toBe(true);
     });
 
-    it('should handle extreme coordinates for distance search', () => {
+    it("should handle extreme coordinates for distance search", () => {
       // North Pole
       const northPole: Coordinates = { lat: 90, lon: 0 };
       const results = getAirportsWithinDistance(northPole, 1000);
       expect(Array.isArray(results)).toBe(true);
     });
 
-    it('should handle unicode characters in search', () => {
-      const results = searchAirports('Zürich');
+    it("should handle unicode characters in search", () => {
+      const results = searchAirports("Zürich");
       // Should handle without error
+      expect(Array.isArray(results)).toBe(true);
+    });
+  });
+
+  describe("Security & Input Validation", () => {
+    beforeEach(async () => {
+      await loadAirports();
+    });
+
+    it("should return null for ICAO code exceeding max length", () => {
+      // 11 characters
+      const longIcao = "AAAAAAAAAAA";
+      expect(getAirportByICAO(longIcao)).toBeNull();
+    });
+
+    it("should return empty array for country code exceeding max length", () => {
+      // 11 characters
+      const longCountry = "AAAAAAAAAAA";
+      expect(getAirportsByCountry(longCountry)).toEqual([]);
+    });
+
+    it("should truncate search query exceeding max length", () => {
+      // Create a search query > 100 chars
+      const longQuery = "a".repeat(200);
+
+      const startTime = Date.now();
+      const results = searchAirports(longQuery);
+      const endTime = Date.now();
+
+      expect(Array.isArray(results)).toBe(true);
+      // It should process quickly
+      expect(endTime - startTime).toBeLessThan(50);
+    });
+
+    it("should handle search query exactly at limit", () => {
+      const query = "a".repeat(100);
+      const results = searchAirports(query);
       expect(Array.isArray(results)).toBe(true);
     });
   });

@@ -1,65 +1,87 @@
-# Welcome to your Expo app 👋
+# TravelBlock
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo + React Native mobile app (Android-first). TravelBlock is an Expo Router app that provides airport-related utilities and a small demo UI. This repository is configured for development with EAS workflows and an Expo dev client.
 
-## Get started
+**Status**: Android-first; iOS simulator/device builds were available but this project is currently focused on Android testing and development.
 
-To start the app, in your terminal run:
+---
+
+## Quick start
+
+### Prerequisites
+
+- Node.js (LTS)
+- npm
+- npx (bundled with npm)
+
+### Install
+
+```bash
+npm install
+```
+
+### Start Metro (development server)
 
 ```bash
 npm run start
+# or to open directly on an Android device/emulator
+npm run android
 ```
 
-In the output, you'll find options to open the app in:
+### Create development builds (EAS)
 
-- [a development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [an Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [an iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+```bash
+# Creates development builds via the preconfigured workflow
+npm run development-builds
+```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Notes about development builds
 
-## Workflows
+- The project uses EAS Workflows defined in `.eas/workflows/create-development-builds.yml`.
+- This workflow was adjusted to only queue Android builds (see [.eas/workflows/create-development-builds.yml](.eas/workflows/create-development-builds.yml)).
+- EAS will snapshot the repository at build submission time — local edits after submission do not affect queued builds.
+- Keystore generation for Android is interactive by default; run the EAS credential flow locally the first time so remote builds don't fail in non-interactive CI.
 
-This project is configured to use [EAS Workflows](https://docs.expo.dev/eas/workflows/get-started/) to automate some development and release processes. These commands are set up in [`package.json`](./package.json) and can be run using NPM scripts in your terminal.
+### Credentials / common EAS commands
 
-### Previews
+```bash
+# Login to Expo/EAS
+npx eas-cli@latest login
+# Inspect builds
+npx eas-cli@latest build:list
+npx eas-cli@latest build:view <BUILD_ID>
+# Manage credentials locally
+npx eas-cli@latest credentials
+```
 
-Run `npm run draft` to [publish a preview update](https://docs.expo.dev/eas/workflows/examples/publish-preview-update/) of your project, which can be viewed in Expo Go or in a development build.
+### Testing & linting
 
-### Development Builds
+```bash
+npm test
+npm run test:expo
+npm run test:coverage
+npm run lint
+```
 
-Run `npm run development-builds` to [create a development build](https://docs.expo.dev/eas/workflows/examples/create-development-builds/). Note - you'll need to follow the [Prerequisites](https://docs.expo.dev/eas/workflows/examples/create-development-builds/#prerequisites) to ensure you have the correct emulator setup on your machine.
-
-### Production Deployments
-
-Run `npm run deploy` to [deploy to production](https://docs.expo.dev/eas/workflows/examples/deploy-to-production/). Note - you'll need to follow the [Prerequisites](https://docs.expo.dev/eas/workflows/examples/deploy-to-production/#prerequisites) to ensure you're set up to submit to the Apple and Google stores.
-
-## Hosting
-
-Expo offers hosting for websites and API functions via EAS Hosting. See the [Getting Started](https://docs.expo.dev/eas/hosting/get-started/) guide to learn more.
-
-
-## Get a fresh project
-
-When you're ready, run:
+### Reset project (create a fresh app folder)
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Project structure (high level)
 
-## Learn more
+- `app/` — Expo Router entry points and screens
+- `components/` — React components and UI primitives
+- `services/` — business logic and data services
+- `expo-sqlite/` — local kv-store wrapper
+- `eas.json` — EAS build profiles
+- `.eas/workflows/` — EAS workflow definitions
 
-To learn more about developing your project with Expo, look at the following resources:
+### Contributing
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- This is a personal / hobby project. Pull requests welcome for bug fixes and small improvements. Keep TypeScript strict and follow existing patterns.
 
-## Join the community
+### License
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- MIT

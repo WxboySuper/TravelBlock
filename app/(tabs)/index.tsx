@@ -1,98 +1,120 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { StyleSheet, View } from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
-}
+import { AirportCard } from "@/components/airport/AirportCard";
+import { SelectAirportModal } from "@/components/airport/SelectAirportModal";
+import { EmptyHomeBase } from "@/components/home/EmptyHomeBase";
+import { HomeHeader } from "@/components/home/HomeHeader";
+import { StatusBar } from "@/components/home/StatusBar";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Button } from "@/components/ui/Button";
+import { Colors, Spacing, Typography } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useHomeAirport } from "@/hooks/use-home-airport";
+import type { Airport } from "@/types/airport";
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  contentContainer: {
+    flex: 1,
+    padding: Spacing.lg,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  airportSection: {
+    flex: 1,
+    paddingTop: Spacing.md,
+  },
+  actionContainer: {
+    paddingTop: Spacing.xl,
   },
 });
+
+export default function HomeScreen() {
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
+  const { homeAirport, isLoading, handleSelectAirport, handleClearHomeBase } =
+    useHomeAirport();
+  const router = useRouter();
+
+  const handleNewJourney = useCallback(() => {
+    router.push("/flight/setup");
+  }, [router]);
+
+  const handleSelect = useCallback(
+    async (airport: Airport) => {
+      try {
+        await handleSelectAirport(airport);
+        setIsModalVisible(false);
+      } catch {
+        // Error already handled in hook
+      }
+    },
+    [handleSelectAirport],
+  );
+
+  const openModal = useCallback(() => setIsModalVisible(true), []);
+  const closeModal = useCallback(() => setIsModalVisible(false), []);
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <StatusBar />
+        <View style={styles.contentContainer}>
+          <HomeHeader />
+          <ThemedText
+            style={{
+              fontSize: Typography.fontSize.sm,
+              color: colors.textSecondary,
+              fontWeight: Typography.fontWeight.medium,
+            }}
+          >
+            Loading...
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <StatusBar />
+
+      <View style={styles.contentContainer}>
+        <HomeHeader />
+
+        <View style={styles.airportSection}>
+          {homeAirport ? (
+            <>
+              <AirportCard
+                airport={homeAirport}
+                onEdit={openModal}
+                onClear={handleClearHomeBase}
+              />
+              <View style={styles.actionContainer}>
+                <Button
+                  title="New Journey"
+                  onPress={handleNewJourney}
+                  size="lg"
+                  variant="primary"
+                />
+              </View>
+            </>
+          ) : (
+            <EmptyHomeBase onSelectAirport={openModal} />
+          )}
+        </View>
+      </View>
+
+      <SelectAirportModal
+        visible={isModalVisible}
+        onClose={closeModal}
+        onSelectAirport={handleSelect}
+        title="Select Home Base"
+      />
+    </ThemedView>
+  );
+}

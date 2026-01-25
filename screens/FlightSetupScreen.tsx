@@ -8,6 +8,8 @@ import { useHomeAirport } from '@/hooks/use-home-airport';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useCallback } from 'react';
+import type { Airport } from '@/types/airport';
 
 const styles = StyleSheet.create({
   container: {
@@ -49,10 +51,58 @@ const styles = StyleSheet.create({
   },
 });
 
+function SectionHeader({ title }: { title: string }) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  return (
+    <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+      {title}
+    </ThemedText>
+  );
+}
+
+function DepartureSection({ homeAirport }: { homeAirport: Airport | null }) {
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="Departure (Origin)" />
+      {homeAirport ? (
+        <AirportCard airport={homeAirport} showEdit={false} />
+      ) : (
+        <ThemedText>No Home Base Selected</ThemedText>
+      )}
+    </View>
+  );
+}
+
+function DestinationSection() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="Destination" />
+      <View style={[styles.destinationPlaceholder, { borderColor: colors.border }]}>
+        <IconSymbol name="map" size={32} color={colors.textTertiary} />
+        <ThemedText style={{ color: colors.textSecondary, marginTop: Spacing.sm }}>
+          Select Destination
+        </ThemedText>
+        <ThemedText style={{ color: colors.textTertiary, fontSize: Typography.fontSize.xs }}>
+          (Coming Soon)
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
 export default function FlightSetupScreen() {
   const { homeAirport } = useHomeAirport();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  const handleStartEngine = useCallback(() => {
+    // Logic to start the flight will go here
+  }, []);
 
   return (
     <ThemedView style={styles.container}>
@@ -62,39 +112,16 @@ export default function FlightSetupScreen() {
             <ThemedText type="title">Flight Setup</ThemedText>
           </View>
 
-          <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-              Departure (Origin)
-            </ThemedText>
-            {homeAirport ? (
-              <AirportCard airport={homeAirport} showEdit={false} />
-            ) : (
-              <ThemedText>No Home Base Selected</ThemedText>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-              Destination
-            </ThemedText>
-            <View style={[styles.destinationPlaceholder, { borderColor: colors.border }]}>
-              <IconSymbol name="map" size={32} color={colors.textTertiary} />
-              <ThemedText style={{ color: colors.textSecondary, marginTop: Spacing.sm }}>
-                Select Destination
-              </ThemedText>
-              <ThemedText style={{ color: colors.textTertiary, fontSize: Typography.fontSize.xs }}>
-                (Coming Soon)
-              </ThemedText>
-            </View>
-          </View>
+          <DepartureSection homeAirport={homeAirport} />
+          <DestinationSection />
         </View>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Button
             title="Start Engine"
-            onPress={() => {}}
+            onPress={handleStartEngine}
             size="lg"
-            disabled={true}
+            disabled
           />
         </View>
       </SafeAreaView>

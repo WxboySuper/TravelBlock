@@ -87,7 +87,7 @@ export default function HomeScreen() {
               <View style={styles.actionContainer}>
                 <Button
                   title="New Journey"
-                  onPress={() => router.push('/flight/setup')}
+                  onPress={handleNewJourney}
                   size="lg"
                   variant="primary"
                 />

@@ -41,7 +41,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           Welcome to TravelBlock
         </ThemedText>
         <ThemedText style={styles.description}>
-          The travel timer is the focus timer. Let&apos;s get you set up in just a few steps.
+          Embark on a journey of deep work. Fasten your seatbelt and prepare for takeoff.
         </ThemedText>
       </View>
       <View style={styles.buttonContainer}>

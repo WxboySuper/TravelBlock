@@ -95,10 +95,42 @@ function DestinationSection() {
   );
 }
 
-export default function FlightSetupScreen() {
-  const { homeAirport } = useHomeAirport();
+function FlightSetupHeader() {
+  return (
+    <View style={styles.header}>
+      <ThemedText type="title">Flight Setup</ThemedText>
+    </View>
+  );
+}
+
+function FlightSetupFooter({ onStart }: { onStart: () => void }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  return (
+    <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <Button
+        title="Start Engine"
+        onPress={onStart}
+        size="lg"
+        disabled
+      />
+    </View>
+  );
+}
+
+function FlightSetupContent({ homeAirport }: { homeAirport: Airport | null }) {
+  return (
+    <View style={styles.content}>
+      <FlightSetupHeader />
+      <DepartureSection homeAirport={homeAirport} />
+      <DestinationSection />
+    </View>
+  );
+}
+
+export default function FlightSetupScreen() {
+  const { homeAirport } = useHomeAirport();
 
   const handleStartEngine = useCallback(() => {
     // Logic to start the flight will go here
@@ -107,23 +139,8 @@ export default function FlightSetupScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <ThemedText type="title">Flight Setup</ThemedText>
-          </View>
-
-          <DepartureSection homeAirport={homeAirport} />
-          <DestinationSection />
-        </View>
-
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <Button
-            title="Start Engine"
-            onPress={handleStartEngine}
-            size="lg"
-            disabled
-          />
-        </View>
+        <FlightSetupContent homeAirport={homeAirport} />
+        <FlightSetupFooter onStart={handleStartEngine} />
       </SafeAreaView>
     </ThemedView>
   );

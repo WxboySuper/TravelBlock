@@ -39,6 +39,10 @@ export default function HomeScreen() {
   const { homeAirport, isLoading, handleSelectAirport, handleClearHomeBase } = useHomeAirport();
   const router = useRouter();
 
+  const handleNewJourney = useCallback(() => {
+    router.push('/flight/setup');
+  }, [router]);
+
   const handleSelect = useCallback(
     async (airport: Airport) => {
       try {

@@ -54,4 +54,33 @@ export const storageService = {
     const airport = await this.getHomeAirport();
     return airport !== null;
   },
+
+  /**
+   * Sets the onboarding completion flag.
+   */
+  async setOnboardingCompleted(completed: boolean): Promise<void> {
+    try {
+      if (completed) {
+        await setItem({ key: StorageKey.HAS_COMPLETED_ONBOARDING, value: 'true' });
+      } else {
+        await removeItem({ key: StorageKey.HAS_COMPLETED_ONBOARDING });
+      }
+    } catch (error) {
+      console.error('Error setting onboarding completed:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Checks if the onboarding flow has been completed.
+   */
+  async getOnboardingCompleted(): Promise<boolean> {
+    try {
+      const value = await getItem({ key: StorageKey.HAS_COMPLETED_ONBOARDING });
+      return value === 'true';
+    } catch (error) {
+      console.error('Error getting onboarding completed:', error);
+      return false;
+    }
+  },
 };

@@ -48,6 +48,25 @@ async function fetchCurrentPositionSafe(): Promise<Coordinates | null> {
   }
 }
 
+// Helper: Resolve search coordinates (from argument or current location) and validate
+async function getValidatedSearchCoordinates(coordinates?: Coordinates): Promise<Coordinates | null> {
+  // Use provided coordinates or get current location
+  const searchCoords = coordinates || (await getCurrentLocation());
+
+  if (!searchCoords) {
+    console.warn('No coordinates available for airport search');
+    return null;
+  }
+
+  // Validate provided/search coordinates are finite numbers.
+  if (!Number.isFinite(searchCoords.lat) || !Number.isFinite(searchCoords.lon)) {
+    console.warn('Invalid search coordinates for airport search', searchCoords);
+    return null;
+  }
+
+  return searchCoords;
+}
+
 // Helper: compute distance to an airport if both coordinates are valid, otherwise null
 function computeDistanceToAirport(search: Coordinates, airport: Airport): number | null {
   const lat = airport.lat;
@@ -61,26 +80,25 @@ function computeDistanceToAirport(search: Coordinates, airport: Airport): number
   return Number.isFinite(distance) ? distance : null;
 }
 
-// Helper: find nearest airport for already-validated search coordinates
-async function findNearestAirportForCoordinates(searchCoords: Coordinates): Promise<Airport | null> {
+// Helper: find nearest N airports for already-validated search coordinates
+async function findNearestAirportsForCoordinates(searchCoords: Coordinates, limit: number): Promise<Airport[]> {
   const airports = await loadAirports();
   const airportArray = Object.values(airports);
   if (airportArray.length === 0) {
     console.warn('No airports available in database');
-    return null;
+    return [];
   }
 
-  let nearest: Airport | null = null;
-  let min = Infinity;
-  for (const airport of airportArray) {
-    const distance = computeDistanceToAirport(searchCoords, airport);
-    if (distance === null) continue;
-    if (distance < min) {
-      min = distance;
-      nearest = airport;
-    }
-  }
-  return nearest;
+  const withDist = airportArray
+    .map((airport) => {
+      const distance = computeDistanceToAirport(searchCoords, airport);
+      return { airport, distance };
+    })
+    .filter((item): item is { airport: Airport; distance: number } => item.distance !== null);
+
+  withDist.sort((a, b) => a.distance - b.distance);
+
+  return withDist.slice(0, limit).map((item) => item.airport);
 }
 
 /**
@@ -182,6 +200,29 @@ export async function getCurrentLocation(): Promise<Coordinates | null> {
 }
 
 /**
+ * Finds the nearest airports to the given coordinates.
+ *
+ * @param limit - Maximum number of airports to return (default: 3)
+ * @param coordinates - Optional coordinates to search from. If not provided, uses current device location
+ * @returns Promise that resolves to an array of nearest airports
+ */
+export async function getNearestAirports(
+  limit = 3,
+  coordinates?: Coordinates
+): Promise<Airport[]> {
+  try {
+    const searchCoords = await getValidatedSearchCoordinates(coordinates);
+    if (!searchCoords) return [];
+
+    // Delegate airport loading and nearest selection to helper
+    return await findNearestAirportsForCoordinates(searchCoords, limit);
+  } catch (error) {
+    console.error('Error finding nearest airports:', error);
+    throw error; // Re-throw to allow wrapper to handle/log specifically if needed, or caller to handle
+  }
+}
+
+/**
  * Finds the nearest airport to the given coordinates.
  *
  * This method searches the entire airport database and returns the closest airport
@@ -211,23 +252,15 @@ export async function getNearestAirport(
   coordinates?: Coordinates
 ): Promise<Airport | null> {
   try {
-    // Use provided coordinates or get current location
-    const searchCoords = coordinates || (await getCurrentLocation());
-
-    if (!searchCoords) {
-      console.warn('No coordinates available for airport search');
-      return null;
-    }
-
-    // Validate provided/search coordinates are finite numbers.
-    if (!Number.isFinite(searchCoords.lat) || !Number.isFinite(searchCoords.lon)) {
-      console.warn('Invalid search coordinates for airport search', searchCoords);
-      return null;
-    }
-
-    // Delegate airport loading and nearest selection to helper
-    return await findNearestAirportForCoordinates(searchCoords);
+    // Reuse the multiple airport logic but limit to 1
+    // This reduces code duplication while maintaining the API contract
+    const nearest = await getNearestAirports(1, coordinates);
+    return nearest[0] || null;
   } catch (error) {
+    // Re-log as singular error for backward compatibility if needed,
+    // or just let the inner one log. But since we catch and re-throw or return null...
+    // The implementation reuses getNearestAirports, which logs 'Error finding nearest airports:'.
+    // To match legacy behavior/tests perfectly, we should catch, log specific msg, and return null.
     console.error('Error finding nearest airport:', error);
     return null;
   }

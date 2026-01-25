@@ -66,12 +66,16 @@ function useAirportSuggestion(
     // Split logic to reduce complexity
     const suggest = async () => {
       const granted = await hasLocationPermission();
-      if (!granted || !mounted) return;
+      if (!granted) return;
+      if (!mounted) return;
 
       setSuggesting(true);
       try {
         const nearest = await getNearestAirport();
-        if (nearest && mounted && !selectedAirport) {
+        // Check mount status again after async call
+        if (!mounted) return;
+
+        if (nearest && !selectedAirport) {
           onSelectAirport(nearest);
         }
       } catch (err) {
@@ -115,7 +119,7 @@ export function HomeAirportSetupStep({
         Set Your Home Airport
       </ThemedText>
       <ThemedText style={styles.description}>
-        Choose your home base. This will be used for quick calculations and default searches.
+        Choose your home base and starting point. This location anchors your travel focus sessions.
       </ThemedText>
 
       <View style={styles.cardContainer}>

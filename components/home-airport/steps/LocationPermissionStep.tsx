@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/Button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { requestLocationPermission } from '@/services/locationService';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface LocationPermissionStepProps {
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
 export function LocationPermissionStep({ onNext }: LocationPermissionStepProps) {
   const [requesting, setRequesting] = useState(false);
 
-  const handleEnableLocation = async () => {
+  const handleEnableLocation = useCallback(async () => {
     setRequesting(true);
     try {
       await requestLocationPermission();
@@ -44,7 +44,7 @@ export function LocationPermissionStep({ onNext }: LocationPermissionStepProps) 
     } finally {
       setRequesting(false);
     }
-  };
+  }, [onNext]);
 
   return (
     <ThemedView style={styles.container}>

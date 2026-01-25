@@ -5,11 +5,12 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useHomeAirport } from '@/hooks/use-home-airport';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useCallback } from 'react';
 import type { Airport } from '@/types/airport';
+import { useRouter } from 'expo-router';
 
 const styles = StyleSheet.create({
   container: {
@@ -24,6 +25,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: Spacing.xl,
+  },
+  closeButton: {
+    padding: Spacing.sm,
   },
   section: {
     marginBottom: Spacing.xl,
@@ -95,10 +99,16 @@ function DestinationSection() {
   );
 }
 
-function FlightSetupHeader() {
+function FlightSetupHeader({ onClose }: { onClose: () => void }) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   return (
     <View style={styles.header}>
       <ThemedText type="title">Flight Setup</ThemedText>
+      <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+        <IconSymbol name="xmark" size={24} color={colors.text} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -119,10 +129,16 @@ function FlightSetupFooter({ onStart }: { onStart: () => void }) {
   );
 }
 
-function FlightSetupContent({ homeAirport }: { homeAirport: Airport | null }) {
+function FlightSetupContent({
+  homeAirport,
+  onClose
+}: {
+  homeAirport: Airport | null;
+  onClose: () => void;
+}) {
   return (
     <View style={styles.content}>
-      <FlightSetupHeader />
+      <FlightSetupHeader onClose={onClose} />
       <DepartureSection homeAirport={homeAirport} />
       <DestinationSection />
     </View>
@@ -131,15 +147,20 @@ function FlightSetupContent({ homeAirport }: { homeAirport: Airport | null }) {
 
 export default function FlightSetupScreen() {
   const { homeAirport } = useHomeAirport();
+  const router = useRouter();
 
   const handleStartEngine = useCallback(() => {
     // Logic to start the flight will go here
   }, []);
 
+  const handleClose = useCallback(() => {
+    router.back();
+  }, [router]);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <FlightSetupContent homeAirport={homeAirport} />
+        <FlightSetupContent homeAirport={homeAirport} onClose={handleClose} />
         <FlightSetupFooter onStart={handleStartEngine} />
       </SafeAreaView>
     </ThemedView>

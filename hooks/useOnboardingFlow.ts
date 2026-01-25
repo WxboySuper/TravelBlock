@@ -10,7 +10,7 @@ export enum FirstRunStep {
   COMPLETED = 3,
 }
 
-export function useFirstRunFlow() {
+export function useOnboardingFlow() {
   const [currentStep, setCurrentStep] = useState<FirstRunStep>(FirstRunStep.WELCOME);
   const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);

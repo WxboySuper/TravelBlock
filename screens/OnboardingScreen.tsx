@@ -7,7 +7,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function FirstRunScreen() {
+export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       <HomeAirportWizard />

@@ -47,7 +47,7 @@ export default function RootLayout() {
     }
 
     startup();
-  }, []);
+  }, [router]);
 
   if (!isReady) {
     return null; // or a Splash Screen

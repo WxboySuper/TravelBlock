@@ -1,9 +1,10 @@
 import { AirportCard } from '@/components/airport/AirportCard';
+import { AirportListItem } from '@/components/airport/AirportListItem';
 import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
 import { Button } from '@/components/ui/Button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getNearestAirport, hasLocationPermission } from '@/services/locationService';
+import { getNearestAirports, hasLocationPermission } from '@/services/locationService';
 import { Airport, AirportWithDistance } from '@/types/airport';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -32,7 +33,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     marginBottom: 32,
-    minHeight: 120, // Reserve space for the card or placeholder
+    minHeight: 120,
     justifyContent: 'center',
   },
   placeholder: {
@@ -52,47 +53,53 @@ const styles = StyleSheet.create({
   changeButton: {
     marginTop: 12,
   },
+  suggestionsContainer: {
+    width: '100%',
+  },
+  suggestionsHeader: {
+    marginBottom: 8,
+    fontWeight: '600',
+    opacity: 0.7,
+  },
+  suggestionItem: {
+    marginHorizontal: 0, // Override AirportListItem margin
+    marginBottom: 8,
+  },
 });
 
-function useAirportSuggestion(
-  selectedAirport: Airport | null,
-  onSelectAirport: (airport: Airport | AirportWithDistance) => void
-) {
-  const [suggesting, setSuggesting] = useState(false);
+function useAirportSuggestions(selectedAirport: Airport | null) {
+  const [suggestions, setSuggestions] = useState<Airport[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    // Split logic to reduce complexity
-    const suggest = async () => {
+    const fetchSuggestions = async () => {
+      // Don't fetch if we already have a selection or suggestions
+      if (selectedAirport || suggestions.length > 0) return;
+
       const granted = await hasLocationPermission();
-      if (!granted) return;
-      if (!mounted) return;
+      if (!granted || !mounted) return;
 
-      setSuggesting(true);
+      setLoading(true);
       try {
-        const nearest = await getNearestAirport();
-        // Check mount status again after async call
-        if (!mounted) return;
-
-        if (nearest && !selectedAirport) {
-          onSelectAirport(nearest);
+        const results = await getNearestAirports(3);
+        if (mounted) {
+          setSuggestions(results);
         }
       } catch (err) {
-        console.warn('Failed to suggest airport', err);
+        console.warn('Failed to load airport suggestions', err);
       } finally {
-        if (mounted) setSuggesting(false);
+        if (mounted) setLoading(false);
       }
     };
 
-    if (!selectedAirport) {
-      suggest();
-    }
+    fetchSuggestions();
 
     return () => { mounted = false; };
-  }, []); // Only run on mount
+  }, [selectedAirport, suggestions.length]); // Added dependencies
 
-  return suggesting;
+  return { suggestions, loading };
 }
 
 export function HomeAirportSetupStep({
@@ -103,7 +110,7 @@ export function HomeAirportSetupStep({
 }: HomeAirportSetupStepProps) {
   const [modalVisible, setModalVisible] = useState(false);
 
-  const suggesting = useAirportSuggestion(selectedAirport, onSelectAirport);
+  const { suggestions, loading } = useAirportSuggestions(selectedAirport);
 
   const handleOpenModal = useCallback(() => {
     setModalVisible(true);
@@ -112,6 +119,58 @@ export function HomeAirportSetupStep({
   const handleCloseModal = useCallback(() => {
     setModalVisible(false);
   }, []);
+
+  const renderContent = () => {
+    if (selectedAirport) {
+      return (
+        <View>
+          <AirportCard airport={selectedAirport} />
+          <Button
+            title="Change Airport"
+            onPress={handleOpenModal}
+            variant="secondary"
+            size="sm"
+            style={styles.changeButton}
+          />
+        </View>
+      );
+    }
+
+    if (suggestions.length > 0) {
+      return (
+        <View style={styles.suggestionsContainer}>
+          <ThemedText style={styles.suggestionsHeader}>Suggested nearby:</ThemedText>
+          {suggestions.map((airport) => (
+            <AirportListItem
+              key={airport.icao}
+              airport={airport}
+              onPress={onSelectAirport}
+              style={styles.suggestionItem}
+              showDistance={false} // Don't calculate distance again inside item for now
+            />
+          ))}
+          <Button
+            title="Search Manually"
+            onPress={handleOpenModal}
+            variant="ghost"
+            size="sm"
+            style={{ marginTop: 4 }}
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.placeholder}>
+        <ThemedText style={styles.placeholderText}>No airport selected</ThemedText>
+        <Button
+          title={loading ? "Finding nearest..." : "Select Airport"}
+          onPress={handleOpenModal}
+          disabled={loading}
+        />
+      </View>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -123,27 +182,7 @@ export function HomeAirportSetupStep({
       </ThemedText>
 
       <View style={styles.cardContainer}>
-        {selectedAirport ? (
-          <View>
-            <AirportCard airport={selectedAirport} />
-            <Button
-              title="Change Airport"
-              onPress={handleOpenModal}
-              variant="secondary"
-              size="sm"
-              style={styles.changeButton}
-            />
-          </View>
-        ) : (
-          <View style={styles.placeholder}>
-            <ThemedText style={styles.placeholderText}>No airport selected</ThemedText>
-            <Button
-              title={suggesting ? "Finding nearest..." : "Select Airport"}
-              onPress={handleOpenModal}
-              disabled={suggesting}
-            />
-          </View>
-        )}
+        {renderContent()}
       </View>
 
       <View style={styles.buttonContainer}>

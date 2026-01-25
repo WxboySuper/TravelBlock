@@ -48,6 +48,40 @@ async function fetchCurrentPositionSafe(): Promise<Coordinates | null> {
   }
 }
 
+/**
+ * Finds the nearest airports to the given coordinates.
+ *
+ * @param limit - Maximum number of airports to return (default: 3)
+ * @param coordinates - Optional coordinates to search from. If not provided, uses current device location
+ * @returns Promise that resolves to an array of nearest airports
+ */
+export async function getNearestAirports(
+  limit: number = 3,
+  coordinates?: Coordinates
+): Promise<Airport[]> {
+  try {
+    // Use provided coordinates or get current location
+    const searchCoords = coordinates || (await getCurrentLocation());
+
+    if (!searchCoords) {
+      console.warn('No coordinates available for airport search');
+      return [];
+    }
+
+    // Validate provided/search coordinates are finite numbers.
+    if (!Number.isFinite(searchCoords.lat) || !Number.isFinite(searchCoords.lon)) {
+      console.warn('Invalid search coordinates for airport search', searchCoords);
+      return [];
+    }
+
+    // Delegate airport loading and nearest selection to helper
+    return await findNearestAirportsForCoordinates(searchCoords, limit);
+  } catch (error) {
+    console.error('Error finding nearest airports:', error);
+    return [];
+  }
+}
+
 // Helper: compute distance to an airport if both coordinates are valid, otherwise null
 function computeDistanceToAirport(search: Coordinates, airport: Airport): number | null {
   const lat = airport.lat;
@@ -81,6 +115,27 @@ async function findNearestAirportForCoordinates(searchCoords: Coordinates): Prom
     }
   }
   return nearest;
+}
+
+// Helper: find nearest N airports for already-validated search coordinates
+async function findNearestAirportsForCoordinates(searchCoords: Coordinates, limit: number): Promise<Airport[]> {
+  const airports = await loadAirports();
+  const airportArray = Object.values(airports);
+  if (airportArray.length === 0) {
+    console.warn('No airports available in database');
+    return [];
+  }
+
+  const withDist = airportArray
+    .map((airport) => {
+      const distance = computeDistanceToAirport(searchCoords, airport);
+      return { airport, distance };
+    })
+    .filter((item): item is { airport: Airport; distance: number } => item.distance !== null);
+
+  withDist.sort((a, b) => a.distance - b.distance);
+
+  return withDist.slice(0, limit).map((item) => item.airport);
 }
 
 /**

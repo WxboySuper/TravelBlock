@@ -37,7 +37,7 @@ export default function RootLayout() {
         // Check onboarding status
         const hasCompleted = await storageService.getOnboardingCompleted();
         if (!hasCompleted) {
-          router.replace('/first-run');
+          router.replace('/onboarding');
         }
       } catch (error) {
         console.error('Failed to initialize persistent store or check onboarding', error);
@@ -59,7 +59,8 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="first-run" options={{ headerShown: false }} />
+          <Stack.Screen name="flight/setup" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         </Stack>
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       </ThemeProvider>

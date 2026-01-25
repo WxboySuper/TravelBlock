@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AirportCard } from '@/components/airport/AirportCard';
@@ -6,6 +7,7 @@ import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
 import { EmptyHomeBase } from '@/components/home/EmptyHomeBase';
 import { HomeHeader } from '@/components/home/HomeHeader';
 import { StatusBar } from '@/components/home/StatusBar';
+import { Button } from '@/components/ui/Button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing, Typography } from '@/constants/theme';
@@ -25,6 +27,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Spacing.md,
   },
+  actionContainer: {
+    paddingTop: Spacing.xl,
+  },
 });
 
 export default function HomeScreen() {
@@ -32,6 +37,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { homeAirport, isLoading, handleSelectAirport, handleClearHomeBase } = useHomeAirport();
+  const router = useRouter();
 
   const handleSelect = useCallback(
     async (airport: Airport) => {
@@ -76,7 +82,17 @@ export default function HomeScreen() {
 
         <View style={styles.airportSection}>
           {homeAirport ? (
-            <AirportCard airport={homeAirport} onEdit={openModal} onClear={handleClearHomeBase} />
+            <>
+              <AirportCard airport={homeAirport} onEdit={openModal} onClear={handleClearHomeBase} />
+              <View style={styles.actionContainer}>
+                <Button
+                  title="New Journey"
+                  onPress={() => router.push('/flight/setup')}
+                  size="lg"
+                  variant="primary"
+                />
+              </View>
+            </>
           ) : (
             <EmptyHomeBase onSelectAirport={openModal} />
           )}

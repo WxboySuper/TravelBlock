@@ -1,4 +1,4 @@
-import { FirstRunStep, useFirstRunFlow } from '@/hooks/useFirstRunFlow';
+import { FirstRunStep, useOnboardingFlow } from '@/hooks/useOnboardingFlow';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompletionStep } from './steps/CompletionStep';
@@ -22,7 +22,7 @@ export function HomeAirportWizard() {
     goToPreviousStep,
     selectAirport,
     completeOnboarding,
-  } = useFirstRunFlow();
+  } = useOnboardingFlow();
 
   const backgroundColor = useThemeColor({ light: '#fff', dark: '#1E293B' }, 'background');
 

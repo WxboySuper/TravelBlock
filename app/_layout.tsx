@@ -3,7 +3,7 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -11,8 +11,7 @@ import "react-native-reanimated";
 import { initStore } from "@/expo-sqlite/kv-store";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { storageService } from "@/services/storageService";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -20,45 +19,29 @@ export const unstable_settings = {
 
 /**
  * Provides the app's root layout, supplying theme and top-level navigation.
- *
- * The ThemeProvider uses the current color scheme to select between DarkTheme and DefaultTheme.
- * The navigation stack includes a "(tabs)" screen (header hidden) and a "modal" screen presented as a modal with title "Modal". A StatusBar is rendered with automatic style.
- *
- * @returns The root React element containing the themed navigation stack and status bar.
  */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // initialize persistent store early so native SQLite is ready before
-    // UI interactions that may save the home airport.
-    async function startup() {
+    async function prepare() {
       try {
-        await initStore();
+        // Initialize store in background - don't wait
+        initStore().catch((e) => console.warn("Store init failed:", e));
 
-        // Check onboarding status
+        // Check onboarding and navigate if needed
         const hasCompleted = await storageService.getOnboardingCompleted();
         if (!hasCompleted) {
           router.replace("/onboarding");
         }
-      } catch (error) {
-        console.error(
-          "Failed to initialize persistent store or check onboarding",
-          error,
-        );
-      } finally {
-        setIsReady(true);
+      } catch (e) {
+        console.warn("Initialization error:", e);
       }
     }
 
-    startup();
+    prepare();
   }, [router]);
-
-  if (!isReady) {
-    return null; // or a Splash Screen
-  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

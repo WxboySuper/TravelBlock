@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/Button";
 import { Colors, Spacing, Typography } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useHomeAirport } from "@/hooks/use-home-airport";
+import { getCurrentLocation, hasLocationPermission } from "@/services/locationService";
 import type { Airport } from "@/types/airport";
+import type { Coordinates } from "@/types/location";
 
 const styles = StyleSheet.create({
   container: {
@@ -34,6 +36,7 @@ const styles = StyleSheet.create({
 
 export default function HomeScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { homeAirport, isLoading, handleSelectAirport, handleClearHomeBase } =
@@ -56,7 +59,17 @@ export default function HomeScreen() {
     [handleSelectAirport],
   );
 
-  const openModal = useCallback(() => setIsModalVisible(true), []);
+  const openModal = useCallback(async () => {
+    setIsModalVisible(true);
+    const hasPermission = await hasLocationPermission();
+    if (hasPermission) {
+      const location = await getCurrentLocation();
+      if (location) {
+        setUserLocation(location);
+      }
+    }
+  }, []);
+
   const closeModal = useCallback(() => setIsModalVisible(false), []);
 
   if (isLoading) {
@@ -114,6 +127,7 @@ export default function HomeScreen() {
         onClose={closeModal}
         onSelectAirport={handleSelect}
         title="Select Home Base"
+        origin={userLocation}
       />
     </ThemedView>
   );

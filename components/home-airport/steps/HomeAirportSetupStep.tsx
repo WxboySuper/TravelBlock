@@ -4,8 +4,9 @@ import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
 import { Button } from '@/components/ui/Button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getNearestAirports, hasLocationPermission } from '@/services/locationService';
+import { getCurrentLocation, getNearestAirports, hasLocationPermission } from '@/services/locationService';
 import { Airport, AirportWithDistance } from '@/types/airport';
+import { Coordinates } from '@/types/location';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -109,10 +110,18 @@ export function HomeAirportSetupStep({
   onBack
 }: HomeAirportSetupStepProps) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
 
   const { suggestions, loading } = useAirportSuggestions(selectedAirport);
 
-  const handleOpenModal = useCallback(() => {
+  const handleOpenModal = useCallback(async () => {
+    const hasPermission = await hasLocationPermission();
+    if (hasPermission) {
+      const location = await getCurrentLocation();
+      if (location) {
+        setUserLocation(location);
+      }
+    }
     setModalVisible(true);
   }, []);
 
@@ -205,6 +214,7 @@ export function HomeAirportSetupStep({
         onClose={handleCloseModal}
         onSelectAirport={onSelectAirport}
         title="Search Home Airport"
+        origin={userLocation}
       />
     </ThemedView>
   );

@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { loadAirports, searchAirports } from '@/services/airportService';
+import { getCurrentLocation, requestLocationPermission } from '@/services/locationService';
 import type { Airport, AirportWithDistance } from '@/types/airport';
 import type { Coordinates } from '@/utils/distance';
 import { calculateDistance, calculateDistanceKm } from '@/utils/distance';
@@ -14,6 +15,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { AirportListItem } from './AirportListItem';
 import { AirportSearchBar } from './AirportSearchBar';
 
@@ -67,6 +69,17 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   emptyText: { fontSize: 16, marginBottom: 8 },
   emptySubtext: { fontSize: 14 },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 8,
+    borderBottomWidth: 1,
+  },
+  locationButtonText: {
+    fontWeight: '500',
+  }
 });
 
 function attachDistance(
@@ -270,6 +283,9 @@ type ModalBodyProps = {
   setSearchQuery: (s: string) => void;
   renderAirportItem: (info: { item: AirportWithDistance }) => ReactElement | null;
   keyExtractor: (item: AirportWithDistance) => string;
+  onUseLocation: () => void;
+  isLocationLoading: boolean;
+  hasLocation: boolean;
 };
 
 /**
@@ -282,7 +298,10 @@ type ModalBodyProps = {
  * @param setSearchQuery - Callback invoked when the search string changes.
  * @param renderAirportItem - Function that renders a single airport item for the list.
  * @param keyExtractor - Function that returns a stable key for each airport item.
- * @returns The composed modal body: an AirportSearchBar followed by either a loading indicator, an error message, an empty message, or the results count and airport list.
+ * @param onUseLocation - Callback invoked when "Use Current Location" is pressed.
+ * @param isLocationLoading - Whether location is currently being fetched.
+ * @param hasLocation - Whether location has been successfully fetched.
+ * @returns The composed modal body.
  */
 export function ModalBody({
   airports,
@@ -292,8 +311,13 @@ export function ModalBody({
   setSearchQuery,
   renderAirportItem,
   keyExtractor,
+  onUseLocation,
+  isLocationLoading,
+  hasLocation,
 }: ModalBodyProps): ReactElement | null {
   const isEmpty = airports.length === 0;
+  const borderColor = useThemeColor({ light: '#E2E8F0', dark: '#334155' }, 'border');
+  const iconColor = useThemeColor({ light: '#64748B', dark: '#94A3B8' }, 'icon');
 
   const bodyState: 'loading' | 'error' | 'empty' | 'list' = isLoading
     ? 'loading'
@@ -326,6 +350,22 @@ export function ModalBody({
   return (
     <>
       <AirportSearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Find an airport..." />
+      {!hasLocation && (
+        <TouchableOpacity
+          style={[styles.locationButton, { borderBottomColor: borderColor }]}
+          onPress={onUseLocation}
+          disabled={isLocationLoading}
+        >
+          {isLocationLoading ? (
+             <ActivityIndicator size="small" color={iconColor} />
+          ) : (
+             <IconSymbol name="location.fill" size={20} color={iconColor} />
+          )}
+          <ThemedText style={styles.locationButtonText}>
+            {isLocationLoading ? "Getting location..." : "Use Current Location"}
+          </ThemedText>
+        </TouchableOpacity>
+      )}
       {renderBody()}
     </>
   );
@@ -362,8 +402,14 @@ export function SelectAirportModal({
 }: SelectAirportModalProps) {
   const backgroundColor = useThemeColor({ light: '#fff', dark: '#1a1a1a' }, 'background');
 
+  // Internal state for location if not provided by prop
+  const [internalOrigin, setInternalOrigin] = useState<Coordinates | null>(null);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+
   // Hook: load airports lazily when modal is visible
   const { hasLoaded, loaderLoading, loaderError } = useAirportLoader(visible);
+
+  const activeOrigin = origin ?? internalOrigin;
 
   // Hook: manage search (debounced) when not externally controlled
   const {
@@ -377,7 +423,7 @@ export function SelectAirportModal({
     hasLoaded,
     onSearchChange,
     externalQuery: searchQueryProp,
-    origin,
+    origin: activeOrigin,
     distanceInKm,
   });
 
@@ -391,6 +437,23 @@ export function SelectAirportModal({
     [onSelectAirport, onClose]
   );
 
+  const handleUseLocation = useCallback(async () => {
+    setIsLocationLoading(true);
+    try {
+      const granted = await requestLocationPermission();
+      if (granted) {
+        const location = await getCurrentLocation();
+        if (location) {
+            setInternalOrigin(location);
+        }
+      }
+    } catch (e) {
+        console.warn('Failed to get location', e);
+    } finally {
+        setIsLocationLoading(false);
+    }
+  }, []);
+
   const keyExtractor = useCallback((item: AirportWithDistance) => item.icao, []);
 
   const renderAirportItem = useCallback(
@@ -398,16 +461,16 @@ export function SelectAirportModal({
       <AirportListItem
         airport={item}
         onPress={handleSelectAirport}
-        showDistance={Boolean(origin)}
+        showDistance={Boolean(activeOrigin)}
         distanceUnit={distanceUnit}
       />
     ),
-    [handleSelectAirport, origin, distanceUnit]
+    [handleSelectAirport, activeOrigin, distanceUnit]
   );
 
   const resolvedAirports = useMemo(
-    () => (airportsProp ? attachDistance(airportsProp, origin, distanceInKm) : searchedAirports),
-    [airportsProp, origin, distanceInKm, searchedAirports]
+    () => (airportsProp ? attachDistance(airportsProp, activeOrigin, distanceInKm) : searchedAirports),
+    [airportsProp, activeOrigin, distanceInKm, searchedAirports]
   );
   const resolvedLoading = isLoading || loaderLoading || searchLoading;
   const resolvedError = errorMessage ?? loaderError ?? searchError;
@@ -431,6 +494,9 @@ export function SelectAirportModal({
           setSearchQuery={setQuery}
           renderAirportItem={renderAirportItem}
           keyExtractor={keyExtractor}
+          onUseLocation={handleUseLocation}
+          isLocationLoading={isLocationLoading}
+          hasLocation={Boolean(activeOrigin)}
         />
       </SafeAreaView>
     </Modal>

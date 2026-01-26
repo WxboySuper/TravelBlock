@@ -56,7 +56,10 @@ export default function HomeScreen() {
     [handleSelectAirport],
   );
 
-  const openModal = useCallback(() => setIsModalVisible(true), []);
+  const openModal = useCallback(() => {
+    setIsModalVisible(true);
+  }, []);
+
   const closeModal = useCallback(() => setIsModalVisible(false), []);
 
   if (isLoading) {

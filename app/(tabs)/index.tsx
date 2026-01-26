@@ -60,7 +60,6 @@ export default function HomeScreen() {
   );
 
   const openModal = useCallback(async () => {
-    setIsModalVisible(true);
     const hasPermission = await hasLocationPermission();
     if (hasPermission) {
       const location = await getCurrentLocation();
@@ -68,6 +67,7 @@ export default function HomeScreen() {
         setUserLocation(location);
       }
     }
+    setIsModalVisible(true);
   }, []);
 
   const closeModal = useCallback(() => setIsModalVisible(false), []);

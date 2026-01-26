@@ -115,7 +115,6 @@ export function HomeAirportSetupStep({
   const { suggestions, loading } = useAirportSuggestions(selectedAirport);
 
   const handleOpenModal = useCallback(async () => {
-    setModalVisible(true);
     const hasPermission = await hasLocationPermission();
     if (hasPermission) {
       const location = await getCurrentLocation();
@@ -123,6 +122,7 @@ export function HomeAirportSetupStep({
         setUserLocation(location);
       }
     }
+    setModalVisible(true);
   }, []);
 
   const handleCloseModal = useCallback(() => {

@@ -79,6 +79,19 @@ describe('storageService', () => {
       
       consoleSpy.mockRestore();
     });
+
+    it('should return null and log if retrieved data is invalid', async () => {
+      const invalidAirport = { foo: 'bar' }; // Missing required fields
+      (getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(invalidAirport));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const result = await storageService.getHomeAirport();
+
+      expect(result).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith('Home airport data is malformed or corrupted', invalidAirport);
+
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('clearHomeAirport', () => {

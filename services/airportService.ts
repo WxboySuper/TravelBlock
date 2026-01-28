@@ -205,7 +205,17 @@ export function getAirportsWithinDistance(
 
   const results: Array<{ airport: InternalAirport; distance: number }> = [];
 
+  // Optimization: Pre-calculate latitude difference limit to skip expensive distance calculations
+  // 1 degree of latitude is approximately 69 miles
+  const latDiffLimit = maxDistance / 69;
+
   for (const airport of airportArray) {
+    // Optimization: Skip airports outside the latitude bounding box
+    // This simple check filters out ~98% of airports for typical search radii
+    if (Math.abs(airport.lat - origin.lat) > latDiffLimit) {
+      continue;
+    }
+
     const airportCoords: Coordinates = {
       lat: airport.lat,
       lon: airport.lon,

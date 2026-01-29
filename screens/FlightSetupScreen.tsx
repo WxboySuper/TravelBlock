@@ -11,6 +11,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useCallback } from 'react';
 import type { Airport } from '@/types/airport';
 import { useRouter } from 'expo-router';
+import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 
 const styles = StyleSheet.create({
   container: {
@@ -106,7 +107,13 @@ function FlightSetupHeader({ onClose }: { onClose: () => void }) {
   return (
     <View style={styles.header}>
       <ThemedText type="title">Flight Setup</ThemedText>
-      <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+      <TouchableOpacity
+        onPress={onClose}
+        style={styles.closeButton}
+        accessibilityLabel="Close flight setup"
+        accessibilityRole="button"
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
         <IconSymbol name="xmark" size={24} color={colors.text} />
       </TouchableOpacity>
     </View>
@@ -154,6 +161,7 @@ export default function FlightSetupScreen() {
   }, []);
 
   const handleClose = useCallback(() => {
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => {});
     router.back();
   }, [router]);
 

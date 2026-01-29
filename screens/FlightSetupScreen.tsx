@@ -117,6 +117,7 @@ function FlightSetupHeader({ onClose }: { onClose: () => void }) {
         style={styles.closeButton}
         accessibilityLabel="Close flight setup"
         accessibilityRole="button"
+        activeOpacity={0.6}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <IconSymbol name="xmark" size={24} color={colors.text} />
       </TouchableOpacity>

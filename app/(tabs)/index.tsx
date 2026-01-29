@@ -12,7 +12,7 @@ import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";
 import { Colors, Spacing, Typography } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useHomeAirport } from "@/hooks/use-home-airport";
+import { useHomeAirport } from "@/hooks/useHomeAirport";
 import { getCurrentLocation, hasLocationPermission } from "@/services/locationService";
 import type { Airport } from "@/types/airport";
 import type { Coordinates } from "@/types/location";

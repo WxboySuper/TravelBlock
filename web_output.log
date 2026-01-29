@@ -1,0 +1,73 @@
+
+> travelblock@0.2.0-alpha web /app
+> expo start --web
+
+Starting project at /app
+React Compiler enabled
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ▓▓▓▓░░░░░░░░░░░░ 30.3% ( 61/153)
+λ node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/node/render.js ▓▓░░░░░░░░░░░░░░ 17.8% (124/294)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 50.2% (197/314)
+λ node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓░░░░░░░░ 56.0% (413/590)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 50.2% (312/472)
+λ node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 59.9% (568/766)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 56.1% (470/657)
+λ node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 67.0% (748/915)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 60.2% (658/849)
+λ node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 81.4% ( 944/1046)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77.4% ( 927/1054)
+λ node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/node/render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.8% (1063/1128)
+λ Bundling failed 24383ms node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/node/render.js (1299 modules)
+
+Metro error: Unable to resolve module ./wa-sqlite/wa-sqlite.wasm from /app/node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/web/worker.ts:
+
+None of these files exist:
+  * node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/web/wa-sqlite/wa-sqlite.wasm(.web.ts|.ts|.web.tsx|.tsx|.web.js|.js|.web.jsx|.jsx|.web.json|.json|.web.cjs|.cjs|.web.mjs|.mjs|.web.scss|.scss|.web.sass|.sass|.web.css|.css)
+  * node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/web/wa-sqlite/wa-sqlite.wasm
+[0m [90m 20 |[39m [36mimport[39m [33mWaSQLiteFactory[39m [36mfrom[39m [32m'./wa-sqlite/wa-sqlite'[39m[33m;[39m
+ [90m 21 |[39m [90m// @ts-expect-error wasm module is not typed[39m
+[31m[1m>[22m[39m[90m 22 |[39m [36mimport[39m wasmModule [36mfrom[39m [32m'./wa-sqlite/wa-sqlite.wasm'[39m[33m;[39m
+ [90m    |[39m                         [31m[1m^[22m[39m
+ [90m 23 |[39m [36mimport[39m {
+ [90m 24 |[39m   type [33mSQLiteWorkerMessage[39m[33m,[39m
+ [90m 25 |[39m   type [33mSQLiteWorkerMessageType[39m[33m,[39m[0m
+
+Import stack:
+
+ node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/web/worker.ts
+ | import "./wa-sqlite/wa-sqlite.wasm"
+
+ node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/web/SQLiteModule.ts
+ | import "./worker"
+
+ node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/build/ExpoSQLite.web.js
+ | import "../web/SQLiteModule"
+
+ node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/build/SQLiteDatabase.js
+ | import "./ExpoSQLite"
+
+ node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/build/index.js
+ | import "./SQLiteDatabase"
+
+ expo-sqlite/kv-store.ts
+ | import "expo-sqlite"
+
+ services/storageService.ts
+ | import "../expo-sqlite/kv-store"
+
+ app/_layout.tsx
+ | import "@/services/storageService"
+
+ app (require.context)
+
+
+Call Stack
+  <unknown> (node_modules/.pnpm/expo-sqlite@16.0.10_expo@54.0.32_react-native@0.81.5_@babel+core@7.28.6_@types+react@19.1.17_react@19.1.0__react@19.1.0/node_modules/expo-sqlite/web/worker.ts:0)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.7% (1282/1297)
+Web Bundled 24813ms node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/entry.js (1298 modules)
+Web node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/_error.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82.9% (265/291)
+Web Bundled 3786ms node_modules/.pnpm/expo-router@6.0.22_a5f14e6437627d1ed8cef30ecd342f09/node_modules/expo-router/_error.js (323 modules)
+ LOG  [web] Logs will appear in the browser console

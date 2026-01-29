@@ -17,7 +17,12 @@
  */
 
 import { Airport, AirportData } from "../types/airport";
-import { Coordinates, calculateDistance, degreesToRadians } from "../utils/distance";
+import {
+  Coordinates,
+  calculateDistance,
+  calculateBoundingBoxLimits,
+  isWithinBoundingBox,
+} from "../utils/distance";
 import { computeScoreOptimized } from "./airportScoring";
 
 const MAX_SEARCH_QUERY_LENGTH = 100;
@@ -121,35 +126,6 @@ function stripInternal(internal: InternalAirport): Airport {
 }
 
 /**
- * Helper to check if an airport is within the bounding box of the origin.
- * Optimized to handle Date Line wrapping.
- */
-function isWithinBoundingBox(
-  origin: Coordinates,
-  airport: Coordinates,
-  latDiffLimit: number,
-  lonDiffLimit: number
-): boolean {
-  // Optimization: Skip airports outside the latitude bounding box
-  if (Math.abs(airport.lat - origin.lat) > latDiffLimit) {
-    return false;
-  }
-
-  // Optimization: Skip airports outside the longitude bounding box
-  // We must handle the International Date Line (crossing 180/-180)
-  let lonDiff = Math.abs(airport.lon - origin.lon);
-  if (lonDiff > 180) {
-    lonDiff = 360 - lonDiff;
-  }
-
-  if (lonDiff > lonDiffLimit) {
-    return false;
-  }
-
-  return true;
-}
-
-/**
  * Searches for airports matching the given query string.
  *
  * The search is performed across multiple fields:
@@ -235,15 +211,7 @@ export function getAirportsWithinDistance(
   const results: Array<{ airport: InternalAirport; distance: number }> = [];
 
   // Optimization: Pre-calculate bounding box limits to skip expensive distance calculations
-  // 1 degree of latitude is approximately 69 miles
-  const latDiffLimit = maxDistance / 69;
-
-  // At the equator, 1 degree of longitude ≈ 69 miles, but it decreases with cos(latitude).
-  // We use the origin's latitude to approximate the longitude degree size.
-  // We take the absolute value of the cosine to avoid negative limits (though latitude is -90 to 90 so cos is >= 0).
-  // If cos is very close to 0 (near poles), division results in Infinity, effectively disabling the longitude check (safe).
-  const cosLat = Math.cos(degreesToRadians(origin.lat));
-  const lonDiffLimit = cosLat > 0.0001 ? maxDistance / (69 * cosLat) : 360;
+  const limits = calculateBoundingBoxLimits(origin, maxDistance);
 
   for (const airport of airportArray) {
     const airportCoords: Coordinates = {
@@ -251,7 +219,7 @@ export function getAirportsWithinDistance(
       lon: airport.lon,
     };
 
-    if (!isWithinBoundingBox(origin, airportCoords, latDiffLimit, lonDiffLimit)) {
+    if (!isWithinBoundingBox(origin, airportCoords, limits)) {
       continue;
     }
 

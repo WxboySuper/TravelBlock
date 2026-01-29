@@ -333,3 +333,68 @@ export function calculateDistanceBetweenPointsKm(
 ): number {
   return calculateDistanceKm(point1, point2);
 }
+
+/**
+ * Pre-calculated latitude and longitude limits for bounding box checks.
+ */
+export interface BoundingBoxLimits {
+  latDiffLimit: number;
+  lonDiffLimit: number;
+}
+
+/**
+ * Calculates the bounding box limits for a given distance and origin.
+ *
+ * @param origin - The center point of the search area
+ * @param maxDistance - The maximum distance in miles
+ * @returns The latitude and longitude difference limits
+ */
+export function calculateBoundingBoxLimits(
+  origin: Coordinates,
+  maxDistance: number
+): BoundingBoxLimits {
+  // 1 degree of latitude is approximately 69 miles
+  const latDiffLimit = maxDistance / 69;
+
+  // At the equator, 1 degree of longitude ≈ 69 miles, but it decreases with cos(latitude).
+  // We use the origin's latitude to approximate the longitude degree size.
+  // We take the absolute value of the cosine to avoid negative limits (though latitude is -90 to 90 so cos is >= 0).
+  // If cos is very close to 0 (near poles), division results in Infinity, effectively disabling the longitude check (safe).
+  const cosLat = Math.cos(degreesToRadians(origin.lat));
+  const lonDiffLimit = cosLat > 0.0001 ? maxDistance / (69 * cosLat) : 360;
+
+  return { latDiffLimit, lonDiffLimit };
+}
+
+/**
+ * Checks if a point is within the bounding box defined by the limits.
+ * Handles the International Date Line for longitude checks.
+ *
+ * @param origin - The center point of the search area
+ * @param point - The point to check
+ * @param limits - The pre-calculated bounding box limits
+ * @returns true if the point is within the bounding box, false otherwise
+ */
+export function isWithinBoundingBox(
+  origin: Coordinates,
+  point: Coordinates,
+  limits: BoundingBoxLimits
+): boolean {
+  // Optimization: Skip airports outside the latitude bounding box
+  if (Math.abs(point.lat - origin.lat) > limits.latDiffLimit) {
+    return false;
+  }
+
+  // Optimization: Skip airports outside the longitude bounding box
+  // We must handle the International Date Line (crossing 180/-180)
+  let lonDiff = Math.abs(point.lon - origin.lon);
+  if (lonDiff > 180) {
+    lonDiff = 360 - lonDiff;
+  }
+
+  if (lonDiff > limits.lonDiffLimit) {
+    return false;
+  }
+
+  return true;
+}

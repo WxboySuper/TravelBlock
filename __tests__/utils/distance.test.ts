@@ -10,6 +10,8 @@ import {
   calculateDistanceKm,
   calculateDistanceBetweenPoints,
   calculateDistanceBetweenPointsKm,
+  calculateBoundingBoxLimits,
+  isWithinBoundingBox,
   degreesToRadians,
   Coordinates,
 } from '../../utils/distance';
@@ -300,6 +302,85 @@ describe('Distance Calculation Utilities', () => {
       // Earth's circumference ≈ 24,901 miles, quarter ≈ 6,225 miles
       expect(distance).toBeGreaterThan(6150);
       expect(distance).toBeLessThan(6300);
+    });
+  });
+
+  describe('Bounding Box Optimization', () => {
+    it('should calculate limits correctly for the equator', () => {
+      const origin = { lat: 0, lon: 0 };
+      const maxDistance = 69; // ~1 degree
+      const limits = calculateBoundingBoxLimits(origin, maxDistance);
+
+      expect(limits.latDiffLimit).toBeCloseTo(1, 2);
+      expect(limits.lonDiffLimit).toBeCloseTo(1, 2); // At equator, 1 deg lon = 1 deg lat distance
+    });
+
+    it('should calculate limits correctly for 60 degrees latitude', () => {
+      const origin = { lat: 60, lon: 0 };
+      const maxDistance = 69; // ~1 degree of latitude
+      const limits = calculateBoundingBoxLimits(origin, maxDistance);
+
+      expect(limits.latDiffLimit).toBeCloseTo(1, 2);
+      // At 60 deg lat, cos(60) = 0.5. So 1 degree of longitude is half the distance.
+      // To cover 69 miles, we need ~2 degrees of longitude.
+      expect(limits.lonDiffLimit).toBeCloseTo(2, 2);
+    });
+
+    it('should correctly identify points within the bounding box', () => {
+      const origin = { lat: 0, lon: 0 };
+      const limits = { latDiffLimit: 1, lonDiffLimit: 1 };
+
+      // Inside
+      expect(isWithinBoundingBox(origin, { lat: 0.5, lon: 0.5 }, limits)).toBe(true);
+      expect(isWithinBoundingBox(origin, { lat: -0.5, lon: -0.5 }, limits)).toBe(true);
+
+      // Outside
+      expect(isWithinBoundingBox(origin, { lat: 1.1, lon: 0 }, limits)).toBe(false);
+      expect(isWithinBoundingBox(origin, { lat: 0, lon: 1.1 }, limits)).toBe(false);
+    });
+
+    it('should handle Date Line wrapping (International Date Line)', () => {
+      const origin = { lat: 0, lon: 179 };
+      const limits = { latDiffLimit: 5, lonDiffLimit: 5 };
+
+      // Point just across the date line (-179 is 2 degrees away from 179)
+      const pointAcrossDateLine = { lat: 0, lon: -179 };
+
+      expect(isWithinBoundingBox(origin, pointAcrossDateLine, limits)).toBe(true);
+
+      // Verify math: |(-179) - 179| = |-358| = 358.
+      // 358 > 180 -> diff = 360 - 358 = 2.
+      // 2 <= 5 -> true.
+    });
+
+    it('should handle Date Line wrapping when checking "outside" points', () => {
+      const origin = { lat: 0, lon: 170 };
+      const limits = { latDiffLimit: 5, lonDiffLimit: 5 };
+
+      // Point far across date line (-170 is 20 degrees away: 10 to 180 + 10 from -180)
+      const pointFarAcross = { lat: 0, lon: -170 };
+
+      expect(isWithinBoundingBox(origin, pointFarAcross, limits)).toBe(false);
+
+      // Verify math: |(-170) - 170| = 340.
+      // 340 > 180 -> diff = 360 - 340 = 20.
+      // 20 > 5 -> false.
+    });
+
+    it('should handle polar regions safely (avoid division by zero)', () => {
+      const origin = { lat: 90, lon: 0 }; // North Pole
+      const maxDistance = 100;
+      const limits = calculateBoundingBoxLimits(origin, maxDistance);
+
+      // Latitude limit is standard
+      expect(limits.latDiffLimit).toBeGreaterThan(0);
+
+      // Longitude limit should be 360 (full circle) because at pole, all longitudes are "close"
+      expect(limits.lonDiffLimit).toBe(360);
+
+      // Check verify
+      const anyPoint = { lat: 89, lon: 150 };
+      expect(isWithinBoundingBox(origin, anyPoint, limits)).toBe(true);
     });
   });
 });

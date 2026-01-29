@@ -18,10 +18,9 @@ describe('isValidAirport', () => {
     expect(isValidAirport(validAirport)).toBe(true);
   });
 
-  test('returns true when optional iata field is missing', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { iata, ...missingIata } = validAirport;
-    expect(isValidAirport(missingIata)).toBe(true);
+  test('returns true when iata field is empty string', () => {
+    const emptyIata = { ...validAirport, iata: '' };
+    expect(isValidAirport(emptyIata)).toBe(true);
   });
 
   test('returns false for null', () => {

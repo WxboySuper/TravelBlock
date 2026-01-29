@@ -7,6 +7,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useHomeAirport } from '@/hooks/use-home-airport';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useCallback } from 'react';
 import type { Airport } from '@/types/airport';
@@ -103,10 +104,21 @@ function FlightSetupHeader({ onClose }: { onClose: () => void }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const handleClose = useCallback(() => {
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => null);
+    onClose();
+  }, [onClose]);
+
   return (
     <View style={styles.header}>
       <ThemedText type="title">Flight Setup</ThemedText>
-      <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+      <TouchableOpacity
+        onPress={handleClose}
+        style={styles.closeButton}
+        accessibilityLabel="Close flight setup"
+        accessibilityRole="button"
+        activeOpacity={0.6}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <IconSymbol name="xmark" size={24} color={colors.text} />
       </TouchableOpacity>
     </View>

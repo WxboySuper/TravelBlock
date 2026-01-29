@@ -24,6 +24,7 @@ const MAPPING = {
   "airplane.departure": "flight-takeoff",
   pencil: "edit",
   "book.fill": "menu-book",
+  "gearshape.fill": "settings",
 } as IconMapping;
 
 /**

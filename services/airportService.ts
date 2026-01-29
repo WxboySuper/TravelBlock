@@ -121,6 +121,35 @@ function stripInternal(internal: InternalAirport): Airport {
 }
 
 /**
+ * Helper to check if an airport is within the bounding box of the origin.
+ * Optimized to handle Date Line wrapping.
+ */
+function isWithinBoundingBox(
+  origin: Coordinates,
+  airport: Coordinates,
+  latDiffLimit: number,
+  lonDiffLimit: number
+): boolean {
+  // Optimization: Skip airports outside the latitude bounding box
+  if (Math.abs(airport.lat - origin.lat) > latDiffLimit) {
+    return false;
+  }
+
+  // Optimization: Skip airports outside the longitude bounding box
+  // We must handle the International Date Line (crossing 180/-180)
+  let lonDiff = Math.abs(airport.lon - origin.lon);
+  if (lonDiff > 180) {
+    lonDiff = 360 - lonDiff;
+  }
+
+  if (lonDiff > lonDiffLimit) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Searches for airports matching the given query string.
  *
  * The search is performed across multiple fields:
@@ -217,27 +246,14 @@ export function getAirportsWithinDistance(
   const lonDiffLimit = cosLat > 0.0001 ? maxDistance / (69 * cosLat) : 360;
 
   for (const airport of airportArray) {
-    // Optimization: Skip airports outside the latitude bounding box
-    // This simple check filters out ~98% of airports for typical search radii
-    if (Math.abs(airport.lat - origin.lat) > latDiffLimit) {
-      continue;
-    }
-
-    // Optimization: Skip airports outside the longitude bounding box
-    // We must handle the International Date Line (crossing 180/-180)
-    let lonDiff = Math.abs(airport.lon - origin.lon);
-    if (lonDiff > 180) {
-      lonDiff = 360 - lonDiff;
-    }
-
-    if (lonDiff > lonDiffLimit) {
-      continue;
-    }
-
     const airportCoords: Coordinates = {
       lat: airport.lat,
       lon: airport.lon,
     };
+
+    if (!isWithinBoundingBox(origin, airportCoords, latDiffLimit, lonDiffLimit)) {
+      continue;
+    }
 
     const distance = calculateDistance(origin, airportCoords);
 

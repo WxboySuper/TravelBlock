@@ -20,9 +20,12 @@ export function isValidAirport(data: unknown): data is Airport {
   }
 
   // Check required string fields
-  const stringFields = ['icao', 'name', 'city', 'country', 'state', 'tz', 'iata'];
+  const stringFields = ['icao', 'name', 'city', 'country', 'state', 'tz'];
   const hasValidStrings = stringFields.every(field => typeof data[field] === 'string');
   if (!hasValidStrings) return false;
+
+  // iata is optional but must be string if present
+  if (data.iata !== undefined && typeof data.iata !== 'string') return false;
 
   // Check required number fields and finiteness
   const numberFields = ['lat', 'lon', 'elevation'];

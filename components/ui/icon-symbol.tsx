@@ -25,9 +25,6 @@ const MAPPING = {
   pencil: "edit",
   "book.fill": "menu-book",
   "gearshape.fill": "settings",
-  xmark: "close",
-  map: "map",
-  "location.fill": "location-on",
 } as IconMapping;
 
 /**

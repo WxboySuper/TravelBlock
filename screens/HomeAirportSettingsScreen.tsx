@@ -53,7 +53,6 @@ export default function HomeAirportSettingsScreen() {
   const handleSelect = useCallback(
     async (airportWithDistance: AirportWithDistance) => {
       // Extract Airport fields from AirportWithDistance
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { distance, ...airport } = airportWithDistance;
       try {
         await handleSelectAirport(airport);

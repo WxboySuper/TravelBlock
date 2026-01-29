@@ -39,20 +39,35 @@ describe('isValidAirport', () => {
     const missingIcao = { ...validAirport };
     delete (missingIcao as any).icao;
     expect(isValidAirport(missingIcao)).toBe(false);
+
+    const missingState = { ...validAirport };
+    delete (missingState as any).state;
+    expect(isValidAirport(missingState)).toBe(false);
+
+    const missingTz = { ...validAirport };
+    delete (missingTz as any).tz;
+    expect(isValidAirport(missingTz)).toBe(false);
   });
 
   test('returns false when required string fields are wrong type', () => {
     const wrongName = { ...validAirport, name: 123 };
     expect(isValidAirport(wrongName)).toBe(false);
+
+    const wrongTz = { ...validAirport, tz: null };
+    expect(isValidAirport(wrongTz)).toBe(false);
   });
 
-  test('returns false when coordinates are missing', () => {
+  test('returns false when required numeric fields are missing', () => {
     const missingLat = { ...validAirport };
     delete (missingLat as any).lat;
     expect(isValidAirport(missingLat)).toBe(false);
+
+    const missingElevation = { ...validAirport };
+    delete (missingElevation as any).elevation;
+    expect(isValidAirport(missingElevation)).toBe(false);
   });
 
-  test('returns false when coordinates are not finite numbers', () => {
+  test('returns false when numeric fields are not finite numbers', () => {
     const infiniteLat = { ...validAirport, lat: Infinity };
     expect(isValidAirport(infiniteLat)).toBe(false);
 

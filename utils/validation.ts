@@ -16,7 +16,7 @@ export function isValidAirport(data: unknown): data is Airport {
   const airport = data as Record<string, unknown>;
 
   // Check required string fields
-  const stringFields = ['icao', 'name', 'city', 'country'];
+  const stringFields = ['icao', 'name', 'city', 'country', 'state', 'tz'];
   for (const field of stringFields) {
     if (typeof airport[field] !== 'string') {
       return false;
@@ -24,7 +24,7 @@ export function isValidAirport(data: unknown): data is Airport {
   }
 
   // Check required number fields and finiteness
-  const numberFields = ['lat', 'lon'];
+  const numberFields = ['lat', 'lon', 'elevation'];
   for (const field of numberFields) {
     const value = airport[field];
     if (typeof value !== 'number' || !Number.isFinite(value)) {

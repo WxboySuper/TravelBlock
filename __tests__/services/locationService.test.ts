@@ -119,6 +119,7 @@ describe('Location Service', () => {
         .filter(a => a.distance <= maxDist)
         .sort((a, b) => a.distance - b.distance)
         .map(a => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { distance, ...rest } = a;
             return rest as Airport;
         });

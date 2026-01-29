@@ -392,9 +392,5 @@ export function isWithinBoundingBox(
     lonDiff = 360 - lonDiff;
   }
 
-  if (lonDiff > limits.lonDiffLimit) {
-    return false;
-  }
-
-  return true;
+  return lonDiff <= limits.lonDiffLimit;
 }

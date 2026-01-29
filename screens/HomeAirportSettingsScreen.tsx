@@ -6,7 +6,7 @@ import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useHomeAirport } from '@/hooks/useHomeAirport';
 import { getCurrentLocation, hasLocationPermission } from '@/services/locationService';
-import type { Airport } from '@/types/airport';
+import type { AirportWithDistance } from '@/types/airport';
 import type { Coordinates } from '@/types/location';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
@@ -51,7 +51,10 @@ export default function HomeAirportSettingsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
 
   const handleSelect = useCallback(
-    async (airport: Airport) => {
+    async (airportWithDistance: AirportWithDistance) => {
+      // Extract Airport fields from AirportWithDistance
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { distance, ...airport } = airportWithDistance;
       try {
         await handleSelectAirport(airport);
         setIsModalVisible(false);

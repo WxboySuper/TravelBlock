@@ -32,20 +32,20 @@ describe('isValidAirport', () => {
   });
 
   test('returns false when required string fields are missing', () => {
-    const missingName = { ...validAirport };
-    delete (missingName as any).name;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { name, ...missingName } = validAirport;
     expect(isValidAirport(missingName)).toBe(false);
 
-    const missingIcao = { ...validAirport };
-    delete (missingIcao as any).icao;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { icao, ...missingIcao } = validAirport;
     expect(isValidAirport(missingIcao)).toBe(false);
 
-    const missingState = { ...validAirport };
-    delete (missingState as any).state;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { state, ...missingState } = validAirport;
     expect(isValidAirport(missingState)).toBe(false);
 
-    const missingTz = { ...validAirport };
-    delete (missingTz as any).tz;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { tz, ...missingTz } = validAirport;
     expect(isValidAirport(missingTz)).toBe(false);
   });
 
@@ -58,12 +58,12 @@ describe('isValidAirport', () => {
   });
 
   test('returns false when required numeric fields are missing', () => {
-    const missingLat = { ...validAirport };
-    delete (missingLat as any).lat;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { lat, ...missingLat } = validAirport;
     expect(isValidAirport(missingLat)).toBe(false);
 
-    const missingElevation = { ...validAirport };
-    delete (missingElevation as any).elevation;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { elevation, ...missingElevation } = validAirport;
     expect(isValidAirport(missingElevation)).toBe(false);
   });
 

@@ -105,7 +105,7 @@ function FlightSetupHeader({ onClose }: { onClose: () => void }) {
   const colors = Colors[colorScheme ?? 'light'];
 
   const handleClose = useCallback(() => {
-    impactAsync(ImpactFeedbackStyle.Light).catch(() => {});
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => null);
     onClose();
   }, [onClose]);
 

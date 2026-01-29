@@ -161,7 +161,9 @@ export default function FlightSetupScreen() {
   }, []);
 
   const handleClose = useCallback(() => {
-    impactAsync(ImpactFeedbackStyle.Light).catch(() => {});
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => {
+      // Ignore haptics error
+    });
     router.back();
   }, [router]);
 

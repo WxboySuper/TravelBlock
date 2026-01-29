@@ -53,6 +53,7 @@ export default function HomeAirportSettingsScreen() {
   const handleSelect = useCallback(
     async (airportWithDistance: AirportWithDistance) => {
       // Extract Airport fields from AirportWithDistance
+      // skipcq: JS-0356
       const { distance, ...airport } = airportWithDistance;
       try {
         await handleSelectAirport(airport);

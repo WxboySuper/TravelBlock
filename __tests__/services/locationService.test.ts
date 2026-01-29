@@ -23,6 +23,7 @@ jest.mock('expo-location', () => ({
 // Mock airport service
 jest.mock('../../services/airportService', () => ({
   loadAirports: jest.fn(),
+  getAirportsWithinDistance: jest.fn(),
 }));
 
 import {
@@ -37,7 +38,8 @@ import {
   getCurrentLocation,
   getNearestAirport,
 } from '../../services/locationService';
-import { loadAirports } from '../../services/airportService';
+import { loadAirports, getAirportsWithinDistance } from '../../services/airportService';
+import { calculateDistance } from '../../utils/distance';
 import type { Airport } from '../../types/airport';
 import type { Coordinates } from '../../types/location';
 
@@ -90,11 +92,38 @@ describe('Location Service', () => {
     tz: 'America/Los_Angeles',
   };
 
+  // State to control mock behavior
+  let currentAirports: Airport[] = [];
+
   beforeEach(() => {
     jest.clearAllMocks();
     // Suppress console output in tests
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    // Default airports
+    currentAirports = [mockAirportJFK, mockAirportLGA, mockAirportLAX];
+
+    // Setup mocks
+    (loadAirports as jest.Mock).mockImplementation(async () => {
+      // Return map for consistency, though unused by optimized locationService
+      return currentAirports.reduce((acc, airport) => {
+        acc[airport.icao] = airport;
+        return acc;
+      }, {} as Record<string, Airport>);
+    });
+
+    (getAirportsWithinDistance as jest.Mock).mockImplementation((origin: Coordinates, maxDist: number) => {
+      return currentAirports
+        .map(a => ({ ...a, distance: calculateDistance(origin, { lat: a.lat, lon: a.lon }) }))
+        .filter(a => a.distance <= maxDist)
+        .sort((a, b) => a.distance - b.distance)
+        .map(a => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { distance, ...rest } = a;
+            return rest as Airport;
+        });
+    });
   });
 
   afterEach(() => {
@@ -255,15 +284,6 @@ describe('Location Service', () => {
   });
 
   describe('getNearestAirport', () => {
-    beforeEach(() => {
-      // Default mock for loadAirports
-      (loadAirports as jest.Mock).mockResolvedValue({
-        KJFK: mockAirportJFK,
-        KLGA: mockAirportLGA,
-        KLAX: mockAirportLAX,
-      });
-    });
-
     it('should find nearest airport from provided coordinates', async () => {
       // Coordinates near JFK (40.6413, -73.7781)
       const searchCoords: Coordinates = { lat: 40.65, lon: -73.78 };
@@ -304,13 +324,13 @@ describe('Location Service', () => {
     });
 
     it('should handle empty airport database', async () => {
-      (loadAirports as jest.Mock).mockResolvedValueOnce({});
+      currentAirports = [];
 
       const searchCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
       const result = await getNearestAirport(searchCoords);
 
+      // It might return empty from search, and getNearestAirport returns result[0] || null
       expect(result).toBeNull();
-      expect(console.warn).toHaveBeenCalledWith('No airports available in database');
     });
 
     it('should find nearest airport from west coast coordinates', async () => {
@@ -328,6 +348,7 @@ describe('Location Service', () => {
       (loadAirports as jest.Mock).mockRejectedValueOnce(error);
 
       const searchCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
+
       const result = await getNearestAirport(searchCoords);
 
       expect(result).toBeNull();
@@ -346,9 +367,7 @@ describe('Location Service', () => {
     });
 
     it('should handle single airport in database', async () => {
-      (loadAirports as jest.Mock).mockResolvedValueOnce({
-        KJFK: mockAirportJFK,
-      });
+      currentAirports = [mockAirportJFK];
 
       const searchCoords: Coordinates = { lat: 40.7128, lon: -74.0060 };
       const result = await getNearestAirport(searchCoords);
@@ -378,13 +397,7 @@ describe('Location Service', () => {
   });
 
   describe('Integration Scenarios', () => {
-    beforeEach(() => {
-      (loadAirports as jest.Mock).mockResolvedValue({
-        KJFK: mockAirportJFK,
-        KLGA: mockAirportLGA,
-        KLAX: mockAirportLAX,
-      });
-    });
+    // currentAirports is already reset in beforeEach
 
     it('should handle complete workflow: request permission, get location, find airport', async () => {
       // Step 1: Request permission
@@ -430,8 +443,6 @@ describe('Location Service', () => {
       expect(location).toBeNull();
 
       // Try to find nearest without coords - should fail
-      // Ensure the permission check inside getNearestAirport/getCurrentLocation
-      // also returns denied by providing a second mock for getForegroundPermissionsAsync
       (Location.getForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({
         status: 'denied',
       });

@@ -20,8 +20,7 @@ import {
 } from 'expo-location';
 import type { Airport } from '../types/airport';
 import type { Coordinates } from '../types/location';
-import { loadAirports } from './airportService';
-import { calculateDistance } from '../utils/distance';
+import { loadAirports, getAirportsWithinDistance } from './airportService';
 
 // Helper: validate a numeric coordinate is finite
 function isFiniteNumber(n: unknown): n is number {
@@ -67,38 +66,20 @@ async function getValidatedSearchCoordinates(coordinates?: Coordinates): Promise
   return searchCoords;
 }
 
-// Helper: compute distance to an airport if both coordinates are valid, otherwise null
-function computeDistanceToAirport(search: Coordinates, airport: Airport): number | null {
-  const lat = airport.lat;
-  const lon = airport.lon;
-  if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
-    // eslint-disable-next-line no-console
-    console.warn('Skipping airport with invalid coordinates', airport);
-    return null;
-  }
-  const distance = calculateDistance(search, { lat, lon });
-  return Number.isFinite(distance) ? distance : null;
-}
-
 // Helper: find nearest N airports for already-validated search coordinates
 async function findNearestAirportsForCoordinates(searchCoords: Coordinates, limit: number): Promise<Airport[]> {
-  const airports = await loadAirports();
-  const airportArray = Object.values(airports);
-  if (airportArray.length === 0) {
-    console.warn('No airports available in database');
-    return [];
+  await loadAirports();
+
+  // Optimization: Try finding airports within 500 miles first (fast path using bounding box check)
+  // This avoids scanning the entire 50,000+ airport database in most cases
+  const nearby = getAirportsWithinDistance(searchCoords, 500);
+  if (nearby.length >= limit) {
+    return nearby.slice(0, limit);
   }
 
-  const withDist = airportArray
-    .map((airport) => {
-      const distance = computeDistanceToAirport(searchCoords, airport);
-      return { airport, distance };
-    })
-    .filter((item): item is { airport: Airport; distance: number } => item.distance !== null);
-
-  withDist.sort((a, b) => a.distance - b.distance);
-
-  return withDist.slice(0, limit).map((item) => item.airport);
+  // Fallback: If not enough airports found nearby, expand search to near-global range
+  // 15,000 miles covers practically everywhere from any point on Earth
+  return getAirportsWithinDistance(searchCoords, 15000).slice(0, limit);
 }
 
 /**

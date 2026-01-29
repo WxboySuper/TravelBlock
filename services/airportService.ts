@@ -17,7 +17,12 @@
  */
 
 import { Airport, AirportData } from "../types/airport";
-import { Coordinates, calculateDistance } from "../utils/distance";
+import {
+  Coordinates,
+  calculateDistance,
+  calculateBoundingBoxLimits,
+  isWithinBoundingBox,
+} from "../utils/distance";
 import { computeScoreOptimized } from "./airportScoring";
 
 const MAX_SEARCH_QUERY_LENGTH = 100;
@@ -205,11 +210,18 @@ export function getAirportsWithinDistance(
 
   const results: Array<{ airport: InternalAirport; distance: number }> = [];
 
+  // Optimization: Pre-calculate bounding box limits to skip expensive distance calculations
+  const limits = calculateBoundingBoxLimits(origin, maxDistance);
+
   for (const airport of airportArray) {
     const airportCoords: Coordinates = {
       lat: airport.lat,
       lon: airport.lon,
     };
+
+    if (!isWithinBoundingBox(origin, airportCoords, limits)) {
+      continue;
+    }
 
     const distance = calculateDistance(origin, airportCoords);
 

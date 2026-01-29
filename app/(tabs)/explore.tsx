@@ -1,10 +1,9 @@
 import { StyleSheet, View } from "react-native";
 
 import { EmptyLogbook } from "@/components/logbook/EmptyLogbook";
-import { ThemedText } from "@/components/themed-text";
+import { TopBar, SettingsButton } from "@/components/navigation/TopBar";
 import { ThemedView } from "@/components/themed-view";
-import { Colors, Spacing, Typography } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Spacing } from "@/constants/theme";
 
 const styles = StyleSheet.create({
   container: {
@@ -13,47 +12,20 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     padding: Spacing.lg,
-  },
-  header: {
-    paddingTop: Spacing.xxl,
-    paddingBottom: Spacing.lg,
-  },
-  subtitle: {
-    marginTop: Spacing.xs,
+    paddingBottom: 120, // Space for FloatingDock
   },
 });
 
 export default function ExploreScreen(): React.JSX.Element {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
-
   return (
     <ThemedView style={styles.container} testID="explore-root">
-      <View style={styles.contentContainer}>
-        <View style={styles.header} testID="explore-header">
-          <ThemedText
-            style={{
-              fontSize: Typography.fontSize.xxxl,
-              fontWeight: Typography.fontWeight.bold,
-              color: colors.text,
-              letterSpacing: -1,
-            }}
-          >
-            Logbook
-          </ThemedText>
-          <ThemedText
-            style={[
-              styles.subtitle,
-              {
-                fontSize: Typography.fontSize.base,
-                color: colors.textSecondary,
-              },
-            ]}
-          >
-            Your Flight History
-          </ThemedText>
-        </View>
+      <TopBar
+        title="Logbook"
+        subtitle="Your Flight History"
+        rightAction={<SettingsButton />}
+      />
 
+      <View style={styles.contentContainer}>
         <EmptyLogbook />
       </View>
     </ThemedView>

@@ -6,10 +6,13 @@ import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useHomeAirport } from '@/hooks/useHomeAirport';
 import { getCurrentLocation, hasLocationPermission } from '@/services/locationService';
+import { storageService } from '@/services/storageService';
+import { Button } from '@/components/ui/Button';
 import type { AirportWithDistance } from '@/types/airport';
 import type { Coordinates } from '@/types/location';
+import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = StyleSheet.create({
@@ -26,7 +29,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.bold,
   },
   contentContainer: {
-    flex: 1,
+    flexGrow: 1,
     padding: Spacing.lg,
   },
   sectionTitle: {
@@ -41,6 +44,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     lineHeight: 20,
   },
+  devSection: {
+    marginTop: Spacing.xxl,
+    borderTopWidth: 1,
+    paddingTop: Spacing.lg,
+  },
 });
 
 export default function HomeAirportSettingsScreen() {
@@ -49,6 +57,25 @@ export default function HomeAirportSettingsScreen() {
   const { homeAirport, isLoading, handleSelectAirport } = useHomeAirport();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
+
+  const handleRestartOnboarding = useCallback(async () => {
+    Alert.alert(
+      "Restart Onboarding",
+      "Are you sure you want to reset the onboarding status? This will return you to the welcome screen.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restart",
+          style: "destructive",
+          onPress: async () => {
+            await storageService.setOnboardingCompleted(false);
+            router.replace('/onboarding');
+          }
+        }
+      ]
+    );
+  }, [router]);
 
   const handleSelect = useCallback(
     async (airportWithDistance: AirportWithDistance) => {
@@ -110,6 +137,21 @@ export default function HomeAirportSettingsScreen() {
           ) : (
             <ThemedText testID="no-home-airport-text">No home airport set.</ThemedText>
           )}
+
+          <View style={[styles.devSection, { borderTopColor: colors.borderLight }]}>
+            <ThemedText style={[styles.sectionTitle, { color: colors.error }]}>
+              Development Zone
+            </ThemedText>
+            <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
+              Resetting onboarding will take you back to the initial setup flow.
+            </ThemedText>
+            <Button
+              title="Restart Onboarding"
+              onPress={handleRestartOnboarding}
+              variant="secondary"
+              style={{ borderColor: colors.error }}
+            />
+          </View>
 
         </ScrollView>
       </SafeAreaView>

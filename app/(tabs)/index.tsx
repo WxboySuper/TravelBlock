@@ -1,12 +1,11 @@
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 
 import { AirportCard } from "@/components/airport/AirportCard";
 import { SelectAirportModal } from "@/components/airport/SelectAirportModal";
 import { EmptyHomeBase } from "@/components/home/EmptyHomeBase";
-import { HomeHeader } from "@/components/home/HomeHeader";
-import { StatusBar } from "@/components/home/StatusBar";
+import { TopBar, SettingsButton } from "@/components/navigation/TopBar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";
@@ -24,15 +23,22 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     padding: Spacing.lg,
+    paddingBottom: 120, // Space for FloatingDock
   },
   airportSection: {
-    flex: 1,
-    paddingTop: Spacing.md,
+    marginTop: Spacing.md,
   },
   actionContainer: {
     paddingTop: Spacing.xl,
   },
 });
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
 
 export default function HomeScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -75,9 +81,8 @@ export default function HomeScreen() {
   if (isLoading) {
     return (
       <ThemedView style={styles.container}>
-        <StatusBar />
+        <TopBar title="TravelBlock" rightAction={<SettingsButton />} />
         <View style={styles.contentContainer}>
-          <HomeHeader />
           <ThemedText
             style={{
               fontSize: Typography.fontSize.sm,
@@ -94,10 +99,22 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <StatusBar />
+      <TopBar
+        title="TravelBlock"
+        subtitle={getGreeting()}
+        rightAction={<SettingsButton />}
+      />
 
-      <View style={styles.contentContainer}>
-        <HomeHeader />
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        {/* Status Text (Inline replacement for StatusBar) */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
+           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success, marginRight: Spacing.sm }} />
+             <ThemedText style={{ fontSize: Typography.fontSize.xs, color: colors.textSecondary, fontWeight: Typography.fontWeight.medium }}>
+               Ready for Departure
+             </ThemedText>
+           </View>
+        </View>
 
         <View style={styles.airportSection}>
           {homeAirport ? (
@@ -120,7 +137,7 @@ export default function HomeScreen() {
             <EmptyHomeBase onSelectAirport={openModal} />
           )}
         </View>
-      </View>
+      </ScrollView>
 
       <SelectAirportModal
         visible={isModalVisible}

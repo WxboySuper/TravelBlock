@@ -31,6 +31,26 @@ const styles = StyleSheet.create({
   actionContainer: {
     paddingTop: Spacing.xl,
   },
+  statusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.sm,
+  },
+  statusText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
+  },
 });
 
 function getGreeting(): string {
@@ -107,10 +127,10 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
         {/* Status Text (Inline replacement for StatusBar) */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
-           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success, marginRight: Spacing.sm }} />
-             <ThemedText style={{ fontSize: Typography.fontSize.xs, color: colors.textSecondary, fontWeight: Typography.fontWeight.medium }}>
+        <View style={styles.statusContainer}>
+           <View style={styles.statusLeft}>
+             <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
+             <ThemedText style={[styles.statusText, { color: colors.textSecondary }]}>
                Ready for Departure
              </ThemedText>
            </View>

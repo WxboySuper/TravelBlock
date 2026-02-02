@@ -3,7 +3,7 @@ import { StyleSheet, View, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { IconSymbol, IconSymbolName } from '@/components/ui/icon-symbol';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -82,7 +82,7 @@ export function FloatingDock({ state, descriptors, navigation }: BottomTabBarPro
         };
 
         // Map route names to icons
-        let iconName = 'house.fill'; // Default
+        let iconName: IconSymbolName = 'house.fill'; // Default
         if (route.name === 'index') iconName = 'house.fill';
         if (route.name === 'explore') iconName = 'book.fill';
 
@@ -101,7 +101,7 @@ export function FloatingDock({ state, descriptors, navigation }: BottomTabBarPro
             android_ripple={{ borderless: true, color: colors.border }}
           >
             {isFocused && <View style={styles.activeIndicator} />}
-            <IconSymbol size={28} name={iconName as any} color={color} />
+            <IconSymbol size={28} name={iconName} color={color} />
           </Pressable>
         );
       })}

@@ -16,11 +16,61 @@ import { getCurrentLocation, hasLocationPermission } from "@/services/locationSe
 import type { Airport } from "@/types/airport";
 import type { Coordinates } from "@/types/location";
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
+    padding: Spacing.lg,
+    paddingBottom: 120, // Space for FloatingDock
+  },
+  airportSection: {
+    marginTop: Spacing.md,
+  },
+  actionContainer: {
+    paddingTop: Spacing.xl,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.sm,
+  },
+  statusText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
+  },
+});
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good Morning';
   if (hour < 17) return 'Good Afternoon';
   return 'Good Evening';
+}
+
+function StatusIndicator({ color }: { color: string }) {
+  return (
+    <View style={styles.statusContainer}>
+      <View style={styles.statusLeft}>
+        <View style={[styles.statusDot, { backgroundColor: color }]} />
+        <ThemedText style={[styles.statusText, { color: '#888' }]}>
+          Ready for Departure
+        </ThemedText>
+      </View>
+    </View>
+  );
 }
 
 export default function HomeScreen() {
@@ -89,15 +139,7 @@ export default function HomeScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Status Text (Inline replacement for StatusBar) */}
-        <View style={styles.statusContainer}>
-           <View style={styles.statusLeft}>
-             <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
-             <ThemedText style={[styles.statusText, { color: colors.textSecondary }]}>
-               Ready for Departure
-             </ThemedText>
-           </View>
-        </View>
+        <StatusIndicator color={colors.success} />
 
         <View style={styles.airportSection}>
           {homeAirport ? (
@@ -132,40 +174,3 @@ export default function HomeScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    padding: Spacing.lg,
-    paddingBottom: 120, // Space for FloatingDock
-  },
-  airportSection: {
-    marginTop: Spacing.md,
-  },
-  actionContainer: {
-    paddingTop: Spacing.xl,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  statusLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: Spacing.sm,
-  },
-  statusText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.medium,
-  },
-});

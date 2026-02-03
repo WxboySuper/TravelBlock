@@ -1,4 +1,4 @@
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { BottomTabBarProps, BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { StyleSheet, View, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
@@ -8,17 +8,17 @@ import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface TabItemProps {
-  route: any;
+  route: BottomTabBarProps['state']['routes'][0];
   index: number;
-  state: any;
-  descriptors: any;
-  navigation: any;
-  colors: any;
+  state: BottomTabBarProps['state'];
+  descriptors: BottomTabBarProps['descriptors'];
+  navigation: BottomTabBarProps['navigation'];
+  colors: typeof Colors['light'];
 }
 
 function TabItem({ route, index, state, descriptors, navigation, colors }: TabItemProps) {
   const isFocused = state.index === index;
-  const { options } = descriptors[route.key];
+  const { options } = descriptors[route.key] as { options: BottomTabNavigationOptions };
 
   const handlePress = () => {
     const event = navigation.emit({

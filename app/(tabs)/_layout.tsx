@@ -1,7 +1,8 @@
+import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import { FloatingDock } from "@/components/navigation/FloatingDock";
 
-const TabBar = (props: any) => <FloatingDock {...props} />;
+const TabBar = (props: BottomTabBarProps) => <FloatingDock {...props} />;
 
 /**
  * Renders the app's bottom tab navigator with Home and Logbook tabs.

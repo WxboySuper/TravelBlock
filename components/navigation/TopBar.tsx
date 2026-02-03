@@ -1,4 +1,4 @@
-import { StyleSheet, View, Pressable } from 'react-native';
+import { StyleSheet, View, Pressable, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -18,43 +18,17 @@ export function TopBar({ title, subtitle, rightAction }: TopBarProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const styles = StyleSheet.create({
-    container: {
-      paddingTop: insets.top + Spacing.md,
-      paddingHorizontal: Spacing.lg,
-      paddingBottom: Spacing.lg,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.background,
-    },
-    textContainer: {
-      flex: 1,
-    },
-    title: {
-      fontSize: Typography.fontSize.xxxl,
-      fontWeight: Typography.fontWeight.bold,
-      color: colors.text,
-      letterSpacing: -1,
-    },
-    subtitle: {
-      fontSize: Typography.fontSize.sm,
-      color: colors.textSecondary,
-      fontWeight: Typography.fontWeight.medium,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginTop: Spacing.xs,
-    },
-    actionContainer: {
-      marginLeft: Spacing.md,
-    }
-  });
-
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      { 
+        paddingTop: insets.top + Spacing.md, 
+        backgroundColor: colors.background 
+      }
+    ]}>
       <View style={styles.textContainer}>
-        {subtitle && <ThemedText style={styles.subtitle}>{subtitle}</ThemedText>}
-        <ThemedText style={styles.title}>{title}</ThemedText>
+        {subtitle && <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</ThemedText>}
+        <ThemedText style={[styles.title, { color: colors.text }]}>{title}</ThemedText>
       </View>
       {rightAction && (
         <View style={styles.actionContainer}>
@@ -70,13 +44,19 @@ export function SettingsButton() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const handlePress = () => {
+    router.push('/settings');
+  };
+
+  const getStyle = ({ pressed }: { pressed: boolean }): ViewStyle => ({
+    opacity: pressed ? 0.7 : 1,
+    padding: Spacing.xs,
+  });
+
   return (
     <Pressable
-      onPress={() => router.push('/settings')}
-      style={({ pressed }) => ({
-        opacity: pressed ? 0.7 : 1,
-        padding: Spacing.xs,
-      })}
+      onPress={handlePress}
+      style={getStyle}
       accessibilityRole="button"
       accessibilityLabel="Settings"
     >
@@ -84,3 +64,31 @@ export function SettingsButton() {
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  textContainer: {
+    flex: 1,
+  },
+  title: {
+    fontSize: Typography.fontSize.xxxl,
+    fontWeight: Typography.fontWeight.bold,
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: Spacing.xs,
+  },
+  actionContainer: {
+    marginLeft: Spacing.md,
+  }
+});

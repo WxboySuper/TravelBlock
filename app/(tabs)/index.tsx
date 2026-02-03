@@ -16,43 +16,6 @@ import { getCurrentLocation, hasLocationPermission } from "@/services/locationSe
 import type { Airport } from "@/types/airport";
 import type { Coordinates } from "@/types/location";
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    flex: 1,
-    padding: Spacing.lg,
-    paddingBottom: 120, // Space for FloatingDock
-  },
-  airportSection: {
-    marginTop: Spacing.md,
-  },
-  actionContainer: {
-    paddingTop: Spacing.xl,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  statusLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: Spacing.sm,
-  },
-  statusText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.medium,
-  },
-});
-
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good Morning';
@@ -169,3 +132,40 @@ export default function HomeScreen() {
     </ThemedView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
+    padding: Spacing.lg,
+    paddingBottom: 120, // Space for FloatingDock
+  },
+  airportSection: {
+    marginTop: Spacing.md,
+  },
+  actionContainer: {
+    paddingTop: Spacing.xl,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.sm,
+  },
+  statusText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
+  },
+});

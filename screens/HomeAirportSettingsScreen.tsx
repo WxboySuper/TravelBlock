@@ -1,7 +1,6 @@
 import { HomeAirportDisplay } from '@/components/home-airport/HomeAirportDisplay';
 import { SelectAirportModal } from '@/components/airport/SelectAirportModal';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useHomeAirport } from '@/hooks/useHomeAirport';
@@ -14,42 +13,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    padding: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
-    marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  description: {
-    fontSize: Typography.fontSize.sm,
-    marginBottom: Spacing.lg,
-    lineHeight: 20,
-  },
-  devSection: {
-    marginTop: Spacing.xxl,
-    borderTopWidth: 1,
-    paddingTop: Spacing.lg,
-  },
-});
 
 export default function HomeAirportSettingsScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -107,54 +70,50 @@ export default function HomeAirportSettingsScreen() {
 
   if (isLoading) {
     return (
-      <ThemedView style={styles.container}>
-         <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-           <View style={styles.contentContainer}>
-            <ThemedText>Loading...</ThemedText>
-           </View>
-         </SafeAreaView>
-      </ThemedView>
+      <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
+         <View style={styles.contentContainer}>
+          <ThemedText>Loading...</ThemedText>
+         </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
-            <ThemedText style={styles.headerTitle}>Settings</ThemedText>
-        </View>
-        <ScrollView contentContainerStyle={styles.contentContainer} testID="settings-scroll-view">
-          <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            Current Home Base
-          </ThemedText>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
+          <ThemedText style={[styles.headerTitle, { color: colors.text }]}>Settings</ThemedText>
+      </View>
+      <ScrollView contentContainerStyle={styles.contentContainer} testID="settings-scroll-view">
+        <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          Current Home Base
+        </ThemedText>
 
+        <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
+          This airport is used as the starting point for all your flight simulations.
+        </ThemedText>
+
+        {homeAirport ? (
+          <HomeAirportDisplay airport={homeAirport} onEdit={openModal} />
+        ) : (
+          <ThemedText testID="no-home-airport-text">No home airport set.</ThemedText>
+        )}
+
+        <View style={[styles.devSection, { borderTopColor: colors.borderLight }]}>
+          <ThemedText style={[styles.sectionTitle, { color: colors.error }]}>
+            Development Zone
+          </ThemedText>
           <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-            This airport is used as the starting point for all your flight simulations.
+            Resetting onboarding will take you back to the initial setup flow.
           </ThemedText>
+          <Button
+            title="Restart Onboarding"
+            onPress={handleRestartOnboarding}
+            variant="secondary"
+            style={{ borderColor: colors.error }}
+          />
+        </View>
 
-          {homeAirport ? (
-            <HomeAirportDisplay airport={homeAirport} onEdit={openModal} />
-          ) : (
-            <ThemedText testID="no-home-airport-text">No home airport set.</ThemedText>
-          )}
-
-          <View style={[styles.devSection, { borderTopColor: colors.borderLight }]}>
-            <ThemedText style={[styles.sectionTitle, { color: colors.error }]}>
-              Development Zone
-            </ThemedText>
-            <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-              Resetting onboarding will take you back to the initial setup flow.
-            </ThemedText>
-            <Button
-              title="Restart Onboarding"
-              onPress={handleRestartOnboarding}
-              variant="secondary"
-              style={{ borderColor: colors.error }}
-            />
-          </View>
-
-        </ScrollView>
-      </SafeAreaView>
+      </ScrollView>
 
       <SelectAirportModal
         visible={isModalVisible}
@@ -163,6 +122,42 @@ export default function HomeAirportSettingsScreen() {
         title="Change Home Base"
         origin={userLocation}
       />
-    </ThemedView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  contentContainer: {
+    flexGrow: 1,
+    padding: Spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
+    marginBottom: Spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  description: {
+    fontSize: Typography.fontSize.sm,
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
+  },
+  devSection: {
+    marginTop: Spacing.xxl,
+    borderTopWidth: 1,
+    paddingTop: Spacing.lg,
+  },
+});

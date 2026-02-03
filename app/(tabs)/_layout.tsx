@@ -1,6 +1,8 @@
 import { Tabs } from "expo-router";
 import { FloatingDock } from "@/components/navigation/FloatingDock";
 
+const TabBar = (props: any) => <FloatingDock {...props} />;
+
 /**
  * Renders the app's bottom tab navigator with Home and Logbook tabs.
  * Uses a custom floating dock for navigation.
@@ -8,7 +10,7 @@ import { FloatingDock } from "@/components/navigation/FloatingDock";
 export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => <FloatingDock {...props} />}
+      tabBar={TabBar}
       screenOptions={{
         headerShown: false,
       }}

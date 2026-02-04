@@ -29,7 +29,7 @@ function TabItem({ route, index, state, descriptors, navigation, colors }: TabIt
 
     if (!isFocused && !event.defaultPrevented) {
       if (Platform.OS === 'ios') {
-        impactAsync(ImpactFeedbackStyle.Light);
+        void impactAsync(ImpactFeedbackStyle.Light);
       }
       navigation.navigate(route.name, route.params);
     }

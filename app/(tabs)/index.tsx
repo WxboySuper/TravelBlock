@@ -61,11 +61,14 @@ function getGreeting(): string {
 }
 
 function StatusIndicator({ color }: { color: string }) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   return (
     <View style={styles.statusContainer}>
       <View style={styles.statusLeft}>
         <View style={[styles.statusDot, { backgroundColor: color }]} />
-        <ThemedText style={[styles.statusText, { color: '#888' }]}>
+        <ThemedText style={[styles.statusText, { color: colors.textSecondary }]}>
           Ready for Departure
         </ThemedText>
       </View>

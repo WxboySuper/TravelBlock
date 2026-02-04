@@ -113,7 +113,7 @@ export function AirportListItem({
     // Trigger haptic feedback on press
     try {
       await impactAsync(ImpactFeedbackStyle.Light);
-    } catch (e) {
+    } catch {
       // Haptics not available on all platforms; silently fail
     }
 

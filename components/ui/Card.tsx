@@ -30,7 +30,6 @@ export function Card({ style, variant = 'default', children, testID, ...props }:
     if (variant === 'elevated') {
       // The dynamic elevated style uses runtime color tokens; cast to ViewStyle
       // to satisfy TypeScript while avoiding broad `any` usage.
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const elevatedStyle = ({
         shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
@@ -43,7 +42,6 @@ export function Card({ style, variant = 'default', children, testID, ...props }:
 
     if (style) {
       // style may be a number, object, or array; treat as StyleProp<ViewStyle>
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       base.push(style as StyleProp<ViewStyle>);
     }
 

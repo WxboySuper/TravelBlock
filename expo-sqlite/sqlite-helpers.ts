@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 type SqliteTx = {
   executeSql: (
     sql: string,
@@ -21,7 +22,7 @@ export type ExpoSqliteModule = {
 
 export function tryQuickSqliteInitSync(DB_NAME: string): SqliteDB | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const maybeSqlite: unknown = require("expo-sqlite");
     const sqliteMod = maybeSqlite as ExpoSqliteModule;
     if (!sqliteMod) return null;
@@ -58,7 +59,7 @@ export function performSqliteInit(
   return opened as SqliteDB;
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
+ 
 export async function createTableIfNeeded(
   db: SqliteDB,
   TABLE_NAME: string,
@@ -80,7 +81,7 @@ export async function createTableIfNeeded(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
+ 
 export async function migrateCacheToDbIfNeeded(
   db: SqliteDB,
   cache: Map<string, string>,

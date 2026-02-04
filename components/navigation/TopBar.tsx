@@ -27,8 +27,8 @@ export function TopBar({ title, subtitle, rightAction }: TopBarProps) {
       }
     ]}>
       <View style={styles.textContainer}>
-        {subtitle && <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</ThemedText>}
         <ThemedText style={[styles.title, { color: colors.text }]}>{title}</ThemedText>
+        {subtitle && <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</ThemedText>}
       </View>
       {rightAction && (
         <View style={styles.actionContainer}>

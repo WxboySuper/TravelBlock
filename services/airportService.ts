@@ -70,7 +70,7 @@ export function loadAirports(): Promise<AirportData> {
   }
 
   // Use require for synchronous loading in React Native
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const rawData: AirportData = require("../data/airports.json");
 
   // Normalize keys to uppercase and precompute lowercase/normalized search fields
@@ -120,7 +120,7 @@ export function loadAirports(): Promise<AirportData> {
 // Strip internal precomputed fields from an InternalAirport before returning
 function stripInternal(internal: InternalAirport): Airport {
   // Destructure away internal fields
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { __lcIcao, __lcIata, __lcName, __lcCity, ...publicFields } = internal;
   return publicFields as Airport;
 }
@@ -177,7 +177,7 @@ export function searchAirports(query: string, limit = 500): Airport[] {
   // Normalize search term for consistent matching
   const searchTerm = normalizeForSearch(sanitizedQuery.trim()).toLowerCase();
   const searchQuery = { term: searchTerm };
-  const results: Array<{ airport: InternalAirport; score: number }> = [];
+  const results: { airport: InternalAirport; score: number }[] = [];
 
   for (const airport of airportArray) {
     const score = computeScoreOptimized(airport, searchQuery);
@@ -208,7 +208,7 @@ export function getAirportsWithinDistance(
     return [];
   }
 
-  const results: Array<{ airport: InternalAirport; distance: number }> = [];
+  const results: { airport: InternalAirport; distance: number }[] = [];
 
   // Optimization: Pre-calculate bounding box limits to skip expensive distance calculations
   const limits = calculateBoundingBoxLimits(origin, maxDistance);

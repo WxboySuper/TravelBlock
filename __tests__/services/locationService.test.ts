@@ -8,24 +8,9 @@
  * - Error handling and edge cases
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 
 // Mock expo-location module
-jest.mock('expo-location', () => ({
-  requestForegroundPermissionsAsync: jest.fn(),
-  getForegroundPermissionsAsync: jest.fn(),
-  getCurrentPositionAsync: jest.fn(),
-  Accuracy: {
-    Balanced: 3,
-  },
-}));
-
-// Mock airport service
-jest.mock('../../services/airportService', () => ({
-  loadAirports: jest.fn(),
-  getAirportsWithinDistance: jest.fn(),
-}));
-
 import {
   requestForegroundPermissionsAsync,
   getForegroundPermissionsAsync,
@@ -42,6 +27,21 @@ import { loadAirports, getAirportsWithinDistance } from '../../services/airportS
 import { calculateDistance } from '../../utils/distance';
 import type { Airport } from '../../types/airport';
 import type { Coordinates } from '../../types/location';
+
+jest.mock('expo-location', () => ({
+  requestForegroundPermissionsAsync: jest.fn(),
+  getForegroundPermissionsAsync: jest.fn(),
+  getCurrentPositionAsync: jest.fn(),
+  Accuracy: {
+    Balanced: 3,
+  },
+}));
+
+// Mock airport service
+jest.mock('../../services/airportService', () => ({
+  loadAirports: jest.fn(),
+  getAirportsWithinDistance: jest.fn(),
+}));
 
 // Provide a `Location` object for backwards-compatible test references
 const Location = {
@@ -119,7 +119,7 @@ describe('Location Service', () => {
         .filter(a => a.distance <= maxDist)
         .sort((a, b) => a.distance - b.distance)
         .map(a => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+             
             const { distance, ...rest } = a;
             return rest as Airport;
         });

@@ -1,4 +1,4 @@
-import { StyleSheet, View, Pressable, ViewStyle } from 'react-native';
+import { StyleSheet, View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -48,15 +48,13 @@ export function SettingsButton() {
     router.push('/settings');
   };
 
-  const getStyle = ({ pressed }: { pressed: boolean }): ViewStyle => ({
-    opacity: pressed ? 0.7 : 1,
-    padding: Spacing.xs,
-  });
-
   return (
     <Pressable
       onPress={handlePress}
-      style={getStyle}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.7 : 1,
+        padding: Spacing.xs,
+      })}
       accessibilityRole="button"
       accessibilityLabel="Settings"
     >

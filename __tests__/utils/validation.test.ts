@@ -37,19 +37,19 @@ describe('isValidAirport', () => {
   });
 
   test('returns false when required string fields are missing', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { name, ...missingName } = validAirport;
     expect(isValidAirport(missingName)).toBe(false);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { icao, ...missingIcao } = validAirport;
     expect(isValidAirport(missingIcao)).toBe(false);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { state, ...missingState } = validAirport;
     expect(isValidAirport(missingState)).toBe(false);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { tz, ...missingTz } = validAirport;
     expect(isValidAirport(missingTz)).toBe(false);
   });
@@ -63,11 +63,11 @@ describe('isValidAirport', () => {
   });
 
   test('returns false when required numeric fields are missing', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { lat, ...missingLat } = validAirport;
     expect(isValidAirport(missingLat)).toBe(false);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { elevation, ...missingElevation } = validAirport;
     expect(isValidAirport(missingElevation)).toBe(false);
   });

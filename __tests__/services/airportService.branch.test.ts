@@ -4,7 +4,7 @@
 describe('airportService edge branches', () => {
   it('works when String.prototype.normalize is not available', async () => {
     // Temporarily remove normalize to exercise fallback path
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const proto = String.prototype as any;
     const orig = proto.normalize;
 

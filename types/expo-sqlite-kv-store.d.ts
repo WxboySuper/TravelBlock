@@ -10,8 +10,8 @@ declare module 'expo-sqlite/kv-store' {
     setItem(opts: { key: string; value: string }): Promise<void>;
     getItem(arg: string | { key: string }): Promise<string | null>;
     removeItem(opts: { key: string }): Promise<void>;
-    multiGet(keys: string[]): Promise<Array<[string, string | null]>>;
-    multiSet(keyValuePairs: Array<[string, string]>): Promise<void>;
+    multiGet(keys: string[]): Promise<[string, string | null][]>;
+    multiSet(keyValuePairs: [string, string][]): Promise<void>;
     multiRemove(keys: string[]): Promise<void>;
     clear(): Promise<void>;
     getAllKeys(): Promise<string[]>;
@@ -34,8 +34,8 @@ declare module 'expo-sqlite/kv-store' {
   export function setItem(arg: any, value?: any): Promise<void>;
   export function getItem(arg: string | { key: string }): Promise<string | null>;
   export function removeItem(opts: { key: string }): Promise<void>;
-  export function multiGet(keys: string[]): Promise<Array<[string, string | null]>>;
-  export function multiSet(keyValuePairs: Array<[string, string]>): Promise<void>;
+  export function multiGet(keys: string[]): Promise<[string, string | null][]>;
+  export function multiSet(keyValuePairs: [string, string][]): Promise<void>;
   export function multiRemove(keys: string[]): Promise<void>;
   export function clear(): Promise<void>;
   export function getAllKeys(): Promise<string[]>;

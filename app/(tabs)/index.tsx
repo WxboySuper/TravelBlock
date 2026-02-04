@@ -1,12 +1,11 @@
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 
 import { AirportCard } from "@/components/airport/AirportCard";
 import { SelectAirportModal } from "@/components/airport/SelectAirportModal";
 import { EmptyHomeBase } from "@/components/home/EmptyHomeBase";
-import { HomeHeader } from "@/components/home/HomeHeader";
-import { StatusBar } from "@/components/home/StatusBar";
+import { TopBar, SettingsButton } from "@/components/navigation/TopBar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";
@@ -22,17 +21,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    flex: 1,
+    flexGrow: 1,
     padding: Spacing.lg,
+    paddingBottom: 120, // Space for FloatingDock
   },
   airportSection: {
-    flex: 1,
-    paddingTop: Spacing.md,
+    marginTop: Spacing.md,
   },
   actionContainer: {
     paddingTop: Spacing.xl,
   },
+  statusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.sm,
+  },
+  statusText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
+  },
 });
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
+function StatusIndicator({ color }: { color: string }) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  return (
+    <View style={styles.statusContainer}>
+      <View style={styles.statusLeft}>
+        <View style={[styles.statusDot, { backgroundColor: color }]} />
+        <ThemedText style={[styles.statusText, { color: colors.textSecondary }]}>
+          Ready for Departure
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -75,9 +117,8 @@ export default function HomeScreen() {
   if (isLoading) {
     return (
       <ThemedView style={styles.container}>
-        <StatusBar />
+        <TopBar title="TravelBlock" rightAction={<SettingsButton />} />
         <View style={styles.contentContainer}>
-          <HomeHeader />
           <ThemedText
             style={{
               fontSize: Typography.fontSize.sm,
@@ -94,10 +135,14 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <StatusBar />
+      <TopBar
+        title="TravelBlock"
+        subtitle={getGreeting()}
+        rightAction={<SettingsButton />}
+      />
 
-      <View style={styles.contentContainer}>
-        <HomeHeader />
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <StatusIndicator color={colors.success} />
 
         <View style={styles.airportSection}>
           {homeAirport ? (
@@ -120,7 +165,7 @@ export default function HomeScreen() {
             <EmptyHomeBase onSelectAirport={openModal} />
           )}
         </View>
-      </View>
+      </ScrollView>
 
       <SelectAirportModal
         visible={isModalVisible}

@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 // Minimal dev shim for `expo-sqlite` used during development.
 // Keep this file intentionally simple; it implements a small subset of the
 // `executeSql`/`transaction` behavior required by the project's KV store.
@@ -27,13 +27,13 @@ export function openDatabase(_name: string) {
             if (handled) return;
           } catch (e) {
             // If the error callback itself throws, fall through to console.error below.
-            // eslint-disable-next-line no-console
+             
             console.error('Error handler threw in mock executeSql:', e);
           }
         }
         // If no error callback provided or it didn't handle the error, call console.error
         // to surface the simulated failure in test logs, but don't throw here.
-        // eslint-disable-next-line no-console
+         
         console.error('expo-sqlite mock executeSql error:', err);
         return;
       }
@@ -53,13 +53,13 @@ export function openDatabase(_name: string) {
         cb(tx);
         if (typeof successCallback === 'function') successCallback();
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.error('expo-sqlite mock transaction error:', err);
         if (typeof errorCallback === 'function') {
           try {
             errorCallback(err);
           } catch (e) {
-            // eslint-disable-next-line no-console
+             
             console.error('expo-sqlite mock transaction error handler threw:', e);
           }
         }

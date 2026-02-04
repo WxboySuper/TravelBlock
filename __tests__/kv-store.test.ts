@@ -1,4 +1,5 @@
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
 // Mock expo-sqlite to avoid loading the real module which is ESM

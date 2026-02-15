@@ -12,15 +12,13 @@
  * @module services/locationService
  */
 
-import {
-  requestForegroundPermissionsAsync,
-  getForegroundPermissionsAsync,
-  getCurrentPositionAsync,
-  Accuracy,
-} from 'expo-location';
+// Note: `expo-location` is lazy-loaded inside functions below to avoid
+// requiring the native module at module parse time (Metro/Expo dev server
+// can attempt to resolve native modules too early and crash when a dev
+// client with the native module isn't installed).
 import type { Airport } from '../types/airport';
 import type { Coordinates } from '../types/location';
-import { loadAirports, getAirportsWithinDistance } from './airportService';
+import { getAirportsWithinDistance, loadAirports } from './airportService';
 
 // Helper: validate a numeric coordinate is finite
 function isFiniteNumber(n: unknown): n is number {
@@ -30,6 +28,7 @@ function isFiniteNumber(n: unknown): n is number {
 // Helper: fetch current position and return validated coordinates or null
 async function fetchCurrentPositionSafe(): Promise<Coordinates | null> {
   try {
+    const { getCurrentPositionAsync, Accuracy } = await import('expo-location');
     const location = await getCurrentPositionAsync({ accuracy: Accuracy.Balanced });
     const lat = location?.coords?.latitude;
     const lon = location?.coords?.longitude;
@@ -106,6 +105,7 @@ async function findNearestAirportsForCoordinates(searchCoords: Coordinates, limi
  */
 export async function requestLocationPermission(): Promise<boolean> {
   try {
+    const { requestForegroundPermissionsAsync } = await import('expo-location');
     const { status } = await requestForegroundPermissionsAsync();
     return status === 'granted';
   } catch (error) {
@@ -133,6 +133,7 @@ export async function requestLocationPermission(): Promise<boolean> {
  */
 export async function hasLocationPermission(): Promise<boolean> {
   try {
+    const { getForegroundPermissionsAsync } = await import('expo-location');
     const { status } = await getForegroundPermissionsAsync();
     return status === 'granted';
   } catch (error) {

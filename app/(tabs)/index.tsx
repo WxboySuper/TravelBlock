@@ -1,11 +1,13 @@
+"use client";
+
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 import { AirportCard } from "@/components/airport/AirportCard";
 import { SelectAirportModal } from "@/components/airport/SelectAirportModal";
 import { EmptyHomeBase } from "@/components/home/EmptyHomeBase";
-import { TopBar, SettingsButton } from "@/components/navigation/TopBar";
+import { SettingsButton, TopBar } from "@/components/navigation/TopBar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";

@@ -34,19 +34,19 @@ Goal: Teaching the app geography.
 
 [x] Create airports.json dataset (ICAO, Name, Lat, Lon).
 
-[ ] Implement utility functions to calculate distance between two coordinates (Great Circle Distance).
+[x] Implement utility functions to calculate distance between two coordinates (Great Circle Distance).
 
-[ ] Create a "Select Airport" modal with search functionality.
+[x] Create a "Select Airport" modal with search functionality.
 
 ## v0.3.0-alpha: The Home Base
 
 Goal: Setting the starting point.
 
-[ ] Implement "First Run" experience: Set Home Airport.
+[x] Implement "First Run" experience: Set Home Airport.
 
-[ ] Use AsyncStorage to persist the user's Home Airport.
+[x] Use AsyncStorage to persist the user's Home Airport.
 
-[ ] Allow finding Home Airport via GPS (optional permission).
+[x] Allow finding Home Airport via GPS (optional permission).
 
 ## v0.4.0-alpha: The Time Slider (Core Mechanic)
 

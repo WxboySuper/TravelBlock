@@ -168,7 +168,7 @@ function FlightSetupFooter({
   return (
     <View style={[styles.footer, { borderTopColor: colors.border }]}>
       <Button
-        title="Start Engine"
+        title="Review Flight"
         onPress={onStart}
         size="lg"
         disabled={isDisabled}
@@ -270,20 +270,16 @@ export default function FlightSetupScreen() {
     [setDestination]
   );
 
-  const handleStartEngine = useCallback(() => {
+  const handleReviewFlight = useCallback(() => {
     if (!destination) return;
 
     impactAsync(ImpactFeedbackStyle.Heavy).catch(() => {
       // Ignore haptics error
     });
 
-    // TODO: Navigate to cockpit screen (v0.5.0)
-    console.log('Starting flight:', {
-      origin: origin?.name,
-      destination: destination.name,
-      duration: flightDuration,
-    });
-  }, [origin, destination, flightDuration]);
+    // Navigate to flight review screen
+    router.push('/flight/review');
+  }, [destination, router]);
 
   const handleClose = useCallback(() => {
     impactAsync(ImpactFeedbackStyle.Light).catch(() => {
@@ -309,7 +305,7 @@ export default function FlightSetupScreen() {
           onClose={handleClose}
         />
         <FlightSetupFooter
-          onStart={handleStartEngine}
+          onStart={handleReviewFlight}
           isDisabled={isStartDisabled}
         />
       </SafeAreaView>

@@ -13,6 +13,7 @@
 
 import { storageService } from "@/services/storageService";
 import { Airport } from "@/types/airport";
+import { BoardingPass, FlightBooking, Seat } from "@/types/flight";
 import { StorageKey } from "@/types/storage";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 
@@ -26,6 +27,12 @@ export interface FlightState {
   destination: Airport | null;
   /** Selected flight duration in seconds */
   flightDuration: number;
+  /** Flight booking details */
+  booking: FlightBooking | null;
+  /** Selected seat */
+  seat: Seat | null;
+  /** Boarding pass */
+  boardingPass: BoardingPass | null;
   /** Whether flight state is loaded from storage */
   isLoaded: boolean;
 }
@@ -40,6 +47,12 @@ interface FlightContextValue extends FlightState {
   setDestination: (airport: Airport | null) => Promise<void>;
   /** Set the flight duration in seconds */
   setFlightDuration: (seconds: number) => Promise<void>;
+  /** Set the flight booking */
+  setBooking: (booking: FlightBooking | null) => Promise<void>;
+  /** Set the selected seat */
+  setSeat: (seat: Seat | null) => Promise<void>;
+  /** Set the boarding pass */
+  setBoardingPass: (boardingPass: BoardingPass | null) => Promise<void>;
   /** Clear all flight state */
   clearFlightState: () => Promise<void>;
   /** Refresh flight state from storage */
@@ -55,6 +68,9 @@ const DEFAULT_FLIGHT_STATE: FlightState = {
   origin: null,
   destination: null,
   flightDuration: 3600, // Default to 1 hour
+  booking: null,
+  seat: null,
+  boardingPass: null,
   isLoaded: false,
 };
 
@@ -85,16 +101,22 @@ export function FlightProvider({ children }: { children: ReactNode }) {
    */
   const loadFlightState = async () => {
     try {
-      const [origin, destination, duration] = await Promise.all([
+      const [origin, destination, duration, booking, seat, boardingPass] = await Promise.all([
         storageService.getGenericItem<Airport>(StorageKey.FLIGHT_ORIGIN),
         storageService.getGenericItem<Airport>(StorageKey.FLIGHT_DESTINATION),
         storageService.getGenericItem<number>(StorageKey.FLIGHT_DURATION),
+        storageService.getGenericItem<FlightBooking>(StorageKey.FLIGHT_BOOKING),
+        storageService.getGenericItem<Seat>(StorageKey.FLIGHT_SEAT),
+        storageService.getGenericItem<BoardingPass>(StorageKey.BOARDING_PASS),
       ]);
 
       setState({
         origin: origin ?? null,
         destination: destination ?? null,
         flightDuration: duration ?? 3600,
+        booking: booking ?? null,
+        seat: seat ?? null,
+        boardingPass: boardingPass ?? null,
         isLoaded: true,
       });
     } catch (error) {
@@ -140,6 +162,9 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   /**
    * Set flight duration and persist to storage.
    */
+  /**
+   * Set flight duration and persist to storage.
+   */
   const setFlightDuration = useCallback(async (seconds: number) => {
     setState((prev) => ({ ...prev, flightDuration: seconds }));
 
@@ -151,6 +176,57 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
+   * Set flight booking and persist to storage.
+   */
+  const setBooking = useCallback(async (booking: FlightBooking | null) => {
+    setState((prev) => ({ ...prev, booking }));
+
+    try {
+      if (booking) {
+        await storageService.setGenericItem(StorageKey.FLIGHT_BOOKING, booking);
+      } else {
+        await storageService.removeGenericItem(StorageKey.FLIGHT_BOOKING);
+      }
+    } catch (error) {
+      console.error("Failed to save booking:", error);
+    }
+  }, []);
+
+  /**
+   * Set selected seat and persist to storage.
+   */
+  const setSeat = useCallback(async (seat: Seat | null) => {
+    setState((prev) => ({ ...prev, seat }));
+
+    try {
+      if (seat) {
+        await storageService.setGenericItem(StorageKey.FLIGHT_SEAT, seat);
+      } else {
+        await storageService.removeGenericItem(StorageKey.FLIGHT_SEAT);
+      }
+    } catch (error) {
+      console.error("Failed to save seat:", error);
+    }
+  }, []);
+
+  /**
+   * Set boarding pass and persist to storage.
+   */
+  const setBoardingPass = useCallback(async (boardingPass: BoardingPass | null) => {
+    setState((prev) => ({ ...prev, boardingPass }));
+
+    try {
+      if (boardingPass) {
+        await storageService.setGenericItem(StorageKey.BOARDING_PASS, boardingPass);
+      } else {
+        await storageService.removeGenericItem(StorageKey.BOARDING_PASS);
+      }
+    } catch (error) {
+      console.error("Failed to save boarding pass:", error);
+    }
+  }, []);
+
+  /**
    * Clear all flight state.
    */
   const clearFlightState = useCallback(async () => {
@@ -158,6 +234,9 @@ export function FlightProvider({ children }: { children: ReactNode }) {
       origin: null,
       destination: null,
       flightDuration: 3600,
+      booking: null,
+      seat: null,
+      boardingPass: null,
       isLoaded: true,
     });
 
@@ -166,6 +245,9 @@ export function FlightProvider({ children }: { children: ReactNode }) {
         storageService.removeGenericItem(StorageKey.FLIGHT_ORIGIN),
         storageService.removeGenericItem(StorageKey.FLIGHT_DESTINATION),
         storageService.removeGenericItem(StorageKey.FLIGHT_DURATION),
+        storageService.removeGenericItem(StorageKey.FLIGHT_BOOKING),
+        storageService.removeGenericItem(StorageKey.FLIGHT_SEAT),
+        storageService.removeGenericItem(StorageKey.BOARDING_PASS),
       ]);
     } catch (error) {
       console.error("Failed to clear flight state:", error);
@@ -184,6 +266,9 @@ export function FlightProvider({ children }: { children: ReactNode }) {
     setOrigin,
     setDestination,
     setFlightDuration,
+    setBooking,
+    setSeat,
+    setBoardingPass,
     clearFlightState,
     refreshFlightState,
   };

@@ -52,6 +52,24 @@ export enum StorageKey {
    * Value: number (seconds)
    */
   FLIGHT_DURATION = 'travelblock_flight_duration',
+
+  /**
+   * Key for storing the current flight booking.
+   * Value: JSON-serialized FlightBooking object
+   */
+  FLIGHT_BOOKING = 'travelblock_flight_booking',
+
+  /**
+   * Key for storing the selected seat.
+   * Value: JSON-serialized Seat object
+   */
+  FLIGHT_SEAT = 'travelblock_flight_seat',
+
+  /**
+   * Key for storing the boarding pass.
+   * Value: JSON-serialized BoardingPass object
+   */
+  BOARDING_PASS = 'travelblock_boarding_pass',
 }
 
 /**

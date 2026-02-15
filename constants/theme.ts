@@ -127,3 +127,51 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+/**
+ * Aviation-specific colors for flight booking and boarding experience
+ */
+export const AviationColors = {
+  // Seat class colors
+  seatEconomy: '#94A3B8', // Slate 400
+  seatPremium: '#3B82F6', // Blue 500
+  seatBusiness: '#F59E0B', // Amber 500
+  seatSelected: '#10B981', // Emerald 500
+  seatOccupied: '#EF4444', // Red 500
+
+  // Boarding phase colors
+  boarding: {
+    background: '#0F172A', // Slate 900
+    passCard: '#1E3A8A', // Blue 900
+    highlight: '#F59E0B', // Amber 500
+    success: '#10B981', // Emerald 500
+  },
+
+  // Flight status colors
+  status: {
+    scheduled: '#64748B', // Slate 500
+    boarding: '#F59E0B', // Amber 500
+    departed: '#10B981', // Emerald 500
+    delayed: '#EF4444', // Red 500
+  },
+};
+
+/**
+ * Boarding pass dimensions (based on real airline boarding passes)
+ */
+export const BoardingPassDimensions = {
+  width: 320,
+  height: 520,
+  cornerRadius: 8,
+  perforationY: 380, // Where tear line appears
+};
+
+/**
+ * Seat map configuration
+ */
+export const SeatMapConfig = {
+  rowHeight: 36,
+  seatWidth: 40,
+  aisleWidth: 24,
+  rowLabelWidth: 30,
+};

@@ -1,3 +1,5 @@
+"use client";
+
 import FlightSetupScreen from '@/screens/FlightSetupScreen';
 import { Stack } from 'expo-router';
 

@@ -1,3 +1,5 @@
+"use client";
+
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import { Stack } from 'expo-router';
 

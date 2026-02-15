@@ -1,7 +1,9 @@
+"use client";
+
 import { StyleSheet, View } from "react-native";
 
 import { EmptyLogbook } from "@/components/logbook/EmptyLogbook";
-import { TopBar, SettingsButton } from "@/components/navigation/TopBar";
+import { SettingsButton, TopBar } from "@/components/navigation/TopBar";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 

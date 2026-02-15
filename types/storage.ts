@@ -34,6 +34,24 @@ export enum StorageKey {
    * Value: "true" | "false"
    */
   HAS_COMPLETED_ONBOARDING = 'travelblock_has_completed_onboarding',
+
+  /**
+   * Key for storing the flight origin airport.
+   * Value: JSON-serialized Airport object
+   */
+  FLIGHT_ORIGIN = 'travelblock_flight_origin',
+
+  /**
+   * Key for storing the flight destination airport.
+   * Value: JSON-serialized Airport object
+   */
+  FLIGHT_DESTINATION = 'travelblock_flight_destination',
+
+  /**
+   * Key for storing the selected flight duration in seconds.
+   * Value: number (seconds)
+   */
+  FLIGHT_DURATION = 'travelblock_flight_duration',
 }
 
 /**

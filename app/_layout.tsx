@@ -10,6 +10,7 @@ import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
+import { FlightProvider } from "@/context/FlightContext";
 import { initStore } from "@/expo-sqlite/kv-store";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { storageService } from "@/services/storageService";
@@ -47,23 +48,25 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: "modal", title: "Modal" }}
+      <FlightProvider>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="modal"
+              options={{ presentation: "modal", title: "Modal" }}
+            />
+            <Stack.Screen
+              name="flight/setup"
+              options={{ presentation: "modal", headerShown: false }}
+            />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar
+            barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
           />
-          <Stack.Screen
-            name="flight/setup"
-            options={{ presentation: "modal", headerShown: false }}
-          />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar
-          barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-        />
-      </ThemeProvider>
+        </ThemeProvider>
+      </FlightProvider>
     </GestureHandlerRootView>
   );
 }

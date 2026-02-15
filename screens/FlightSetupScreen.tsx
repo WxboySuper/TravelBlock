@@ -1,37 +1,48 @@
 import { AirportCard } from '@/components/airport/AirportCard';
-import { Button } from '@/components/ui/Button';
+import { DestinationsList } from '@/components/destinations/DestinationsList';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing, Typography } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useHomeAirport } from '@/hooks/useHomeAirport';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { TimeSlider } from '@/components/time-slider/TimeSlider';
+import { TimeValue } from '@/components/time-slider/TimeValue';
+import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useCallback } from 'react';
+import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useFlight } from '@/context/FlightContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useDestinations } from '@/hooks/useDestinations';
+import { useHomeAirport } from '@/hooks/useHomeAirport';
 import type { Airport } from '@/types/airport';
-import { useRouter } from 'expo-router';
+import { AirportWithFlightTime } from '@/types/radius';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    flex: 1,
+  },
   content: {
     flex: 1,
-    padding: Spacing.lg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
   },
   closeButton: {
     padding: Spacing.sm,
   },
   section: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
   },
   sectionTitle: {
     fontSize: Typography.fontSize.sm,
@@ -41,14 +52,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     opacity: 0.7,
   },
-  destinationPlaceholder: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120,
+  timeSliderSection: {
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+  },
+  destinationsSection: {
+    flex: 1,
+    minHeight: 300,
   },
   footer: {
     padding: Spacing.lg,
@@ -80,22 +90,47 @@ function DepartureSection({ homeAirport }: { homeAirport: Airport | null }) {
   );
 }
 
-function DestinationSection() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-
+function TimeSliderSection({
+  flightTime,
+  onFlightTimeChange,
+}: {
+  flightTime: number;
+  onFlightTimeChange: (time: number) => void;
+}) {
   return (
-    <View style={styles.section}>
-      <SectionHeader title="Destination" />
-      <View style={[styles.destinationPlaceholder, { borderColor: colors.border }]}>
-        <IconSymbol name="map" size={32} color={colors.textTertiary} />
-        <ThemedText style={{ color: colors.textSecondary, marginTop: Spacing.sm }}>
-          Select Destination
-        </ThemedText>
-        <ThemedText style={{ color: colors.textTertiary, fontSize: Typography.fontSize.xs }}>
-          (Coming Soon)
-        </ThemedText>
+    <View style={styles.timeSliderSection}>
+      <SectionHeader title="Flight Duration" />
+      <TimeValue seconds={flightTime} />
+      <TimeSlider value={flightTime} onValueChange={onFlightTimeChange} />
+    </View>
+  );
+}
+
+function DestinationsSection({
+  destinations,
+  selectedDestination,
+  onSelectDestination,
+  isLoading,
+  error,
+}: {
+  destinations: AirportWithFlightTime[];
+  selectedDestination: AirportWithFlightTime | null;
+  onSelectDestination: (airport: AirportWithFlightTime) => void;
+  isLoading: boolean;
+  error: string | null;
+}) {
+  return (
+    <View style={styles.destinationsSection}>
+      <View style={{ paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm }}>
+        <SectionHeader title="Available Destinations" />
       </View>
+      <DestinationsList
+        destinations={destinations}
+        selectedDestination={selectedDestination}
+        onSelectDestination={onSelectDestination}
+        isLoading={isLoading}
+        error={error}
+      />
     </View>
   );
 }
@@ -120,7 +155,13 @@ function FlightSetupHeader({ onClose }: { onClose: () => void }) {
   );
 }
 
-function FlightSetupFooter({ onStart }: { onStart: () => void }) {
+function FlightSetupFooter({
+  onStart,
+  isDisabled,
+}: {
+  onStart: () => void;
+  isDisabled: boolean;
+}) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -130,7 +171,7 @@ function FlightSetupFooter({ onStart }: { onStart: () => void }) {
         title="Start Engine"
         onPress={onStart}
         size="lg"
-        disabled
+        disabled={isDisabled}
       />
     </View>
   );
@@ -138,27 +179,111 @@ function FlightSetupFooter({ onStart }: { onStart: () => void }) {
 
 function FlightSetupContent({
   homeAirport,
-  onClose
+  flightTime,
+  onFlightTimeChange,
+  destinations,
+  selectedDestination,
+  onSelectDestination,
+  isLoadingDestinations,
+  destinationsError,
+  onClose,
 }: {
   homeAirport: Airport | null;
+  flightTime: number;
+  onFlightTimeChange: (time: number) => void;
+  destinations: AirportWithFlightTime[];
+  selectedDestination: AirportWithFlightTime | null;
+  onSelectDestination: (airport: AirportWithFlightTime) => void;
+  isLoadingDestinations: boolean;
+  destinationsError: string | null;
   onClose: () => void;
 }) {
   return (
-    <View style={styles.content}>
-      <FlightSetupHeader onClose={onClose} />
-      <DepartureSection homeAirport={homeAirport} />
-      <DestinationSection />
-    </View>
+    <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
+        <FlightSetupHeader onClose={onClose} />
+        <DepartureSection homeAirport={homeAirport} />
+        <TimeSliderSection
+          flightTime={flightTime}
+          onFlightTimeChange={onFlightTimeChange}
+        />
+        <DestinationsSection
+          destinations={destinations}
+          selectedDestination={selectedDestination}
+          onSelectDestination={onSelectDestination}
+          isLoading={isLoadingDestinations}
+          error={destinationsError}
+        />
+      </View>
+    </ScrollView>
   );
 }
 
 export default function FlightSetupScreen() {
   const { homeAirport } = useHomeAirport();
   const router = useRouter();
+  const {
+    origin,
+    destination,
+    flightDuration,
+    setOrigin,
+    setDestination,
+    setFlightDuration,
+  } = useFlight();
+
+  // Local state for slider value (updates immediately)
+  const [localFlightTime, setLocalFlightTime] = useState(flightDuration);
+
+  // Sync origin with home airport
+  useEffect(() => {
+    if (homeAirport && (!origin || origin.icao !== homeAirport.icao)) {
+      setOrigin(homeAirport);
+    }
+  }, [homeAirport, origin, setOrigin]);
+
+  // Fetch destinations based on current flight time
+  const {
+    destinations,
+    isLoading: isLoadingDestinations,
+    error: destinationsError,
+  } = useDestinations({
+    origin: homeAirport,
+    flightTimeInSeconds: localFlightTime,
+    useTimeRange: true,
+  });
+
+  // Find the selected destination in the destinations array
+  // (needed because destination from context is Airport, but we need AirportWithFlightTime)
+  const selectedDestinationWithTime = destination
+    ? destinations.find((d) => d.icao === destination.icao) || null
+    : null;
+
+  const handleFlightTimeChange = useCallback((time: number) => {
+    setLocalFlightTime(time);
+    setFlightDuration(time);
+  }, [setFlightDuration]);
+
+  const handleSelectDestination = useCallback(
+    (airport: AirportWithFlightTime) => {
+      setDestination(airport);
+    },
+    [setDestination]
+  );
 
   const handleStartEngine = useCallback(() => {
-    // Logic to start the flight will go here
-  }, []);
+    if (!destination) return;
+
+    impactAsync(ImpactFeedbackStyle.Heavy).catch(() => {
+      // Ignore haptics error
+    });
+
+    // TODO: Navigate to cockpit screen (v0.5.0)
+    console.log('Starting flight:', {
+      origin: origin?.name,
+      destination: destination.name,
+      duration: flightDuration,
+    });
+  }, [origin, destination, flightDuration]);
 
   const handleClose = useCallback(() => {
     impactAsync(ImpactFeedbackStyle.Light).catch(() => {
@@ -167,11 +292,26 @@ export default function FlightSetupScreen() {
     router.back();
   }, [router]);
 
+  const isStartDisabled = !destination || !homeAirport;
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <FlightSetupContent homeAirport={homeAirport} onClose={handleClose} />
-        <FlightSetupFooter onStart={handleStartEngine} />
+        <FlightSetupContent
+          homeAirport={homeAirport}
+          flightTime={localFlightTime}
+          onFlightTimeChange={handleFlightTimeChange}
+          destinations={destinations}
+          selectedDestination={selectedDestinationWithTime}
+          onSelectDestination={handleSelectDestination}
+          isLoadingDestinations={isLoadingDestinations}
+          destinationsError={destinationsError}
+          onClose={handleClose}
+        />
+        <FlightSetupFooter
+          onStart={handleStartEngine}
+          isDisabled={isStartDisabled}
+        />
       </SafeAreaView>
     </ThemedView>
   );

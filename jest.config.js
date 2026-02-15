@@ -21,6 +21,10 @@ module.exports = {
       statements: 90,
     },
   },
+  // Map @/ alias to root directory for ts-jest
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+  },
   // Ensure shared test setup is loaded for all Jest environments (ts-jest and jest-expo)
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };

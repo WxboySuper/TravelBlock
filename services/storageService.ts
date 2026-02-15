@@ -92,4 +92,43 @@ export const storageService = {
       return false;
     }
   },
+
+  /**
+   * Generic method to get an item from storage.
+   * Returns the parsed JSON value if it exists, null otherwise.
+   */
+  async getGenericItem<T>(key: StorageKey): Promise<T | null> {
+    try {
+      const data = await getItem({ key });
+      if (!data) return null;
+      return JSON.parse(data) as T;
+    } catch (error) {
+      console.error(`Error getting item ${key}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Generic method to set an item in storage.
+   * Serializes the value to JSON before storing.
+   */
+  async setGenericItem<T>(key: StorageKey, value: T): Promise<void> {
+    try {
+      await setItem({ key, value: JSON.stringify(value) });
+    } catch (error) {
+      console.error(`Error setting item ${key}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generic method to remove an item from storage.
+   */
+  async removeGenericItem(key: StorageKey): Promise<void> {
+    try {
+      await removeItem({ key });
+    } catch (error) {
+      console.error(`Error removing item ${key}:`, error);
+    }
+  },
 };

@@ -16,14 +16,11 @@ import { AirportWithFlightTime } from '@/types/radius';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  scrollContent: {
     flex: 1,
   },
   content: {
@@ -199,23 +196,21 @@ function FlightSetupContent({
   onClose: () => void;
 }) {
   return (
-    <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
-        <FlightSetupHeader onClose={onClose} />
-        <DepartureSection homeAirport={homeAirport} />
-        <TimeSliderSection
-          flightTime={flightTime}
-          onFlightTimeChange={onFlightTimeChange}
-        />
-        <DestinationsSection
-          destinations={destinations}
-          selectedDestination={selectedDestination}
-          onSelectDestination={onSelectDestination}
-          isLoading={isLoadingDestinations}
-          error={destinationsError}
-        />
-      </View>
-    </ScrollView>
+    <View style={styles.content}>
+      <FlightSetupHeader onClose={onClose} />
+      <DepartureSection homeAirport={homeAirport} />
+      <TimeSliderSection
+        flightTime={flightTime}
+        onFlightTimeChange={onFlightTimeChange}
+      />
+      <DestinationsSection
+        destinations={destinations}
+        selectedDestination={selectedDestination}
+        onSelectDestination={onSelectDestination}
+        isLoading={isLoadingDestinations}
+        error={destinationsError}
+      />
+    </View>
   );
 }
 

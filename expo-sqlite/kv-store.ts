@@ -39,11 +39,11 @@ function quickSqliteInit(): void {
   }
 }
 
-function loadAsyncStorageOnce(): AsyncStorageLike | null {
+async function loadAsyncStorageOnce(): Promise<AsyncStorageLike | null> {
   if (asyncStorage) return asyncStorage;
   try {
-     
-    const mod: unknown = require('@react-native-async-storage/async-storage');
+    // Use dynamic import to avoid loading native module at parse time
+    const mod = await import('@react-native-async-storage/async-storage');
     asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
     return asyncStorage;
   } catch {
@@ -128,7 +128,7 @@ export async function setItem(opts: { key: string; value: string }): Promise<voi
   }
 
   // Try AsyncStorage as a persistent fallback
-  const asModule = loadAsyncStorageOnce();
+  const asModule = await loadAsyncStorageOnce();
   if (asModule?.setItem) {
     writeBackend = 'asyncstorage';
     lastOperationBackend = 'asyncstorage';
@@ -174,7 +174,7 @@ async function getFromSqlite(opts: { key: string }): Promise<string | null> {
 
 async function getFromAsyncStorage(opts: { key: string }): Promise<string | null> {
   const { key } = opts;
-  const asModule = loadAsyncStorageOnce();
+  const asModule = await loadAsyncStorageOnce();
   if (!asModule?.getItem) return null;
   return await asModule.getItem(key);
 }
@@ -199,7 +199,7 @@ export async function removeItem(opts: { key: string }): Promise<void> {
     return;
   }
 
-  const asModule = loadAsyncStorageOnce();
+  const asModule = await loadAsyncStorageOnce();
   if (asModule?.removeItem) {
     writeBackend = 'asyncstorage';
     lastOperationBackend = 'asyncstorage';
@@ -221,7 +221,10 @@ export function setItemSync(opts: { key: string; value: string }): void {
   cache.set(opts.key, opts.value);
   // Schedule background write to persistent storage if available.
   // Prefer SQLite when available, otherwise fall back to AsyncStorage.
-  const asModule = loadAsyncStorageOnce();
+  // Note: loadAsyncStorageOnce is now async but we don't await since this
+  // is a background operation. If AsyncStorage isn't loaded yet, we just
+  // use memory backend.
+  const asModulePromise = loadAsyncStorageOnce();
   if (db) {
     writeBackend = 'sqlite';
     lastOperationBackend = 'sqlite';
@@ -229,16 +232,24 @@ export function setItemSync(opts: { key: string; value: string }): void {
        
       console.warn('setItemSync: background write to SQLite failed', err);
     });
-  } else if (asModule?.setItem) {
-    writeBackend = 'asyncstorage';
-    lastOperationBackend = 'asyncstorage';
-    asModule.setItem(opts.key, opts.value).catch((err) => {
-       
-      console.warn('setItemSync: background write to AsyncStorage failed', err);
-    });
   } else {
-    writeBackend = 'memory';
-    lastOperationBackend = 'memory';
+    // Try AsyncStorage as background write (don't block on loading)
+    asModulePromise.then((asModule) => {
+      if (asModule?.setItem) {
+        writeBackend = 'asyncstorage';
+        lastOperationBackend = 'asyncstorage';
+        asModule.setItem(opts.key, opts.value).catch((err) => {
+          console.warn('setItemSync: background write to AsyncStorage failed', err);
+        });
+      } else {
+        writeBackend = 'memory';
+        lastOperationBackend = 'memory';
+      }
+    }).catch(() => {
+      // AsyncStorage not available
+      writeBackend = 'memory';
+      lastOperationBackend = 'memory';
+    });
   }
 }
 
@@ -335,7 +346,7 @@ export async function initStore(): Promise<void> {
   if (db) return;
 
   // Ensure AsyncStorage is available so it's ready as a fallback
-  const asModule = loadAsyncStorageOnce();
+  const asModule = await loadAsyncStorageOnce();
   if (!asModule?.setItem) return;
 
   // migrate any existing cache into AsyncStorage to avoid data loss

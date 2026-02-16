@@ -70,6 +70,18 @@ export enum StorageKey {
    * Value: JSON-serialized BoardingPass object
    */
   BOARDING_PASS = 'travelblock_boarding_pass',
+
+  /**
+   * Key for storing active in-flight state for crash recovery.
+   * Value: JSON-serialized ActiveFlightState object
+   */
+  ACTIVE_FLIGHT_STATE = 'travelblock_active_flight_state',
+
+  /**
+   * Key for storing completed flight logs.
+   * Value: JSON-serialized array of CompletedFlight objects
+   */
+  COMPLETED_FLIGHTS = 'travelblock_completed_flights',
 }
 
 /**

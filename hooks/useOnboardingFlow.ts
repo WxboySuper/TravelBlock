@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
 import { storageService } from '@/services/storageService';
 import { Airport, AirportWithDistance } from '@/types/airport';
 import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 
 export enum FirstRunStep {
   WELCOME = 0,
@@ -26,8 +26,8 @@ export function useOnboardingFlow() {
 
   const selectAirport = useCallback((airport: Airport | AirportWithDistance) => {
     // Strip distance if present to match Airport type
-    const { lat, lon, name, city, country, iata, icao, elevation } = airport;
-    const cleanAirport: Airport = { lat, lon, name, city, country, iata, icao, elevation };
+    const { lat, lon, name, city, country, state, tz, iata, icao, elevation } = airport;
+    const cleanAirport: Airport = { lat, lon, name, city, country, state, tz, iata, icao, elevation };
     setSelectedAirport(cleanAirport);
   }, []);
 

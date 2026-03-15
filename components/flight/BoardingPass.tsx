@@ -164,7 +164,9 @@ interface ScaledStyles {
   headerSpacing: { paddingBottom: number; marginBottom: number };
   routeSpacing: { marginBottom: number; paddingVertical: number };
   detailRow: { marginBottom: number };
-  stubSection: { left: number; right: number };
+  stubSection: { left: number; right: number; paddingTop: number };
+  qrPlaceholderSpacing: { marginBottom: number };
+  qrNoteSpacing: { marginTop: number };
 }
 
 interface DetailPairProps {
@@ -331,13 +333,15 @@ function StubSection({
         { position: 'absolute', top: stubTop },
       ]}
     >
-      <View style={[styles.qrPlaceholder, scaledStyles.qrPlaceholder]}>
+      <View style={[styles.qrPlaceholder, scaledStyles.qrPlaceholder, scaledStyles.qrPlaceholderSpacing]}>
         <ThemedText style={[styles.qrText, scaledStyles.qrText, { color: '#000000' }]}>
           BOARDING CODE{'\n'}
           {bookingReference}
         </ThemedText>
       </View>
-      <ThemedText style={[styles.qrNote, scaledStyles.qrNote, { color: colors.textSecondary }]}>
+      <ThemedText
+        style={[styles.qrNote, scaledStyles.qrNote, scaledStyles.qrNoteSpacing, { color: colors.textSecondary }]}
+      >
         QR rendering is not wired up yet in this build.
       </ThemedText>
       <ThemedText style={[styles.serialNumber, scaledStyles.serialNumber, { color: colors.textSecondary }]}>
@@ -365,7 +369,8 @@ export function BoardingPass({
   const { booking, seat, passengerName, serialNumber } = boardingPass;
   const originCode = booking.origin.iata || booking.origin.icao;
   const destinationCode = booking.destination.iata || booking.destination.icao;
-  const cardWidth = Math.min(screenWidth - Spacing.xl * 2, BoardingPassDimensions.width);
+  const availableWidth = Math.max(240, screenWidth - Spacing.xl * 2);
+  const cardWidth = Math.min(availableWidth, BoardingPassDimensions.width);
   const scale = cardWidth / BoardingPassDimensions.width;
   const cardHeight = BoardingPassDimensions.height * scale;
   const perforationTop = BoardingPassDimensions.perforationY * scale;
@@ -399,7 +404,13 @@ export function BoardingPass({
       headerSpacing: { paddingBottom: Spacing.md * scale, marginBottom: Spacing.md * scale },
       routeSpacing: { marginBottom: Spacing.lg * scale, paddingVertical: Spacing.md * scale },
       detailRow: { marginBottom: Spacing.md * scale },
-      stubSection: { left: Spacing.lg * scale, right: Spacing.lg * scale },
+      stubSection: {
+        left: Spacing.lg * scale,
+        right: Spacing.lg * scale,
+        paddingTop: Spacing.lg * scale,
+      },
+      qrPlaceholderSpacing: { marginBottom: Spacing.md * scale },
+      qrNoteSpacing: { marginTop: Spacing.xs * scale },
     }),
     [scale]
   );

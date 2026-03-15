@@ -2,7 +2,7 @@ import { Colors, Spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getDefaultTimeRange, getTimeInRange, snapToInterval } from "@/utils/timeSlider";
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -178,6 +178,9 @@ function createSliderGestures(
       range,
       clampPosition(shared.trackWidth, event.x)
     );
+    if (nextValue === shared.lastEmittedValue.value) {
+      return;
+    }
 
     shared.isGestureActive.value = false;
     shared.lastEmittedValue.value = nextValue;
@@ -205,39 +208,48 @@ export function TimeSlider({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const defaultRange = getDefaultTimeRange();
-  const range = {
+  const range = useMemo(
+    () => ({
     minValue: min ?? defaultRange.min,
     maxValue: max ?? defaultRange.max,
     snapValue: interval ?? defaultRange.interval,
-  };
-  const shared = useSliderSharedState(value);
+    }),
+    [defaultRange.interval, defaultRange.max, defaultRange.min, interval, max, min]
+  );
+  const {
+    gestureStartX,
+    isGestureActive,
+    lastEmittedValue,
+    trackWidth,
+    translateX,
+  } = useSliderSharedState(value);
 
   const triggerHaptic = useCallback(() => {
     impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    if (!shared.isGestureActive.value) {
-      shared.lastEmittedValue.value = value;
-      shared.translateX.value = withSpring(
-        valueToPosition(shared.trackWidth, range, value),
+    if (!isGestureActive.value) {
+      lastEmittedValue.value = value;
+      translateX.value = withSpring(
+        valueToPosition(trackWidth, range, value),
         SPRING_CONFIG
       );
     }
-  }, [range, shared, value]);
+  }, [isGestureActive, lastEmittedValue, range, trackWidth, translateX, value]);
 
   const handleTrackLayout = useCallback(
     (event: LayoutChangeEvent) => {
       const { width } = event.nativeEvent.layout;
-      shared.trackWidth.value = width;
-      shared.translateX.value = valueToPosition(shared.trackWidth, range, value);
+      trackWidth.value = width;
+      translateX.value = valueToPosition(trackWidth, range, value);
     },
-    [range, shared, value]
+    [range, trackWidth, translateX, value]
   );
 
   const sliderGesture = createSliderGestures(
     range,
-    shared,
+    { gestureStartX, isGestureActive, lastEmittedValue, trackWidth, translateX },
     onGestureStart,
     onGestureEnd,
     onValueChange,
@@ -245,11 +257,11 @@ export function TimeSlider({
   );
 
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shared.translateX.value }],
+    transform: [{ translateX: translateX.value }],
   }));
 
   const activeTrackStyle = useAnimatedStyle(() => ({
-    width: shared.translateX.value,
+    width: translateX.value,
   }));
 
   return (

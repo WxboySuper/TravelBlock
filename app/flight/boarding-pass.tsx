@@ -24,7 +24,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
+    flexGrow: 1,
     alignItems: 'center',
     padding: Spacing.lg,
     paddingBottom: Spacing.md,
@@ -120,6 +124,7 @@ export default function BoardingPassScreen() {
         <Stack.Screen options={{ headerShown: false }} />
 
         <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >

@@ -151,6 +151,14 @@ function renderSelectedTabContent(
   }
 }
 
+function isCockpitReady(
+  isLoaded: boolean,
+  activeBooking: FlightBooking | null,
+  progress: FlightProgress | null
+): activeBooking is FlightBooking {
+  return isLoaded && activeBooking !== null && progress !== null;
+}
+
 function useCockpitFlightState(booking: FlightBooking | null): CockpitFlightState {
   const [activeBooking, setActiveBooking] = useState(booking);
   const [progress, setProgress] = useState<FlightProgress | null>(null);
@@ -384,7 +392,9 @@ export default function CockpitScreen() {
   });
 
   // Show loading state while initializing
-  if (!isLoaded || !activeBooking || !progress) {
+  const cockpitReady = isCockpitReady(isLoaded, activeBooking, progress);
+
+  if (!cockpitReady || progress === null) {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={{ flex: 1 }}>

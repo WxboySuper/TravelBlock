@@ -115,7 +115,7 @@ Goal: History tracking.
 [ ] Log every completed session (Origin, Dest, Duration, Date).
 
 [~] Create a "Logbook" screen to view flight history.
-Placeholder tab exists; persisted history is not implemented yet.
+  Placeholder tab exists; persisted history is not implemented yet.
 
 [ ] Add Charts: "Where you flew" (Map view of all past routes).
 
@@ -130,7 +130,7 @@ Goal: Introduce a points economy and ticket/seat purchase flows to increase rete
 [ ] Add `TicketStoreScreen` and purchase/checkout flow
 
 [~] Add `SeatSelector` component and integrate with flight state
-Seat selection exists for booking flow; paid seat/ticket economy is still pending.
+  Seat selection exists for booking flow; paid seat/ticket economy is still pending.
 
 [ ] Award points on flight completion and update balances
 

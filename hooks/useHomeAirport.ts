@@ -15,6 +15,7 @@ let homeAirportState: HomeAirportState = {
   isLoading: true,
 };
 let loadPromise: Promise<Airport | null> | null = null;
+let latestLoadRequestId = 0;
 
 export function resetHomeAirportStoreForTests() {
   listeners.clear();
@@ -23,6 +24,7 @@ export function resetHomeAirportStoreForTests() {
     isLoading: true,
   };
   loadPromise = null;
+  latestLoadRequestId = 0;
 }
 
 function emitHomeAirportState() {
@@ -46,21 +48,35 @@ export function loadHomeAirport(forceRefresh = false): Promise<Airport | null> {
   }
 
   setHomeAirportState({ isLoading: true });
+  const requestId = latestLoadRequestId + 1;
+  latestLoadRequestId = requestId;
+  let nextPromise: Promise<Airport | null> | null = null;
 
-  loadPromise = (async () => {
+  nextPromise = (async () => {
     try {
       const savedAirport = await storageService.getHomeAirport();
-      setHomeAirportState({ homeAirport: savedAirport, isLoading: false });
+
+      if (requestId === latestLoadRequestId) {
+        setHomeAirportState({ homeAirport: savedAirport, isLoading: false });
+      }
+
       return savedAirport;
     } catch (error) {
       console.error('Failed to load home airport', error);
-      setHomeAirportState({ homeAirport: null, isLoading: false });
+
+      if (requestId === latestLoadRequestId) {
+        setHomeAirportState({ homeAirport: null, isLoading: false });
+      }
+
       throw error;
     } finally {
-      loadPromise = null;
+      if (nextPromise !== null && loadPromise === nextPromise) {
+        loadPromise = null;
+      }
     }
   })();
 
+  loadPromise = nextPromise;
   return loadPromise;
 }
 

@@ -186,25 +186,32 @@ function useCockpitTimer(
   const { booking, isLoaded, onArrival, router, setActiveBooking, setProgress } = config;
   const timerStartedRef = useRef(false);
   const arrivalHandlerRef = useRef(onArrival);
+  const bookingRef = useRef(booking);
 
   useEffect(() => {
     arrivalHandlerRef.current = onArrival;
   }, [onArrival]);
 
   useEffect(() => {
+    bookingRef.current = booking;
+  }, [booking]);
+
+  useEffect(() => {
     if (!isLoaded || timerStartedRef.current) {
       return undefined;
     }
 
-    if (!booking) {
+    const initialBooking = bookingRef.current;
+
+    if (!initialBooking) {
       console.warn('[Cockpit] No booking data, returning to home');
       router.replace('/(tabs)');
       return undefined;
     }
 
     timerStartedRef.current = true;
-    setActiveBooking(booking);
-    flightTimerService.startFlight(booking);
+    setActiveBooking(initialBooking);
+    flightTimerService.startFlight(initialBooking);
 
     const unsubscribeTick = flightTimerService.onTick((newProgress) => {
       setProgress(newProgress);
@@ -225,7 +232,7 @@ function useCockpitTimer(
     }
 
     return cleanupTimer;
-  }, [booking, isLoaded, router, setActiveBooking, setProgress]);
+  }, [isLoaded, router, setActiveBooking, setProgress]);
 }
 
 function useDivertControls(

@@ -244,7 +244,7 @@ export default function FlightSetupScreen() {
   } = useDestinations({
     origin: homeAirport,
     flightTimeInSeconds: localFlightTime,
-    useTimeRange: true,
+    useTimeRange: false,
   });
 
   // Find the selected destination in the destinations array

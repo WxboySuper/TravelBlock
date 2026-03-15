@@ -15,12 +15,11 @@ import {
     snapToInterval,
 } from "@/utils/timeSlider";
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import {
     Gesture,
     GestureDetector,
-    GestureHandlerRootView,
 } from "react-native-gesture-handler";
 import Animated, {
     runOnJS,
@@ -55,6 +54,11 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.lg,
+    position: "relative",
+  },
+  sliderSurface: {
+    height: THUMB_SIZE,
+    justifyContent: "center",
   },
   trackContainer: {
     height: TRACK_HEIGHT,
@@ -132,32 +136,31 @@ export function TimeSlider({
 
   const trackWidth = useSharedValue(0);
   const translateX = useSharedValue(0);
+  const gestureStartX = useSharedValue(0);
   const isGestureActive = useSharedValue(false);
-  const lastHapticValue = useRef(value);
+  const lastEmittedValue = useSharedValue(value);
 
-  // Calculate position from value
-  const valueToPosition = useCallback(
-    (val: number) => {
-      if (trackWidth.value === 0) return 0;
-      const normalizedValue = (val - minValue) / (maxValue - minValue);
-      return normalizedValue * trackWidth.value;
-    },
-    [minValue, maxValue, trackWidth]
-  );
+  const clampPosition = (position: number) => {
+    "worklet";
+    return Math.max(0, Math.min(trackWidth.value, position));
+  };
 
-  // Calculate value from position
-  const positionToValue = useCallback(
-    (position: number) => {
-      if (trackWidth.value === 0) return minValue;
-      const normalizedPosition = position / trackWidth.value;
-      const rawValue = normalizedPosition * (maxValue - minValue) + minValue;
-      const constrained = getTimeInRange(rawValue, minValue, maxValue);
-      return snapToInterval(constrained, snapValue);
-    },
-    [minValue, maxValue, snapValue, trackWidth]
-  );
+  const valueToPosition = (val: number) => {
+    "worklet";
+    if (trackWidth.value === 0) return 0;
+    const normalizedValue = (val - minValue) / (maxValue - minValue);
+    return normalizedValue * trackWidth.value;
+  };
 
-  // Trigger haptic feedback
+  const positionToValue = (position: number) => {
+    "worklet";
+    if (trackWidth.value === 0) return minValue;
+    const normalizedPosition = position / trackWidth.value;
+    const rawValue = normalizedPosition * (maxValue - minValue) + minValue;
+    const constrained = getTimeInRange(rawValue, minValue, maxValue);
+    return snapToInterval(constrained, snapValue);
+  };
+
   const triggerHaptic = useCallback(() => {
     impactAsync(ImpactFeedbackStyle.Light).catch(() => {
       // Ignore haptic errors
@@ -167,12 +170,13 @@ export function TimeSlider({
   // Update position when value changes externally
   useEffect(() => {
     if (!isGestureActive.value) {
+      lastEmittedValue.value = value;
       translateX.value = withSpring(valueToPosition(value), {
         damping: 20,
         stiffness: 200,
       });
     }
-  }, [value, valueToPosition, isGestureActive, translateX]);
+  }, [isGestureActive, lastEmittedValue, translateX, value]);
 
   // Handle track layout
   const handleTrackLayout = useCallback(
@@ -181,29 +185,26 @@ export function TimeSlider({
       trackWidth.value = width;
       translateX.value = valueToPosition(value);
     },
-    [trackWidth, translateX, valueToPosition, value]
+    [trackWidth, translateX, value]
   );
 
-  // Gesture handler using new Gesture API
   const panGesture = Gesture.Pan()
     .onBegin(() => {
       isGestureActive.value = true;
+      gestureStartX.value = translateX.value;
       if (onGestureStart) {
         runOnJS(onGestureStart)();
       }
       runOnJS(triggerHaptic)();
     })
     .onUpdate((event) => {
-      const startX = valueToPosition(value);
-      const newPosition = startX + event.translationX;
-      const constrainedPosition = Math.max(
-        0,
-        Math.min(trackWidth.value, newPosition)
-      );
+      const newPosition = gestureStartX.value + event.translationX;
+      const constrainedPosition = clampPosition(newPosition);
       translateX.value = constrainedPosition;
 
       const newValue = positionToValue(constrainedPosition);
-      if (newValue !== value) {
+      if (newValue !== lastEmittedValue.value) {
+        lastEmittedValue.value = newValue;
         runOnJS(onValueChange)(newValue);
         runOnJS(triggerHaptic)();
       }
@@ -211,6 +212,7 @@ export function TimeSlider({
     .onEnd(() => {
       const finalValue = positionToValue(translateX.value);
       const finalPosition = valueToPosition(finalValue);
+      lastEmittedValue.value = finalValue;
 
       translateX.value = withSpring(finalPosition, {
         damping: 20,
@@ -225,6 +227,25 @@ export function TimeSlider({
     })
     .hitSlop(HIT_SLOP);
 
+  const tapGesture = Gesture.Tap()
+    .onEnd((event) => {
+      const tappedPosition = clampPosition(event.x);
+      const nextValue = positionToValue(tappedPosition);
+      const finalPosition = valueToPosition(nextValue);
+
+      isGestureActive.value = false;
+      lastEmittedValue.value = nextValue;
+      translateX.value = withSpring(finalPosition, {
+        damping: 20,
+        stiffness: 200,
+      });
+
+      runOnJS(onValueChange)(nextValue);
+      runOnJS(triggerHaptic)();
+    });
+
+  const sliderGesture = Gesture.Simultaneous(panGesture, tapGesture);
+
   // Animated thumb style
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -236,26 +257,28 @@ export function TimeSlider({
   }));
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <View
-        style={[styles.trackContainer, { backgroundColor: colors.border }]}
-        onLayout={handleTrackLayout}
-      >
-        <View style={[styles.track, { backgroundColor: colors.border }]} />
-        <Animated.View
-          style={[
-            styles.activeTrack,
-            { backgroundColor: colors.tint },
-            activeTrackStyle,
-          ]}
-        />
-      </View>
+    <View style={styles.container}>
+      <GestureDetector gesture={sliderGesture}>
+        <View style={styles.sliderSurface}>
+          <View
+            style={[styles.trackContainer, { backgroundColor: colors.border }]}
+            onLayout={handleTrackLayout}
+          >
+            <View style={[styles.track, { backgroundColor: colors.border }]} />
+            <Animated.View
+              style={[
+                styles.activeTrack,
+                { backgroundColor: colors.tint },
+                activeTrackStyle,
+              ]}
+            />
+          </View>
 
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.thumbContainer, thumbStyle]}>
-          <View style={[styles.thumb, { borderColor: colors.tint }]} />
-        </Animated.View>
+          <Animated.View style={[styles.thumbContainer, thumbStyle]}>
+            <View style={[styles.thumb, { borderColor: colors.tint }]} />
+          </Animated.View>
+        </View>
       </GestureDetector>
-    </GestureHandlerRootView>
+    </View>
   );
 }

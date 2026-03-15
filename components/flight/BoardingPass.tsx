@@ -7,7 +7,8 @@
  */
 
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useMemo } from 'react';
+import { StyleSheet, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { BoardingPassDimensions, Colors, Spacing, Typography } from '@/constants/theme';
@@ -16,8 +17,6 @@ import { BoardingPass as BoardingPassType } from '@/types/flight';
 
 const styles = StyleSheet.create({
   passContainer: {
-    width: BoardingPassDimensions.width,
-    height: BoardingPassDimensions.height,
     borderRadius: BoardingPassDimensions.cornerRadius,
     overflow: 'hidden',
     elevation: 8,
@@ -101,8 +100,8 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
   },
   qrPlaceholder: {
-    width: 120,
-    height: 120,
+    width: 128,
+    height: 128,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     alignSelf: 'center',
@@ -113,11 +112,18 @@ const styles = StyleSheet.create({
   qrText: {
     fontSize: Typography.fontSize.xs,
     textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: Spacing.sm,
   },
   serialNumber: {
     fontSize: Typography.fontSize.xs,
     fontFamily: 'monospace',
     textAlign: 'center',
+  },
+  qrNote: {
+    fontSize: Typography.fontSize.xs,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
   },
   passengerName: {
     fontSize: Typography.fontSize.lg,
@@ -143,6 +149,7 @@ export function BoardingPass({
 }: BoardingPassProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { width: screenWidth } = useWindowDimensions();
 
   // Pass uses dedicated boarding color scheme
   const passColors = {
@@ -155,6 +162,42 @@ export function BoardingPass({
   const { booking, seat, passengerName, serialNumber } = boardingPass;
   const originCode = booking.origin.iata || booking.origin.icao;
   const destCode = booking.destination.iata || booking.destination.icao;
+  const cardWidth = Math.min(screenWidth - Spacing.xl * 2, BoardingPassDimensions.width);
+  const scale = cardWidth / BoardingPassDimensions.width;
+  const cardHeight = BoardingPassDimensions.height * scale;
+  const perforationTop = BoardingPassDimensions.perforationY * scale;
+  const stubTop = perforationTop + 16 * scale;
+  const scaledStyles = useMemo(
+    () => ({
+      airline: { fontSize: Typography.fontSize.xl * scale },
+      flightNumber: { fontSize: Typography.fontSize.base * scale },
+      airportCode: { fontSize: Typography.fontSize.xxxl * scale },
+      airportName: { fontSize: Math.max(11, Typography.fontSize.xs * scale) },
+      arrowText: { fontSize: Typography.fontSize.xl * scale },
+      detailLabel: { fontSize: Math.max(10, Typography.fontSize.xs * scale) },
+      detailValue: { fontSize: Typography.fontSize.lg * scale },
+      passengerName: {
+        fontSize: Typography.fontSize.lg * scale,
+        letterSpacing: Math.max(1, 2 * scale),
+      },
+      qrPlaceholder: {
+        width: 128 * scale,
+        height: 128 * scale,
+      },
+      qrText: {
+        fontSize: Math.max(10, Typography.fontSize.xs * scale),
+        lineHeight: Math.max(14, 18 * scale),
+      },
+      serialNumber: { fontSize: Math.max(10, Typography.fontSize.xs * scale) },
+      qrNote: { fontSize: Math.max(10, Typography.fontSize.xs * scale) },
+      passPadding: { padding: Spacing.lg * scale },
+      headerSpacing: { paddingBottom: Spacing.md * scale, marginBottom: Spacing.md * scale },
+      routeSpacing: { marginBottom: Spacing.lg * scale, paddingVertical: Spacing.md * scale },
+      detailRow: { marginBottom: Spacing.md * scale },
+      stubSection: { left: Spacing.lg * scale, right: Spacing.lg * scale },
+    }),
+    [scale]
+  );
 
   // Format times (simple formatting for now)
   const boardingTime = new Date(booking.boardingTime).toLocaleTimeString('en-US', {
@@ -174,55 +217,70 @@ export function BoardingPass({
 
   return (
     <TouchableOpacity
-      style={[styles.passContainer, { backgroundColor: passColors.background }]}
+      style={[
+        styles.passContainer,
+        {
+          backgroundColor: passColors.background,
+          width: cardWidth,
+          height: cardHeight,
+        },
+      ]}
       onPress={handleTap}
       disabled={!interactive}
       activeOpacity={interactive ? 0.8 : 1}
     >
-      <View style={styles.passContent}>
+      <View style={[styles.passContent, scaledStyles.passPadding]}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: passColors.border }]}>
-          <ThemedText style={[styles.airline, { color: passColors.text }]}>
+        <View
+          style={[
+            styles.header,
+            scaledStyles.headerSpacing,
+            { borderBottomColor: passColors.border },
+          ]}
+        >
+          <ThemedText style={[styles.airline, scaledStyles.airline, { color: passColors.text }]}>
             TravelBlock Airlines
           </ThemedText>
-          <ThemedText style={[styles.flightNumber, { color: passColors.textSecondary }]}>
+          <ThemedText
+            style={[styles.flightNumber, scaledStyles.flightNumber, { color: passColors.textSecondary }]}
+          >
             {booking.flightNumber}
           </ThemedText>
         </View>
 
         {/* Route */}
-        <View style={styles.routeSection}>
+        <View style={[styles.routeSection, scaledStyles.routeSpacing]}>
           <View style={styles.airportBlock}>
-            <ThemedText style={[styles.airportCode, { color: passColors.text }]}>
+            <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: passColors.text }]}>
               {originCode}
             </ThemedText>
-            <ThemedText style={[styles.airportName, { color: passColors.textSecondary }]}>
+            <ThemedText style={[styles.airportName, scaledStyles.airportName, { color: passColors.textSecondary }]}>
               {booking.origin.city}
             </ThemedText>
           </View>
 
           <View style={styles.arrow}>
-            <ThemedText style={[styles.arrowText, { color: passColors.textSecondary }]}>
+            <ThemedText style={[styles.arrowText, scaledStyles.arrowText, { color: passColors.textSecondary }]}>
               →
             </ThemedText>
           </View>
 
           <View style={[styles.airportBlock, { alignItems: 'flex-end' }]}>
-            <ThemedText style={[styles.airportCode, { color: passColors.text }]}>
+            <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: passColors.text }]}>
               {destCode}
             </ThemedText>
-            <ThemedText style={[styles.airportName, { color: passColors.textSecondary }]}>
+            <ThemedText style={[styles.airportName, scaledStyles.airportName, { color: passColors.textSecondary }]}>
               {booking.destination.city}
             </ThemedText>
           </View>
         </View>
 
         {/* Passenger name */}
-        <View style={{ marginBottom: Spacing.lg }}>
-          <ThemedText style={[styles.detailLabel, { color: passColors.textSecondary }]}>
+        <View style={{ marginBottom: Spacing.lg * scale }}>
+          <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
             Passenger
           </ThemedText>
-          <ThemedText style={[styles.passengerName, { color: passColors.text }]}>
+          <ThemedText style={[styles.passengerName, scaledStyles.passengerName, { color: passColors.text }]}>
             {passengerName}
           </ThemedText>
         </View>
@@ -230,40 +288,40 @@ export function BoardingPass({
         {/* Flight details grid */}
         <View style={styles.detailsGrid}>
           {/* Row 1 */}
-          <View style={styles.detailRow}>
+          <View style={[styles.detailRow, scaledStyles.detailRow]}>
             <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, { color: passColors.textSecondary }]}>
+              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
                 Boarding
               </ThemedText>
-              <ThemedText style={[styles.detailValue, { color: passColors.text }]}>
+              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
                 {boardingTime}
               </ThemedText>
             </View>
             <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, { color: passColors.textSecondary }]}>
+              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
                 Departure
               </ThemedText>
-              <ThemedText style={[styles.detailValue, { color: passColors.text }]}>
+              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
                 {departureTime}
               </ThemedText>
             </View>
           </View>
 
           {/* Row 2 */}
-          <View style={styles.detailRow}>
+          <View style={[styles.detailRow, scaledStyles.detailRow]}>
             <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, { color: passColors.textSecondary }]}>
+              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
                 Gate
               </ThemedText>
-              <ThemedText style={[styles.detailValue, { color: passColors.text }]}>
+              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
                 {booking.gate}
               </ThemedText>
             </View>
             <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, { color: passColors.textSecondary }]}>
+              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
                 Seat
               </ThemedText>
-              <ThemedText style={[styles.detailValue, { color: passColors.text }]}>
+              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
                 {seat.row}
                 {seat.letter}
               </ThemedText>
@@ -276,25 +334,33 @@ export function BoardingPass({
           style={[
             styles.perforationLine,
             {
-              top: BoardingPassDimensions.perforationY,
+              top: perforationTop,
               borderColor: passColors.border,
             },
           ]}
         />
 
         {/* Stub section (below perforation) */}
-        <View style={[styles.stubSection, { position: 'absolute', top: BoardingPassDimensions.perforationY + 16, left: Spacing.lg, right: Spacing.lg }]}>
-          {/* QR Code placeholder */}
-          <View style={styles.qrPlaceholder}>
-            <ThemedText style={[styles.qrText, { color: '#000' }]}>
-              QR CODE{'\n'}
-              {serialNumber}
+        <View
+          style={[
+            styles.stubSection,
+            scaledStyles.stubSection,
+            { position: 'absolute', top: stubTop },
+          ]}
+        >
+          <View style={[styles.qrPlaceholder, scaledStyles.qrPlaceholder]}>
+            <ThemedText style={[styles.qrText, scaledStyles.qrText, { color: '#000000' }]}>
+              BOARDING CODE{'\n'}
+              {booking.bookingReference}
             </ThemedText>
           </View>
+          <ThemedText style={[styles.qrNote, scaledStyles.qrNote, { color: passColors.textSecondary }]}>
+            QR rendering is not wired up yet in this build.
+          </ThemedText>
 
           {/* Booking reference */}
-          <ThemedText style={[styles.serialNumber, { color: passColors.textSecondary }]}>
-            {booking.bookingReference}
+          <ThemedText style={[styles.serialNumber, scaledStyles.serialNumber, { color: passColors.textSecondary }]}>
+            {serialNumber}
           </ThemedText>
         </View>
       </View>

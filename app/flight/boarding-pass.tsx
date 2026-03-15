@@ -7,9 +7,9 @@
  */
 
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BoardingPass } from '@/components/flight/BoardingPass';
@@ -25,14 +25,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xl,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   title: {
     fontSize: Typography.fontSize.xxl,
@@ -45,12 +44,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   passContainer: {
-    marginBottom: Spacing.xl,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   instruction: {
     fontSize: Typography.fontSize.base,
     textAlign: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
+    lineHeight: 24,
   },
   footer: {
     padding: Spacing.lg,
@@ -115,12 +117,17 @@ export default function BoardingPassScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.content}>
+        <Stack.Screen options={{ headerShown: false }} />
+
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Header */}
           <View style={styles.header}>
             <ThemedText style={styles.title}>Boarding Pass</ThemedText>
             <ThemedText style={[styles.subtitle, { color: colors.success }]}>
-              ✓ Checked In
+              Checked In
             </ThemedText>
           </View>
 
@@ -141,7 +148,7 @@ export default function BoardingPassScreen() {
           <ThemedText style={[styles.instruction, { color: colors.textSecondary }]}>
             Ready to board! Tap the button below to begin your flight.
           </ThemedText>
-        </View>
+        </ScrollView>
 
         {/* Footer */}
         <View style={styles.footer}>

@@ -52,39 +52,39 @@ Goal: Setting the starting point.
 
 Goal: Converting focus time into destinations.
 
-[ ] Implement a custom Slider component (30m to 5h range).
+[x] Implement a custom Slider component (30m to 5h range).
 
-[ ] Add "Snap to 10m intervals" logic.
+[x] Add "Snap to 10m intervals" logic.
 
-[ ] The "Radius" Logic: When slider moves, filter airports.json to find destinations that match the flight time (e.g., 1h 03m flight shows up under 1h tab).
+[x] The "Radius" Logic: When slider moves, filter airports.json to find destinations that match the flight time (e.g., 1h 03m flight shows up under 1h tab).
 
-[ ] Display a list of "Available Destinations" dynamically based on the slider position.
+[x] Display a list of "Available Destinations" dynamically based on the slider position.
 
 ## v0.5.0-alpha: The Flight Engine (Real-Time)
 
 Goal: The simulation logic.
 
-[ ] Create the "Cockpit" view (Active Timer).
+[x] Create the "Cockpit" view (Active Timer).
 
-[ ] Implement Real-Time Logic: 1 second of focus = 1 second of flight.
+[x] Implement Real-Time Logic: 1 second of focus = 1 second of flight.
 
-[ ] No Pause Rule: Remove pause button. Stopping the timer "Diverts" the flight (Fail state).
+[~] No Pause Rule: Timer/diversion flow exists; intentional no-pause enforcement still needs polish.
 
-[ ] Link Timer to Distance: As time counts down, update "Miles Remaining" and "Miles Flown."
+[x] Link Timer to Distance: As time counts down, update "Miles Remaining" and "Miles Flown."
 
-[ ] Handle "Arrival": When timer hits 0, trigger "Landed" state.
+[~] Handle "Arrival": Completion handling exists; dedicated landed/pivot screen still pending.
 
 ## v0.6.0-alpha: Map Visualization
 
 Goal: Showing the journey.
 
-[ ] Install react-native-maps.
+[x] Install react-native-maps.
 
-[ ] Render a Google Map centered on the route (Satellite/Terrain/Plain views).
+[x] Render a map centered on the active route.
 
-[ ] Draw a Polyline (Geodesic curve) from Origin to Destination.
+[x] Draw a Polyline (Geodesic curve) from Origin to Destination.
 
-[ ] Add a "Plane Icon" marker that updates position along the line in real-time.
+[x] Add a live plane marker that updates position along the line in real-time.
 
 ## v0.7.0-alpha: Audio Immersion
 
@@ -114,7 +114,8 @@ Goal: History tracking.
 
 [ ] Log every completed session (Origin, Dest, Duration, Date).
 
-[ ] Create a "Logbook" screen to view flight history.
+[~] Create a "Logbook" screen to view flight history.
+Placeholder tab exists; persisted history is not implemented yet.
 
 [ ] Add Charts: "Where you flew" (Map view of all past routes).
 
@@ -128,7 +129,8 @@ Goal: Introduce a points economy and ticket/seat purchase flows to increase rete
 
 [ ] Add `TicketStoreScreen` and purchase/checkout flow
 
-[ ] Add `SeatSelector` component and integrate with flight state
+[~] Add `SeatSelector` component and integrate with flight state
+Seat selection exists for booking flow; paid seat/ticket economy is still pending.
 
 [ ] Award points on flight completion and update balances
 

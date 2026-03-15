@@ -13,7 +13,7 @@
 
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -33,6 +33,7 @@ import { TimerDisplay } from '@/components/cockpit/TimerDisplay';
 
 // Services
 import { calculateDivertRoute, findNearestAirports, getDivertReason } from '@/services/divertService';
+import { persistDivertedFlightState } from '@/services/flightStateService';
 import { flightTimerService } from '@/services/flightTimerService';
 
 // Types
@@ -74,7 +75,23 @@ export default function CockpitScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { booking, clearFlightState } = useFlight();
+  const {
+    booking,
+    boardingPass,
+    clearFlightState,
+    isLoaded,
+    setBoardingPass,
+    setBooking,
+    setDestination,
+  } = useFlight();
+  const [activeBooking, setActiveBooking] = useState(booking);
+  const timerStartedRef = useRef(false);
+  const handleArrivalRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    if (!booking) return;
+    setActiveBooking(booking);
+  }, [booking]);
 
   // UI state
   const [selectedTab, setSelectedTab] = useState<CockpitTab>('map');
@@ -89,11 +106,18 @@ export default function CockpitScreen() {
 
   // Initialize flight timer on mount
   useEffect(() => {
+    if (!isLoaded || timerStartedRef.current) {
+      return;
+    }
+
     if (!booking) {
       console.warn('[Cockpit] No booking data, returning to home');
       router.replace('/(tabs)');
       return;
     }
+
+    timerStartedRef.current = true;
+    setActiveBooking(booking);
 
     // Start flight simulation
     flightTimerService.startFlight(booking);
@@ -109,7 +133,7 @@ export default function CockpitScreen() {
     });
 
     const unsubscribeArrival = flightTimerService.onArrival(() => {
-      handleArrival();
+      handleArrivalRef.current();
     });
 
     // Cleanup on unmount
@@ -117,9 +141,10 @@ export default function CockpitScreen() {
       unsubscribeTick();
       unsubscribePhaseChange();
       unsubscribeArrival();
+      timerStartedRef.current = false;
       flightTimerService.cleanup();
     };
-  }, [booking]);
+  }, [booking, isLoaded, router]);
 
   /**
    * Handle flight arrival (completion)
@@ -131,8 +156,8 @@ export default function CockpitScreen() {
     Alert.alert(
       '✅ Flight Completed',
       isDiverted
-        ? `Diverted flight completed!\n\n${booking?.origin.iata} → ${booking?.destination.iata}`
-        : `Flight completed successfully!\n\n${booking?.origin.iata} → ${booking?.destination.iata}`,
+        ? `Diverted flight completed!\n\n${activeBooking?.origin.iata} → ${activeBooking?.destination.iata}`
+        : `Flight completed successfully!\n\n${activeBooking?.origin.iata} → ${activeBooking?.destination.iata}`,
       [
         {
           text: 'Return to Home',
@@ -144,13 +169,19 @@ export default function CockpitScreen() {
       ],
       { cancelable: false }
     );
-  }, [booking, isDiverted, clearFlightState, router]);
+  }, [activeBooking, isDiverted, clearFlightState, router]);
+
+  useEffect(() => {
+    handleArrivalRef.current = () => {
+      void handleArrival();
+    };
+  }, [handleArrival]);
 
   /**
    * Handle divert button press
    */
   const handleDivertPress = useCallback(async () => {
-    if (!progress || !booking) return;
+    if (!progress || !activeBooking) return;
 
     // Pause flight
     flightTimerService.pauseFlight();
@@ -161,7 +192,7 @@ export default function CockpitScreen() {
     
     const nearestAirports = await findNearestAirports(
       progress.currentPosition,
-      booking.destination.icao,
+      activeBooking.destination.icao,
       5,
       500 // 500km max range
     );
@@ -171,24 +202,31 @@ export default function CockpitScreen() {
     setShowDivertModal(true);
 
     await impactAsync(ImpactFeedbackStyle.Medium).catch(() => {});
-  }, [progress, booking]);
+  }, [progress, activeBooking]);
 
   /**
    * Handle divert airport selection
    */
   const handleDivertSelect = useCallback(async (option: DivertOption) => {
-    if (!booking || !progress) return;
+    if (!activeBooking || !progress) return;
 
     setShowDivertModal(false);
     setIsDiverted(true);
 
     // Calculate new route to divert airport
     const newBooking = calculateDivertRoute(
-      booking,
+      activeBooking,
       progress.currentPosition,
       option.airport,
       progress.elapsedSeconds
     );
+
+    setActiveBooking(newBooking);
+    await persistDivertedFlightState(newBooking, boardingPass, {
+      setBooking,
+      setBoardingPass,
+      setDestination,
+    });
 
     // Update timer with new booking
     flightTimerService.updateFlight(newBooking, 0); // Start from 0 for new route
@@ -204,7 +242,7 @@ export default function CockpitScreen() {
       `Rerouting to ${option.airport.name} (${option.airport.iata})\nDistance: ${option.distanceFromCurrent.toFixed(1)} km\nETA: ${Math.round(option.estimatedTime / 60)} minutes`,
       [{ text: 'OK' }]
     );
-  }, [booking, progress]);
+  }, [activeBooking, boardingPass, progress, setBoardingPass, setBooking, setDestination]);
 
   /**
    * Handle divert modal close
@@ -216,7 +254,7 @@ export default function CockpitScreen() {
   }, []);
 
   // Show loading state while initializing
-  if (!booking || !progress) {
+  if (!isLoaded || !activeBooking || !progress) {
     return (
       <ThemedView style={styles.container}>
         <SafeAreaView style={{ flex: 1 }}>
@@ -248,8 +286,8 @@ export default function CockpitScreen() {
         <View style={styles.content}>
           {selectedTab === 'map' && (
             <FlightMapView
-              origin={booking.origin}
-              destination={booking.destination}
+              origin={activeBooking.origin}
+              destination={activeBooking.destination}
               currentPosition={progress.currentPosition}
               heading={progress.heading}
               isDiverted={isDiverted}
@@ -261,7 +299,7 @@ export default function CockpitScreen() {
           )}
           
           {selectedTab === 'info' && (
-            <InfoPanel booking={booking} />
+            <InfoPanel booking={activeBooking} />
           )}
         </View>
 

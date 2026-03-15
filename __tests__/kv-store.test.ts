@@ -1,6 +1,4 @@
-
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
 // Mock expo-sqlite to avoid loading the real module which is ESM
 jest.mock('expo-sqlite', () => ({}), { virtual: true });
@@ -14,10 +12,10 @@ jest.mock('../expo-sqlite/sqlite-helpers', () => ({
 }));
 
 // We need to manage the mock for async-storage
-const mockSetItem = jest.fn<(key: string, value: string) => Promise<void>>();
-const mockMultiSet = jest.fn<(keyValuePairs: string[][]) => Promise<void>>();
-const mockGetItem = jest.fn<(key: string) => Promise<string | null>>();
-const mockRemoveItem = jest.fn<(key: string) => Promise<void>>();
+const mockSetItem = jest.fn<Promise<void>, [string, string]>();
+const mockMultiSet = jest.fn<Promise<void>, [readonly (readonly [string, string])[]]>();
+const mockGetItem = jest.fn<Promise<string | null>, [string]>();
+const mockRemoveItem = jest.fn<Promise<void>, [string]>();
 
 describe('KV Store Migration', () => {
   let kvStore: typeof import('../expo-sqlite/kv-store');

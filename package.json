@@ -2,7 +2,7 @@
   "name": "travelblock",
   "license": "MIT",
   "main": "expo-router/entry",
-  "version": "0.2.0-alpha",
+  "version": "0.8.0-alpha",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@babel/preset-react": "^7.22.0",
+    "@playwright/test": "^1.58.2",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^12.4.2",
     "@types/jest": "29.5.14",

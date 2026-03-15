@@ -24,7 +24,7 @@ type AsyncStorageLike = {
   getItem?: (key: string) => Promise<string | null>;
   setItem?: (key: string, value: string) => Promise<void>;
   removeItem?: (key: string) => Promise<void>;
-  multiSet?: (keyValuePairs: string[][]) => Promise<void>;
+  multiSet?: (keyValuePairs: readonly (readonly [string, string])[]) => Promise<void>;
 };
 
 // runtime reference to AsyncStorage (may be null)
@@ -44,7 +44,8 @@ async function loadAsyncStorageOnce(): Promise<AsyncStorageLike | null> {
   try {
     // Use dynamic import to avoid loading native module at parse time
     const mod = await import('@react-native-async-storage/async-storage');
-    asyncStorage = ((mod as { default?: AsyncStorageLike })?.default ?? (mod as AsyncStorageLike)) as AsyncStorageLike;
+    const moduleRef = mod as unknown as { default?: AsyncStorageLike } & AsyncStorageLike;
+    asyncStorage = moduleRef.default ?? moduleRef;
     return asyncStorage;
   } catch {
     return null;

@@ -19,9 +19,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Spacing, Typography } from '@/constants/theme';
 import { useFlight } from '@/context/FlightContext';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // Cockpit components
 import { CockpitTab, CockpitTabs } from '@/components/cockpit/CockpitTabs';
@@ -77,6 +76,15 @@ type FlightActions = Pick<
   'boardingPass' | 'clearFlightState' | 'setBoardingPass' | 'setBooking' | 'setDestination'
 >;
 
+type TimerConfig = {
+  booking: FlightBooking | null;
+  isLoaded: boolean;
+  onArrival: () => void;
+  router: ReturnType<typeof useRouter>;
+  setActiveBooking: Dispatch<SetStateAction<FlightBooking | null>>;
+  setProgress: Dispatch<SetStateAction<FlightProgress | null>>;
+};
+
 type CockpitFlightState = {
   activeBooking: FlightBooking | null;
   isDiverted: boolean;
@@ -94,6 +102,14 @@ type DivertControls = {
   handleDivertSelect: (option: DivertOption) => Promise<void>;
   isLoadingDiverts: boolean;
   showDivertModal: boolean;
+};
+
+type DivertConfig = {
+  activeBooking: FlightBooking | null;
+  flightActions: FlightActions;
+  progress: FlightProgress | null;
+  setActiveBooking: Dispatch<SetStateAction<FlightBooking | null>>;
+  setIsDiverted: Dispatch<SetStateAction<boolean>>;
 };
 
 function getFlightCompletionMessage(
@@ -157,13 +173,9 @@ function useCockpitFlightState(booking: FlightBooking | null): CockpitFlightStat
 }
 
 function useCockpitTimer(
-  booking: FlightBooking | null,
-  isLoaded: boolean,
-  router: ReturnType<typeof useRouter>,
-  setActiveBooking: Dispatch<SetStateAction<FlightBooking | null>>,
-  setProgress: Dispatch<SetStateAction<FlightProgress | null>>,
-  onArrival: () => void
+  config: TimerConfig
 ) {
+  const { booking, isLoaded, onArrival, router, setActiveBooking, setProgress } = config;
   const timerStartedRef = useRef(false);
   const arrivalHandlerRef = useRef(onArrival);
 
@@ -209,12 +221,15 @@ function useCockpitTimer(
 }
 
 function useDivertControls(
-  activeBooking: FlightBooking | null,
-  progress: FlightProgress | null,
-  flightActions: FlightActions,
-  setActiveBooking: Dispatch<SetStateAction<FlightBooking | null>>,
-  setIsDiverted: Dispatch<SetStateAction<boolean>>
+  config: DivertConfig
 ): DivertControls {
+  const {
+    activeBooking,
+    flightActions,
+    progress,
+    setActiveBooking,
+    setIsDiverted,
+  } = config;
   const [showDivertModal, setShowDivertModal] = useState(false);
   const [divertOptions, setDivertOptions] = useState<DivertOption[]>([]);
   const [divertReason, setDivertReason] = useState('');
@@ -293,8 +308,6 @@ function useDivertControls(
 
 export default function CockpitScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const {
     booking,
     boardingPass,
@@ -321,7 +334,7 @@ export default function CockpitScreen() {
    */
   const handleArrival = useCallback(async () => {
     // Heavy haptic feedback
-    await impactAsync(ImpactFeedbackStyle.Heavy).catch(() => {});
+    await impactAsync(ImpactFeedbackStyle.Heavy).catch(() => undefined);
 
     Alert.alert(
       '✅ Flight Completed',
@@ -339,14 +352,14 @@ export default function CockpitScreen() {
     );
   }, [activeBooking, isDiverted, clearFlightState, router]);
 
-  useCockpitTimer(
+  useCockpitTimer({
     booking,
     isLoaded,
+    onArrival: handleArrival,
     router,
     setActiveBooking,
     setProgress,
-    handleArrival
-  );
+  });
 
   const {
     divertOptions,
@@ -356,19 +369,19 @@ export default function CockpitScreen() {
     handleDivertSelect,
     isLoadingDiverts,
     showDivertModal,
-  } = useDivertControls(
+  } = useDivertControls({
     activeBooking,
-    progress,
-    {
+    flightActions: {
       boardingPass,
       clearFlightState,
       setBoardingPass,
       setBooking,
       setDestination,
     },
+    progress,
     setActiveBooking,
-    setIsDiverted
-  );
+    setIsDiverted,
+  });
 
   // Show loading state while initializing
   if (!isLoaded || !activeBooking || !progress) {

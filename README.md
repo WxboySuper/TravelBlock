@@ -1,8 +1,8 @@
 # TravelBlock
 
-Expo + React Native mobile app (Android-first). TravelBlock is an Expo Router app that provides airport-related utilities and a small demo UI. This repository is configured for development with EAS workflows and an Expo dev client.
+Expo + React Native mobile app (Android-first). TravelBlock is an Expo Router app for a flight-simulator-style focus loop: set a home airport, choose a flight duration, book a route, move through boarding, and enter a live cockpit view with diversion support. The repository is configured for development with EAS workflows and an Expo dev client.
 
-**Status**: Android-first; iOS simulator/device builds were available but this project is currently focused on Android testing and development.
+**Status**: `v0.8.0-alpha` stabilization baseline. Core onboarding, airport selection, booking flow, and cockpit simulation are implemented. Logbook/history, analytics, audio immersion, and rewards systems are still upcoming.
 
 ---
 
@@ -68,6 +68,12 @@ npm run lint
 ```bash
 npm run reset-project
 ```
+
+### Current feature status
+
+- Implemented: onboarding, home airport persistence, destination discovery by time, booking review, seat selection, check-in, boarding pass, cockpit timer, diversion flow
+- In progress: logbook/history screen, post-flight summary/pivot flow polish
+- Planned: audio immersion, analytics, rewards/points economy, production release hardening
 
 ### Project structure (high level)
 

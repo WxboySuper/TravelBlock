@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed below.
 
+## v0.8.0-alpha — Flight Loop Stabilization
+
+- Stabilized the in-flight diversion flow so the active booking, destination, and persisted flight state stay in sync after rerouting.
+- Unified home-airport state across screens so Home and Settings reflect edits immediately without requiring a remount or app restart.
+- Added regression coverage for shared home-airport state and cockpit diversion behavior.
+- Restored TypeScript health for the Expo Go-compatible storage shim and related tests.
+- Updated project metadata and status docs to match the implemented app flow instead of the original airport-only milestone.
+
 ## v0.2.0-alpha — Teaching the app geography
 
 - Implemented core distance utilities (Haversine) for accurate great-circle distance calculations (miles / km).

@@ -1,12 +1,24 @@
-# TravelBlock v0.2.0-v1.0 Implementation Plans - Complete Summary
+# TravelBlock Planning Archive
 
 **Project**: TravelBlock - Flight Simulator Focus App
 
-**Target Release**: June 1, 2026
+**Target Release**: Planning archive
 
-**Last Updated**: January 4, 2026
+**Last Updated**: March 15, 2026
 
 ---
+
+## Status Note
+
+This document is now an archive of the original implementation planning process.
+It no longer reflects the exact current repo state.
+
+The implemented app has already moved beyond the early v0.2.0 planning stage and
+includes onboarding, home-airport management, destination discovery, booking,
+seat selection, check-in, boarding pass, cockpit simulation, and diversion support.
+
+Use the root-level `README.md`, `ROADMAP.md`, `CHANGELOG.md`, `package.json`, and
+`app.json` as the current source of truth for project status and versioning.
 
 ## 📋 Quick Reference
 

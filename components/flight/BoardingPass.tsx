@@ -125,6 +125,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.xs,
   },
+  passengerSection: {
+    marginBottom: Spacing.lg,
+  },
   passengerName: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.bold,
@@ -134,12 +137,217 @@ const styles = StyleSheet.create({
 });
 
 interface BoardingPassProps {
-  /** Boarding pass data */
   boardingPass: BoardingPassType;
-  /** Whether the pass can be interacted with */
   interactive?: boolean;
-  /** Callback when pass is tapped (for scan interaction) */
   onTap?: () => void;
+}
+
+interface PassColors {
+  background: string;
+  text: string;
+  textSecondary: string;
+  border: string;
+}
+
+interface ScaledStyles {
+  airline: { fontSize: number };
+  flightNumber: { fontSize: number };
+  airportCode: { fontSize: number };
+  airportName: { fontSize: number };
+  arrowText: { fontSize: number };
+  detailLabel: { fontSize: number };
+  detailValue: { fontSize: number };
+  passengerSection: { marginBottom: number };
+  passengerName: { fontSize: number; letterSpacing: number };
+  qrPlaceholder: { width: number; height: number };
+  qrText: { fontSize: number; lineHeight: number };
+  serialNumber: { fontSize: number };
+  qrNote: { fontSize: number };
+  passPadding: { padding: number };
+  headerSpacing: { paddingBottom: number; marginBottom: number };
+  routeSpacing: { marginBottom: number; paddingVertical: number };
+  detailRow: { marginBottom: number };
+  stubSection: { left: number; right: number };
+}
+
+interface DetailPairProps {
+  colors: PassColors;
+  label: string;
+  scaledStyles: ScaledStyles;
+  value: string;
+}
+
+function DetailPair({ colors, label, scaledStyles, value }: DetailPairProps) {
+  return (
+    <View style={styles.detailBlock}>
+      <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: colors.textSecondary }]}>
+        {label}
+      </ThemedText>
+      <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: colors.text }]}>
+        {value}
+      </ThemedText>
+    </View>
+  );
+}
+
+interface BoardingPassHeaderProps {
+  colors: PassColors;
+  flightNumber: string;
+  scaledStyles: ScaledStyles;
+}
+
+function BoardingPassHeader({ colors, flightNumber, scaledStyles }: BoardingPassHeaderProps) {
+  return (
+    <View
+      style={[
+        styles.header,
+        scaledStyles.headerSpacing,
+        { borderBottomColor: colors.border },
+      ]}
+    >
+      <ThemedText style={[styles.airline, scaledStyles.airline, { color: colors.text }]}>
+        TravelBlock Airlines
+      </ThemedText>
+      <ThemedText
+        style={[styles.flightNumber, scaledStyles.flightNumber, { color: colors.textSecondary }]}
+      >
+        {flightNumber}
+      </ThemedText>
+    </View>
+  );
+}
+
+interface RouteSectionProps {
+  colors: PassColors;
+  destinationCity: string;
+  destinationCode: string;
+  originCity: string;
+  originCode: string;
+  scaledStyles: ScaledStyles;
+}
+
+function RouteSection({
+  colors,
+  destinationCity,
+  destinationCode,
+  originCity,
+  originCode,
+  scaledStyles,
+}: RouteSectionProps) {
+  return (
+    <View style={[styles.routeSection, scaledStyles.routeSpacing]}>
+      <View style={styles.airportBlock}>
+        <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: colors.text }]}>
+          {originCode}
+        </ThemedText>
+        <ThemedText style={[styles.airportName, scaledStyles.airportName, { color: colors.textSecondary }]}>
+          {originCity}
+        </ThemedText>
+      </View>
+      <View style={styles.arrow}>
+        <ThemedText style={[styles.arrowText, scaledStyles.arrowText, { color: colors.textSecondary }]}>
+          →
+        </ThemedText>
+      </View>
+      <View style={[styles.airportBlock, { alignItems: 'flex-end' }]}>
+        <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: colors.text }]}>
+          {destinationCode}
+        </ThemedText>
+        <ThemedText style={[styles.airportName, scaledStyles.airportName, { color: colors.textSecondary }]}>
+          {destinationCity}
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+interface PassengerSectionProps {
+  colors: PassColors;
+  passengerName: string;
+  scaledStyles: ScaledStyles;
+}
+
+function PassengerSection({ colors, passengerName, scaledStyles }: PassengerSectionProps) {
+  return (
+    <View style={[styles.passengerSection, scaledStyles.passengerSection]}>
+      <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: colors.textSecondary }]}>
+        Passenger
+      </ThemedText>
+      <ThemedText style={[styles.passengerName, scaledStyles.passengerName, { color: colors.text }]}>
+        {passengerName}
+      </ThemedText>
+    </View>
+  );
+}
+
+interface DetailsGridProps {
+  boardingTime: string;
+  colors: PassColors;
+  departureTime: string;
+  gate: string;
+  scaledStyles: ScaledStyles;
+  seatLabel: string;
+}
+
+function DetailsGrid({
+  boardingTime,
+  colors,
+  departureTime,
+  gate,
+  scaledStyles,
+  seatLabel,
+}: DetailsGridProps) {
+  return (
+    <View style={styles.detailsGrid}>
+      <View style={[styles.detailRow, scaledStyles.detailRow]}>
+        <DetailPair colors={colors} label="Boarding" scaledStyles={scaledStyles} value={boardingTime} />
+        <DetailPair colors={colors} label="Departure" scaledStyles={scaledStyles} value={departureTime} />
+      </View>
+      <View style={[styles.detailRow, scaledStyles.detailRow]}>
+        <DetailPair colors={colors} label="Gate" scaledStyles={scaledStyles} value={gate} />
+        <DetailPair colors={colors} label="Seat" scaledStyles={scaledStyles} value={seatLabel} />
+      </View>
+    </View>
+  );
+}
+
+interface StubSectionProps {
+  bookingReference: string;
+  colors: PassColors;
+  scaledStyles: ScaledStyles;
+  serialNumber: string;
+  stubTop: number;
+}
+
+function StubSection({
+  bookingReference,
+  colors,
+  scaledStyles,
+  serialNumber,
+  stubTop,
+}: StubSectionProps) {
+  return (
+    <View
+      style={[
+        styles.stubSection,
+        scaledStyles.stubSection,
+        { position: 'absolute', top: stubTop },
+      ]}
+    >
+      <View style={[styles.qrPlaceholder, scaledStyles.qrPlaceholder]}>
+        <ThemedText style={[styles.qrText, scaledStyles.qrText, { color: '#000000' }]}>
+          BOARDING CODE{'\n'}
+          {bookingReference}
+        </ThemedText>
+      </View>
+      <ThemedText style={[styles.qrNote, scaledStyles.qrNote, { color: colors.textSecondary }]}>
+        QR rendering is not wired up yet in this build.
+      </ThemedText>
+      <ThemedText style={[styles.serialNumber, scaledStyles.serialNumber, { color: colors.textSecondary }]}>
+        {serialNumber}
+      </ThemedText>
+    </View>
+  );
 }
 
 export function BoardingPass({
@@ -150,24 +358,23 @@ export function BoardingPass({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { width: screenWidth } = useWindowDimensions();
-
-  // Pass uses dedicated boarding color scheme
-  const passColors = {
-    background: '#1E3A8A', // Deep blue
+  const passColors: PassColors = {
+    background: '#1E3A8A',
     text: '#FFFFFF',
-    textSecondary: '#93C5FD', // Light blue
-    border: '#3B82F6', // Medium blue
+    textSecondary: '#93C5FD',
+    border: '#3B82F6',
   };
 
   const { booking, seat, passengerName, serialNumber } = boardingPass;
   const originCode = booking.origin.iata || booking.origin.icao;
-  const destCode = booking.destination.iata || booking.destination.icao;
+  const destinationCode = booking.destination.iata || booking.destination.icao;
   const cardWidth = Math.min(screenWidth - Spacing.xl * 2, BoardingPassDimensions.width);
   const scale = cardWidth / BoardingPassDimensions.width;
   const cardHeight = BoardingPassDimensions.height * scale;
   const perforationTop = BoardingPassDimensions.perforationY * scale;
   const stubTop = perforationTop + 16 * scale;
-  const scaledStyles = useMemo(
+  const seatLabel = `${seat.row}${seat.letter}`;
+  const scaledStyles = useMemo<ScaledStyles>(
     () => ({
       airline: { fontSize: Typography.fontSize.xl * scale },
       flightNumber: { fontSize: Typography.fontSize.base * scale },
@@ -176,6 +383,7 @@ export function BoardingPass({
       arrowText: { fontSize: Typography.fontSize.xl * scale },
       detailLabel: { fontSize: Math.max(10, Typography.fontSize.xs * scale) },
       detailValue: { fontSize: Typography.fontSize.lg * scale },
+      passengerSection: { marginBottom: Spacing.lg * scale },
       passengerName: {
         fontSize: Typography.fontSize.lg * scale,
         letterSpacing: Math.max(1, 2 * scale),
@@ -199,7 +407,6 @@ export function BoardingPass({
     [scale]
   );
 
-  // Format times (simple formatting for now)
   const boardingTime = new Date(booking.boardingTime).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
@@ -211,7 +418,7 @@ export function BoardingPass({
 
   const handleTap = () => {
     if (!interactive || !onTap) return;
-    impactAsync(ImpactFeedbackStyle.Heavy).catch(() => {});
+    impactAsync(ImpactFeedbackStyle.Heavy).catch(() => undefined);
     onTap();
   };
 
@@ -230,106 +437,32 @@ export function BoardingPass({
       activeOpacity={interactive ? 0.8 : 1}
     >
       <View style={[styles.passContent, scaledStyles.passPadding]}>
-        {/* Header */}
-        <View
-          style={[
-            styles.header,
-            scaledStyles.headerSpacing,
-            { borderBottomColor: passColors.border },
-          ]}
-        >
-          <ThemedText style={[styles.airline, scaledStyles.airline, { color: passColors.text }]}>
-            TravelBlock Airlines
-          </ThemedText>
-          <ThemedText
-            style={[styles.flightNumber, scaledStyles.flightNumber, { color: passColors.textSecondary }]}
-          >
-            {booking.flightNumber}
-          </ThemedText>
-        </View>
-
-        {/* Route */}
-        <View style={[styles.routeSection, scaledStyles.routeSpacing]}>
-          <View style={styles.airportBlock}>
-            <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: passColors.text }]}>
-              {originCode}
-            </ThemedText>
-            <ThemedText style={[styles.airportName, scaledStyles.airportName, { color: passColors.textSecondary }]}>
-              {booking.origin.city}
-            </ThemedText>
-          </View>
-
-          <View style={styles.arrow}>
-            <ThemedText style={[styles.arrowText, scaledStyles.arrowText, { color: passColors.textSecondary }]}>
-              →
-            </ThemedText>
-          </View>
-
-          <View style={[styles.airportBlock, { alignItems: 'flex-end' }]}>
-            <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: passColors.text }]}>
-              {destCode}
-            </ThemedText>
-            <ThemedText style={[styles.airportName, scaledStyles.airportName, { color: passColors.textSecondary }]}>
-              {booking.destination.city}
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* Passenger name */}
-        <View style={{ marginBottom: Spacing.lg * scale }}>
-          <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
-            Passenger
-          </ThemedText>
-          <ThemedText style={[styles.passengerName, scaledStyles.passengerName, { color: passColors.text }]}>
-            {passengerName}
-          </ThemedText>
-        </View>
-
-        {/* Flight details grid */}
-        <View style={styles.detailsGrid}>
-          {/* Row 1 */}
-          <View style={[styles.detailRow, scaledStyles.detailRow]}>
-            <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
-                Boarding
-              </ThemedText>
-              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
-                {boardingTime}
-              </ThemedText>
-            </View>
-            <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
-                Departure
-              </ThemedText>
-              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
-                {departureTime}
-              </ThemedText>
-            </View>
-          </View>
-
-          {/* Row 2 */}
-          <View style={[styles.detailRow, scaledStyles.detailRow]}>
-            <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
-                Gate
-              </ThemedText>
-              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
-                {booking.gate}
-              </ThemedText>
-            </View>
-            <View style={styles.detailBlock}>
-              <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: passColors.textSecondary }]}>
-                Seat
-              </ThemedText>
-              <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: passColors.text }]}>
-                {seat.row}
-                {seat.letter}
-              </ThemedText>
-            </View>
-          </View>
-        </View>
-
-        {/* Perforation line */}
+        <BoardingPassHeader
+          colors={passColors}
+          flightNumber={booking.flightNumber}
+          scaledStyles={scaledStyles}
+        />
+        <RouteSection
+          colors={passColors}
+          destinationCity={booking.destination.city}
+          destinationCode={destinationCode}
+          originCity={booking.origin.city}
+          originCode={originCode}
+          scaledStyles={scaledStyles}
+        />
+        <PassengerSection
+          colors={passColors}
+          passengerName={passengerName}
+          scaledStyles={scaledStyles}
+        />
+        <DetailsGrid
+          boardingTime={boardingTime}
+          colors={passColors}
+          departureTime={departureTime}
+          gate={booking.gate}
+          scaledStyles={scaledStyles}
+          seatLabel={seatLabel}
+        />
         <View
           style={[
             styles.perforationLine,
@@ -339,30 +472,13 @@ export function BoardingPass({
             },
           ]}
         />
-
-        {/* Stub section (below perforation) */}
-        <View
-          style={[
-            styles.stubSection,
-            scaledStyles.stubSection,
-            { position: 'absolute', top: stubTop },
-          ]}
-        >
-          <View style={[styles.qrPlaceholder, scaledStyles.qrPlaceholder]}>
-            <ThemedText style={[styles.qrText, scaledStyles.qrText, { color: '#000000' }]}>
-              BOARDING CODE{'\n'}
-              {booking.bookingReference}
-            </ThemedText>
-          </View>
-          <ThemedText style={[styles.qrNote, scaledStyles.qrNote, { color: passColors.textSecondary }]}>
-            QR rendering is not wired up yet in this build.
-          </ThemedText>
-
-          {/* Booking reference */}
-          <ThemedText style={[styles.serialNumber, scaledStyles.serialNumber, { color: passColors.textSecondary }]}>
-            {serialNumber}
-          </ThemedText>
-        </View>
+        <StubSection
+          bookingReference={booking.bookingReference}
+          colors={passColors}
+          scaledStyles={scaledStyles}
+          serialNumber={serialNumber}
+          stubTop={stubTop}
+        />
       </View>
     </TouchableOpacity>
   );

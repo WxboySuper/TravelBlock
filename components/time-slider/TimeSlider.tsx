@@ -7,6 +7,7 @@ import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
+  SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -32,6 +33,7 @@ interface TimeSliderProps {
 const TRACK_HEIGHT = 8;
 const THUMB_SIZE = 32;
 const HIT_SLOP = { top: 20, bottom: 20, left: 10, right: 10 };
+const SPRING_CONFIG = { damping: 20, stiffness: 200 };
 
 const styles = StyleSheet.create({
   container: {
@@ -82,6 +84,115 @@ const styles = StyleSheet.create({
   },
 });
 
+interface SliderRange {
+  minValue: number;
+  maxValue: number;
+  snapValue: number;
+}
+
+interface SliderSharedState {
+  gestureStartX: SharedValue<number>;
+  isGestureActive: SharedValue<boolean>;
+  lastEmittedValue: SharedValue<number>;
+  trackWidth: SharedValue<number>;
+  translateX: SharedValue<number>;
+}
+
+function useSliderSharedState(value: number): SliderSharedState {
+  return {
+    trackWidth: useSharedValue(0),
+    translateX: useSharedValue(0),
+    gestureStartX: useSharedValue(0),
+    isGestureActive: useSharedValue(false),
+    lastEmittedValue: useSharedValue(value),
+  };
+}
+
+function clampPosition(trackWidth: SharedValue<number>, position: number) {
+  "worklet";
+  return Math.max(0, Math.min(trackWidth.value, position));
+}
+
+function valueToPosition(trackWidth: SharedValue<number>, range: SliderRange, value: number) {
+  "worklet";
+  if (trackWidth.value === 0) return 0;
+  const normalizedValue = (value - range.minValue) / (range.maxValue - range.minValue);
+  return normalizedValue * trackWidth.value;
+}
+
+function positionToValue(trackWidth: SharedValue<number>, range: SliderRange, position: number) {
+  "worklet";
+  if (trackWidth.value === 0) return range.minValue;
+  const normalizedPosition = position / trackWidth.value;
+  const rawValue = normalizedPosition * (range.maxValue - range.minValue) + range.minValue;
+  const constrained = getTimeInRange(rawValue, range.minValue, range.maxValue);
+  return snapToInterval(constrained, range.snapValue);
+}
+
+function createSliderGestures(
+  range: SliderRange,
+  shared: SliderSharedState,
+  onGestureStart: (() => void) | undefined,
+  onGestureEnd: (() => void) | undefined,
+  onValueChange: (value: number) => void,
+  triggerHaptic: () => void
+) {
+  const panGesture = Gesture.Pan()
+    .onBegin(() => {
+      shared.isGestureActive.value = true;
+      shared.gestureStartX.value = shared.translateX.value;
+      if (onGestureStart) {
+        runOnJS(onGestureStart)();
+      }
+      runOnJS(triggerHaptic)();
+    })
+    .onUpdate((event) => {
+      const nextPosition = clampPosition(shared.trackWidth, shared.gestureStartX.value + event.translationX);
+      shared.translateX.value = nextPosition;
+
+      const nextValue = positionToValue(shared.trackWidth, range, nextPosition);
+      if (nextValue !== shared.lastEmittedValue.value) {
+        shared.lastEmittedValue.value = nextValue;
+        runOnJS(onValueChange)(nextValue);
+        runOnJS(triggerHaptic)();
+      }
+    })
+    .onEnd(() => {
+      const finalValue = positionToValue(shared.trackWidth, range, shared.translateX.value);
+      shared.lastEmittedValue.value = finalValue;
+      shared.translateX.value = withSpring(
+        valueToPosition(shared.trackWidth, range, finalValue),
+        SPRING_CONFIG
+      );
+      shared.isGestureActive.value = false;
+
+      if (onGestureEnd) {
+        runOnJS(onGestureEnd)();
+      }
+    })
+    .hitSlop(HIT_SLOP);
+
+  const tapGesture = Gesture.Tap().onEnd((event) => {
+    const nextValue = positionToValue(
+      shared.trackWidth,
+      range,
+      clampPosition(shared.trackWidth, event.x)
+    );
+
+    shared.isGestureActive.value = false;
+    shared.lastEmittedValue.value = nextValue;
+    shared.translateX.value = withSpring(
+      valueToPosition(shared.trackWidth, range, nextValue),
+      SPRING_CONFIG
+    );
+
+    runOnJS(onValueChange)(nextValue);
+    runOnJS(triggerHaptic)();
+  });
+
+  return Gesture.Simultaneous(panGesture, tapGesture);
+}
+
 export function TimeSlider({
   value,
   onValueChange,
@@ -93,128 +204,52 @@ export function TimeSlider({
 }: TimeSliderProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-
   const defaultRange = getDefaultTimeRange();
-  const minValue = min ?? defaultRange.min;
-  const maxValue = max ?? defaultRange.max;
-  const snapValue = interval ?? defaultRange.interval;
-
-  const trackWidth = useSharedValue(0);
-  const translateX = useSharedValue(0);
-  const gestureStartX = useSharedValue(0);
-  const isGestureActive = useSharedValue(false);
-  const lastEmittedValue = useSharedValue(value);
-
-  const clampPosition = (position: number) => {
-    "worklet";
-    return Math.max(0, Math.min(trackWidth.value, position));
+  const range = {
+    minValue: min ?? defaultRange.min,
+    maxValue: max ?? defaultRange.max,
+    snapValue: interval ?? defaultRange.interval,
   };
-
-  const valueToPosition = (val: number) => {
-    "worklet";
-    if (trackWidth.value === 0) return 0;
-    const normalizedValue = (val - minValue) / (maxValue - minValue);
-    return normalizedValue * trackWidth.value;
-  };
-
-  const positionToValue = (position: number) => {
-    "worklet";
-    if (trackWidth.value === 0) return minValue;
-    const normalizedPosition = position / trackWidth.value;
-    const rawValue = normalizedPosition * (maxValue - minValue) + minValue;
-    const constrained = getTimeInRange(rawValue, minValue, maxValue);
-    return snapToInterval(constrained, snapValue);
-  };
+  const shared = useSliderSharedState(value);
 
   const triggerHaptic = useCallback(() => {
-    impactAsync(ImpactFeedbackStyle.Light).catch(() => {
-      // Ignore haptic errors
-    });
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    if (!isGestureActive.value) {
-      lastEmittedValue.value = value;
-      translateX.value = withSpring(valueToPosition(value), {
-        damping: 20,
-        stiffness: 200,
-      });
+    if (!shared.isGestureActive.value) {
+      shared.lastEmittedValue.value = value;
+      shared.translateX.value = withSpring(
+        valueToPosition(shared.trackWidth, range, value),
+        SPRING_CONFIG
+      );
     }
-  }, [isGestureActive, lastEmittedValue, translateX, value]);
+  }, [range, shared, value]);
 
   const handleTrackLayout = useCallback(
     (event: LayoutChangeEvent) => {
       const { width } = event.nativeEvent.layout;
-      trackWidth.value = width;
-      translateX.value = valueToPosition(value);
+      shared.trackWidth.value = width;
+      shared.translateX.value = valueToPosition(shared.trackWidth, range, value);
     },
-    [trackWidth, translateX, value]
+    [range, shared, value]
   );
 
-  const panGesture = Gesture.Pan()
-    .onBegin(() => {
-      isGestureActive.value = true;
-      gestureStartX.value = translateX.value;
-      if (onGestureStart) {
-        runOnJS(onGestureStart)();
-      }
-      runOnJS(triggerHaptic)();
-    })
-    .onUpdate((event) => {
-      const newPosition = gestureStartX.value + event.translationX;
-      const constrainedPosition = clampPosition(newPosition);
-      translateX.value = constrainedPosition;
-
-      const newValue = positionToValue(constrainedPosition);
-      if (newValue !== lastEmittedValue.value) {
-        lastEmittedValue.value = newValue;
-        runOnJS(onValueChange)(newValue);
-        runOnJS(triggerHaptic)();
-      }
-    })
-    .onEnd(() => {
-      const finalValue = positionToValue(translateX.value);
-      const finalPosition = valueToPosition(finalValue);
-      lastEmittedValue.value = finalValue;
-
-      translateX.value = withSpring(finalPosition, {
-        damping: 20,
-        stiffness: 200,
-      });
-
-      isGestureActive.value = false;
-
-      if (onGestureEnd) {
-        runOnJS(onGestureEnd)();
-      }
-    })
-    .hitSlop(HIT_SLOP);
-
-  const tapGesture = Gesture.Tap()
-    .onEnd((event) => {
-      const tappedPosition = clampPosition(event.x);
-      const nextValue = positionToValue(tappedPosition);
-      const finalPosition = valueToPosition(nextValue);
-
-      isGestureActive.value = false;
-      lastEmittedValue.value = nextValue;
-      translateX.value = withSpring(finalPosition, {
-        damping: 20,
-        stiffness: 200,
-      });
-
-      runOnJS(onValueChange)(nextValue);
-      runOnJS(triggerHaptic)();
-    });
-
-  const sliderGesture = Gesture.Simultaneous(panGesture, tapGesture);
+  const sliderGesture = createSliderGestures(
+    range,
+    shared,
+    onGestureStart,
+    onGestureEnd,
+    onValueChange,
+    triggerHaptic
+  );
 
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
+    transform: [{ translateX: shared.translateX.value }],
   }));
 
   const activeTrackStyle = useAnimatedStyle(() => ({
-    width: translateX.value,
+    width: shared.translateX.value,
   }));
 
   return (

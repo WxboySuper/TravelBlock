@@ -15,6 +15,9 @@ import { BoardingPassDimensions, Colors, Spacing, Typography } from '@/constants
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BoardingPass as BoardingPassType } from '@/types/flight';
 
+const flexOne = { flex: 1 } as const;
+const alignEnd = { alignItems: 'flex-end' } as const;
+
 const styles = StyleSheet.create({
   passContainer: {
     borderRadius: BoardingPassDimensions.cornerRadius,
@@ -50,9 +53,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     paddingVertical: Spacing.md,
   },
-  airportBlock: {
-    flex: 1,
-  },
   airportCode: {
     fontSize: Typography.fontSize.xxxl,
     fontWeight: Typography.fontWeight.bold,
@@ -74,9 +74,6 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: 'row',
     marginBottom: Spacing.md,
-  },
-  detailBlock: {
-    flex: 1,
   },
   detailLabel: {
     fontSize: Typography.fontSize.xs,
@@ -179,7 +176,7 @@ interface DetailPairProps {
 
 function DetailPair({ colors, label, scaledStyles, value }: DetailPairProps) {
   return (
-    <View style={styles.detailBlock}>
+    <View style={flexOne}>
       <ThemedText style={[styles.detailLabel, scaledStyles.detailLabel, { color: colors.textSecondary }]}>
         {label}
       </ThemedText>
@@ -236,7 +233,7 @@ function RouteSection({
 }: RouteSectionProps) {
   return (
     <View style={[styles.routeSection, scaledStyles.routeSpacing]}>
-      <View style={styles.airportBlock}>
+      <View style={flexOne}>
         <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: colors.text }]}>
           {originCode}
         </ThemedText>
@@ -249,7 +246,7 @@ function RouteSection({
           →
         </ThemedText>
       </View>
-      <View style={[styles.airportBlock, { alignItems: 'flex-end' }]}>
+      <View style={[flexOne, alignEnd]}>
         <ThemedText style={[styles.airportCode, scaledStyles.airportCode, { color: colors.text }]}>
           {destinationCode}
         </ThemedText>

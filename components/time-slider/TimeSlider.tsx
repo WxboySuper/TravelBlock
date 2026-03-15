@@ -1,31 +1,15 @@
-/**
- * TimeSlider component provides a custom slider for selecting flight duration.
- *
- * Uses react-native-gesture-handler for smooth gesture handling and
- * react-native-reanimated for high-performance animations.
- *
- * @module components/time-slider/TimeSlider
- */
-
 import { Colors, Spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import {
-    getDefaultTimeRange,
-    getTimeInRange,
-    snapToInterval,
-} from "@/utils/timeSlider";
+import { getDefaultTimeRange, getTimeInRange, snapToInterval } from "@/utils/timeSlider";
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
 import { useCallback, useEffect } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
-import {
-    Gesture,
-    GestureDetector,
-} from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
 } from "react-native-reanimated";
 
 interface TimeSliderProps {
@@ -98,25 +82,6 @@ const styles = StyleSheet.create({
   },
 });
 
-/**
- * A custom slider component for selecting flight duration with haptic feedback.
- *
- * Features:
- * - Smooth gesture handling with spring animations
- * - Automatic snapping to 10-minute intervals
- * - Haptic feedback on interaction
- * - Responsive to touch with hit slop for easier interaction
- *
- * @example
- * ```tsx
- * const [flightTime, setFlightTime] = useState(3600); // 1 hour
- *
- * <TimeSlider
- *   value={flightTime}
- *   onValueChange={setFlightTime}
- * />
- * ```
- */
 export function TimeSlider({
   value,
   onValueChange,
@@ -167,7 +132,6 @@ export function TimeSlider({
     });
   }, []);
 
-  // Update position when value changes externally
   useEffect(() => {
     if (!isGestureActive.value) {
       lastEmittedValue.value = value;
@@ -178,7 +142,6 @@ export function TimeSlider({
     }
   }, [isGestureActive, lastEmittedValue, translateX, value]);
 
-  // Handle track layout
   const handleTrackLayout = useCallback(
     (event: LayoutChangeEvent) => {
       const { width } = event.nativeEvent.layout;
@@ -246,12 +209,10 @@ export function TimeSlider({
 
   const sliderGesture = Gesture.Simultaneous(panGesture, tapGesture);
 
-  // Animated thumb style
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
 
-  // Animated active track style
   const activeTrackStyle = useAnimatedStyle(() => ({
     width: translateX.value,
   }));

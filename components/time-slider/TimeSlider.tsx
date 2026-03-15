@@ -3,7 +3,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getDefaultTimeRange, getTimeInRange, snapToInterval } from "@/utils/timeSlider";
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
 import { useCallback, useEffect, useMemo } from "react";
-import { LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -129,7 +129,7 @@ function positionToValue(trackWidth: SharedValue<number>, range: SliderRange, po
   return snapToInterval(constrained, range.snapValue);
 }
 
-function createSliderGestures(
+function createPanGesture(
   range: SliderRange,
   shared: SliderSharedState,
   onGestureStart: (() => void) | undefined,
@@ -137,7 +137,7 @@ function createSliderGestures(
   onValueChange: (value: number) => void,
   triggerHaptic: () => void
 ) {
-  const panGesture = Gesture.Pan()
+  return Gesture.Pan()
     .onBegin(() => {
       shared.isGestureActive.value = true;
       shared.gestureStartX.value = shared.translateX.value;
@@ -171,29 +171,6 @@ function createSliderGestures(
       }
     })
     .hitSlop(HIT_SLOP);
-
-  const tapGesture = Gesture.Tap().onEnd((event) => {
-    const nextValue = positionToValue(
-      shared.trackWidth,
-      range,
-      clampPosition(shared.trackWidth, event.x)
-    );
-    if (nextValue === shared.lastEmittedValue.value) {
-      return;
-    }
-
-    shared.isGestureActive.value = false;
-    shared.lastEmittedValue.value = nextValue;
-    shared.translateX.value = withSpring(
-      valueToPosition(shared.trackWidth, range, nextValue),
-      SPRING_CONFIG
-    );
-
-    runOnJS(onValueChange)(nextValue);
-    runOnJS(triggerHaptic)();
-  });
-
-  return Gesture.Simultaneous(panGesture, tapGesture);
 }
 
 export function TimeSlider({
@@ -247,7 +224,23 @@ export function TimeSlider({
     [range, trackWidth, translateX, value]
   );
 
-  const sliderGesture = createSliderGestures(
+  const handleTrackPress = useCallback(
+    (locationX: number) => {
+      const nextValue = positionToValue(trackWidth, range, clampPosition(trackWidth, locationX));
+      if (nextValue === lastEmittedValue.value) {
+        return;
+      }
+
+      isGestureActive.value = false;
+      lastEmittedValue.value = nextValue;
+      translateX.value = withSpring(valueToPosition(trackWidth, range, nextValue), SPRING_CONFIG);
+      onValueChange(nextValue);
+      triggerHaptic();
+    },
+    [isGestureActive, lastEmittedValue, onValueChange, range, trackWidth, translateX, triggerHaptic]
+  );
+
+  const panGesture = createPanGesture(
     range,
     { gestureStartX, isGestureActive, lastEmittedValue, trackWidth, translateX },
     onGestureStart,
@@ -266,27 +259,28 @@ export function TimeSlider({
 
   return (
     <View style={styles.container}>
-      <GestureDetector gesture={sliderGesture}>
-        <View style={styles.sliderSurface}>
-          <View
-            style={[styles.trackContainer, { backgroundColor: colors.border }]}
-            onLayout={handleTrackLayout}
-          >
-            <View style={[styles.track, { backgroundColor: colors.border }]} />
-            <Animated.View
-              style={[
-                styles.activeTrack,
-                { backgroundColor: colors.tint },
-                activeTrackStyle,
-              ]}
-            />
-          </View>
+      <View style={styles.sliderSurface}>
+        <Pressable
+          onPress={(event) => handleTrackPress(event.nativeEvent.locationX)}
+          style={[styles.trackContainer, { backgroundColor: colors.border }]}
+          onLayout={handleTrackLayout}
+        >
+          <View style={[styles.track, { backgroundColor: colors.border }]} />
+          <Animated.View
+            style={[
+              styles.activeTrack,
+              { backgroundColor: colors.tint },
+              activeTrackStyle,
+            ]}
+          />
+        </Pressable>
 
+        <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.thumbContainer, thumbStyle]}>
             <View style={[styles.thumb, { borderColor: colors.tint }]} />
           </Animated.View>
-        </View>
-      </GestureDetector>
+        </GestureDetector>
+      </View>
     </View>
   );
 }

@@ -29,10 +29,10 @@ describe('KV Store Migration', () => {
     mockRemoveItem.mockReset();
 
     // Default implementations
-    mockSetItem.mockResolvedValue(undefined);
-    mockMultiSet.mockResolvedValue(undefined);
+    mockSetItem.mockResolvedValue();
+    mockMultiSet.mockResolvedValue();
     mockGetItem.mockResolvedValue(null);
-    mockRemoveItem.mockResolvedValue(undefined);
+    mockRemoveItem.mockResolvedValue();
   });
 
   it('uses multiSet for migration when available', async () => {

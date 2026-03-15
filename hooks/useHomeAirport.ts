@@ -40,7 +40,7 @@ export function getHomeAirportSnapshot(): HomeAirportState {
   return homeAirportState;
 }
 
-export async function loadHomeAirport(forceRefresh: boolean = false): Promise<Airport | null> {
+export function loadHomeAirport(forceRefresh = false): Promise<Airport | null> {
   if (loadPromise && !forceRefresh) {
     return loadPromise;
   }

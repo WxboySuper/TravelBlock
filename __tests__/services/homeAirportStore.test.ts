@@ -62,7 +62,8 @@ describe('homeAirport shared store', () => {
         snapshots.push(state.homeAirport);
       }
     });
-    const unsubscribeB = subscribeToHomeAirportState(() => {});
+    const secondaryListener = jest.fn();
+    const unsubscribeB = subscribeToHomeAirportState(secondaryListener);
 
     await Promise.all([loadHomeAirport(), loadHomeAirport()]);
 

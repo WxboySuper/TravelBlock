@@ -37,7 +37,8 @@ import { persistDivertedFlightState } from '@/services/flightStateService';
 import { flightTimerService } from '@/services/flightTimerService';
 
 // Types
-import type { DivertOption, FlightProgress } from '@/types/flight';
+import type { DivertOption, FlightBooking, FlightProgress } from '@/types/flight';
+import type { Dispatch, SetStateAction } from 'react';
 
 const styles = StyleSheet.create({
   container: {
@@ -71,6 +72,225 @@ const styles = StyleSheet.create({
   },
 });
 
+type FlightActions = Pick<
+  ReturnType<typeof useFlight>,
+  'boardingPass' | 'clearFlightState' | 'setBoardingPass' | 'setBooking' | 'setDestination'
+>;
+
+type CockpitFlightState = {
+  activeBooking: FlightBooking | null;
+  isDiverted: boolean;
+  progress: FlightProgress | null;
+  setActiveBooking: Dispatch<SetStateAction<FlightBooking | null>>;
+  setIsDiverted: Dispatch<SetStateAction<boolean>>;
+  setProgress: Dispatch<SetStateAction<FlightProgress | null>>;
+};
+
+type DivertControls = {
+  divertOptions: DivertOption[];
+  divertReason: string;
+  handleDivertClose: () => void;
+  handleDivertPress: () => Promise<void>;
+  handleDivertSelect: (option: DivertOption) => Promise<void>;
+  isLoadingDiverts: boolean;
+  showDivertModal: boolean;
+};
+
+function getFlightCompletionMessage(
+  booking: FlightBooking | null,
+  isDiverted: boolean
+): string {
+  const routeSummary = booking
+    ? `${booking.origin.iata} → ${booking.destination.iata}`
+    : 'Route unavailable';
+
+  return isDiverted
+    ? `Diverted flight completed!\n\n${routeSummary}`
+    : `Flight completed successfully!\n\n${routeSummary}`;
+}
+
+function renderSelectedTabContent(
+  selectedTab: CockpitTab,
+  activeBooking: FlightBooking,
+  progress: FlightProgress,
+  isDiverted: boolean
+) {
+  switch (selectedTab) {
+    case 'map':
+      return (
+        <FlightMapView
+          origin={activeBooking.origin}
+          destination={activeBooking.destination}
+          currentPosition={progress.currentPosition}
+          heading={progress.heading}
+          isDiverted={isDiverted}
+        />
+      );
+    case 'metrics':
+      return <MetricsGrid progress={progress} />;
+    case 'info':
+      return <InfoPanel booking={activeBooking} />;
+    default:
+      return null;
+  }
+}
+
+function useCockpitFlightState(booking: FlightBooking | null): CockpitFlightState {
+  const [activeBooking, setActiveBooking] = useState(booking);
+  const [progress, setProgress] = useState<FlightProgress | null>(null);
+  const [isDiverted, setIsDiverted] = useState(false);
+
+  useEffect(() => {
+    if (booking) {
+      setActiveBooking(booking);
+    }
+  }, [booking]);
+
+  return {
+    activeBooking,
+    isDiverted,
+    progress,
+    setActiveBooking,
+    setIsDiverted,
+    setProgress,
+  };
+}
+
+function useCockpitTimer(
+  booking: FlightBooking | null,
+  isLoaded: boolean,
+  router: ReturnType<typeof useRouter>,
+  setActiveBooking: Dispatch<SetStateAction<FlightBooking | null>>,
+  setProgress: Dispatch<SetStateAction<FlightProgress | null>>,
+  onArrival: () => void
+) {
+  const timerStartedRef = useRef(false);
+  const arrivalHandlerRef = useRef(onArrival);
+
+  useEffect(() => {
+    arrivalHandlerRef.current = onArrival;
+  }, [onArrival]);
+
+  useEffect(() => {
+    if (!isLoaded || timerStartedRef.current) {
+      return undefined;
+    }
+
+    if (!booking) {
+      console.warn('[Cockpit] No booking data, returning to home');
+      router.replace('/(tabs)');
+      return undefined;
+    }
+
+    timerStartedRef.current = true;
+    setActiveBooking(booking);
+    flightTimerService.startFlight(booking);
+
+    const unsubscribeTick = flightTimerService.onTick((newProgress) => {
+      setProgress(newProgress);
+    });
+    const unsubscribePhaseChange = flightTimerService.onPhaseChange(() => {
+      impactAsync(ImpactFeedbackStyle.Medium).catch(() => undefined);
+    });
+    const unsubscribeArrival = flightTimerService.onArrival(() => {
+      arrivalHandlerRef.current();
+    });
+
+    function cleanupTimer() {
+      unsubscribeTick();
+      unsubscribePhaseChange();
+      unsubscribeArrival();
+      timerStartedRef.current = false;
+      flightTimerService.cleanup();
+    }
+
+    return cleanupTimer;
+  }, [booking, isLoaded, router, setActiveBooking, setProgress]);
+}
+
+function useDivertControls(
+  activeBooking: FlightBooking | null,
+  progress: FlightProgress | null,
+  flightActions: FlightActions,
+  setActiveBooking: Dispatch<SetStateAction<FlightBooking | null>>,
+  setIsDiverted: Dispatch<SetStateAction<boolean>>
+): DivertControls {
+  const [showDivertModal, setShowDivertModal] = useState(false);
+  const [divertOptions, setDivertOptions] = useState<DivertOption[]>([]);
+  const [divertReason, setDivertReason] = useState('');
+  const [isLoadingDiverts, setIsLoadingDiverts] = useState(false);
+
+  const handleDivertPress = useCallback(async () => {
+    if (!progress || !activeBooking) {
+      return;
+    }
+
+    flightTimerService.pauseFlight();
+    setIsLoadingDiverts(true);
+    setDivertReason(getDivertReason());
+
+    const nearestAirports = await findNearestAirports(
+      progress.currentPosition,
+      activeBooking.destination.icao,
+      5,
+      500
+    );
+
+    setDivertOptions(nearestAirports);
+    setIsLoadingDiverts(false);
+    setShowDivertModal(true);
+    await impactAsync(ImpactFeedbackStyle.Medium).catch(() => undefined);
+  }, [activeBooking, progress]);
+
+  const handleDivertSelect = useCallback(async (option: DivertOption) => {
+    if (!activeBooking || !progress) {
+      return;
+    }
+
+    setShowDivertModal(false);
+    setIsDiverted(true);
+
+    const newBooking = calculateDivertRoute(
+      activeBooking,
+      progress.currentPosition,
+      option.airport,
+      progress.elapsedSeconds
+    );
+
+    setActiveBooking(newBooking);
+    await persistDivertedFlightState(newBooking, flightActions.boardingPass, {
+      setBooking: flightActions.setBooking,
+      setBoardingPass: flightActions.setBoardingPass,
+      setDestination: flightActions.setDestination,
+    });
+
+    flightTimerService.updateFlight(newBooking, 0);
+    flightTimerService.resumeFlight();
+    await impactAsync(ImpactFeedbackStyle.Heavy).catch(() => undefined);
+
+    Alert.alert(
+      '⚠️ Flight Diverted',
+      `Rerouting to ${option.airport.name} (${option.airport.iata})\nDistance: ${option.distanceFromCurrent.toFixed(1)} km\nETA: ${Math.round(option.estimatedTime / 60)} minutes`,
+      [{ text: 'OK' }]
+    );
+  }, [activeBooking, flightActions, progress, setActiveBooking, setIsDiverted]);
+
+  const handleDivertClose = useCallback(() => {
+    setShowDivertModal(false);
+    flightTimerService.resumeFlight();
+  }, []);
+
+  return {
+    divertOptions,
+    divertReason,
+    handleDivertClose,
+    handleDivertPress,
+    handleDivertSelect,
+    isLoadingDiverts,
+    showDivertModal,
+  };
+}
+
 export default function CockpitScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -84,67 +304,17 @@ export default function CockpitScreen() {
     setBooking,
     setDestination,
   } = useFlight();
-  const [activeBooking, setActiveBooking] = useState(booking);
-  const timerStartedRef = useRef(false);
-  const handleArrivalRef = useRef<() => void>(() => {});
-
-  useEffect(() => {
-    if (!booking) return;
-    setActiveBooking(booking);
-  }, [booking]);
+  const {
+    activeBooking,
+    isDiverted,
+    progress,
+    setActiveBooking,
+    setIsDiverted,
+    setProgress,
+  } = useCockpitFlightState(booking);
 
   // UI state
   const [selectedTab, setSelectedTab] = useState<CockpitTab>('map');
-  const [showDivertModal, setShowDivertModal] = useState(false);
-  const [divertOptions, setDivertOptions] = useState<DivertOption[]>([]);
-  const [divertReason, setDivertReason] = useState('');
-  const [isLoadingDiverts, setIsLoadingDiverts] = useState(false);
-
-  // Flight progress state
-  const [progress, setProgress] = useState<FlightProgress | null>(null);
-  const [isDiverted, setIsDiverted] = useState(false);
-
-  // Initialize flight timer on mount
-  useEffect(() => {
-    if (!isLoaded || timerStartedRef.current) {
-      return;
-    }
-
-    if (!booking) {
-      console.warn('[Cockpit] No booking data, returning to home');
-      router.replace('/(tabs)');
-      return;
-    }
-
-    timerStartedRef.current = true;
-    setActiveBooking(booking);
-
-    // Start flight simulation
-    flightTimerService.startFlight(booking);
-
-    // Subscribe to timer updates
-    const unsubscribeTick = flightTimerService.onTick((newProgress) => {
-      setProgress(newProgress);
-    });
-
-    const unsubscribePhaseChange = flightTimerService.onPhaseChange((phase) => {
-      // Haptic feedback on phase change
-      impactAsync(ImpactFeedbackStyle.Medium).catch(() => {});
-    });
-
-    const unsubscribeArrival = flightTimerService.onArrival(() => {
-      handleArrivalRef.current();
-    });
-
-    // Cleanup on unmount
-    return () => {
-      unsubscribeTick();
-      unsubscribePhaseChange();
-      unsubscribeArrival();
-      timerStartedRef.current = false;
-      flightTimerService.cleanup();
-    };
-  }, [booking, isLoaded, router]);
 
   /**
    * Handle flight arrival (completion)
@@ -155,9 +325,7 @@ export default function CockpitScreen() {
 
     Alert.alert(
       '✅ Flight Completed',
-      isDiverted
-        ? `Diverted flight completed!\n\n${activeBooking?.origin.iata} → ${activeBooking?.destination.iata}`
-        : `Flight completed successfully!\n\n${activeBooking?.origin.iata} → ${activeBooking?.destination.iata}`,
+      getFlightCompletionMessage(activeBooking, isDiverted),
       [
         {
           text: 'Return to Home',
@@ -171,87 +339,36 @@ export default function CockpitScreen() {
     );
   }, [activeBooking, isDiverted, clearFlightState, router]);
 
-  useEffect(() => {
-    handleArrivalRef.current = () => {
-      void handleArrival();
-    };
-  }, [handleArrival]);
+  useCockpitTimer(
+    booking,
+    isLoaded,
+    router,
+    setActiveBooking,
+    setProgress,
+    handleArrival
+  );
 
-  /**
-   * Handle divert button press
-   */
-  const handleDivertPress = useCallback(async () => {
-    if (!progress || !activeBooking) return;
-
-    // Pause flight
-    flightTimerService.pauseFlight();
-
-    // Get nearest airports
-    setIsLoadingDiverts(true);
-    setDivertReason(getDivertReason());
-    
-    const nearestAirports = await findNearestAirports(
-      progress.currentPosition,
-      activeBooking.destination.icao,
-      5,
-      500 // 500km max range
-    );
-
-    setDivertOptions(nearestAirports);
-    setIsLoadingDiverts(false);
-    setShowDivertModal(true);
-
-    await impactAsync(ImpactFeedbackStyle.Medium).catch(() => {});
-  }, [progress, activeBooking]);
-
-  /**
-   * Handle divert airport selection
-   */
-  const handleDivertSelect = useCallback(async (option: DivertOption) => {
-    if (!activeBooking || !progress) return;
-
-    setShowDivertModal(false);
-    setIsDiverted(true);
-
-    // Calculate new route to divert airport
-    const newBooking = calculateDivertRoute(
-      activeBooking,
-      progress.currentPosition,
-      option.airport,
-      progress.elapsedSeconds
-    );
-
-    setActiveBooking(newBooking);
-    await persistDivertedFlightState(newBooking, boardingPass, {
-      setBooking,
+  const {
+    divertOptions,
+    divertReason,
+    handleDivertClose,
+    handleDivertPress,
+    handleDivertSelect,
+    isLoadingDiverts,
+    showDivertModal,
+  } = useDivertControls(
+    activeBooking,
+    progress,
+    {
+      boardingPass,
+      clearFlightState,
       setBoardingPass,
+      setBooking,
       setDestination,
-    });
-
-    // Update timer with new booking
-    flightTimerService.updateFlight(newBooking, 0); // Start from 0 for new route
-
-    // Resume flight
-    flightTimerService.resumeFlight();
-
-    await impactAsync(ImpactFeedbackStyle.Heavy).catch(() => {});
-
-    // Show toast notification
-    Alert.alert(
-      '⚠️ Flight Diverted',
-      `Rerouting to ${option.airport.name} (${option.airport.iata})\nDistance: ${option.distanceFromCurrent.toFixed(1)} km\nETA: ${Math.round(option.estimatedTime / 60)} minutes`,
-      [{ text: 'OK' }]
-    );
-  }, [activeBooking, boardingPass, progress, setBoardingPass, setBooking, setDestination]);
-
-  /**
-   * Handle divert modal close
-   */
-  const handleDivertClose = useCallback(() => {
-    setShowDivertModal(false);
-    // Resume flight
-    flightTimerService.resumeFlight();
-  }, []);
+    },
+    setActiveBooking,
+    setIsDiverted
+  );
 
   // Show loading state while initializing
   if (!isLoaded || !activeBooking || !progress) {
@@ -283,25 +400,7 @@ export default function CockpitScreen() {
         />
 
         {/* Content based on selected tab */}
-        <View style={styles.content}>
-          {selectedTab === 'map' && (
-            <FlightMapView
-              origin={activeBooking.origin}
-              destination={activeBooking.destination}
-              currentPosition={progress.currentPosition}
-              heading={progress.heading}
-              isDiverted={isDiverted}
-            />
-          )}
-          
-          {selectedTab === 'metrics' && (
-            <MetricsGrid progress={progress} />
-          )}
-          
-          {selectedTab === 'info' && (
-            <InfoPanel booking={activeBooking} />
-          )}
-        </View>
+        <View style={styles.content}>{renderSelectedTabContent(selectedTab, activeBooking, progress, isDiverted)}</View>
 
         {/* Divert Button (overlays map on map tab) */}
         {selectedTab === 'map' && (

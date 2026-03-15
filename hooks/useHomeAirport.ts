@@ -38,6 +38,37 @@ function setHomeAirportState(nextState: Partial<HomeAirportState>) {
   emitHomeAirportState();
 }
 
+function isLatestHomeAirportRequest(requestId: number): boolean {
+  return requestId === latestLoadRequestId;
+}
+
+function finalizeHomeAirportLoad(
+  requestId: number,
+  nextPromise: Promise<Airport | null> | null
+) {
+  if (nextPromise !== null && loadPromise === nextPromise && isLatestHomeAirportRequest(requestId)) {
+    loadPromise = null;
+  }
+}
+
+function applyLoadedHomeAirport(requestId: number, airport: Airport | null) {
+  if (!isLatestHomeAirportRequest(requestId)) {
+    return;
+  }
+
+  setHomeAirportState({ homeAirport: airport, isLoading: false });
+}
+
+function applyHomeAirportLoadError(requestId: number, error: unknown) {
+  console.error('Failed to load home airport', error);
+
+  if (!isLatestHomeAirportRequest(requestId)) {
+    return;
+  }
+
+  setHomeAirportState({ homeAirport: null, isLoading: false });
+}
+
 export function getHomeAirportSnapshot(): HomeAirportState {
   return homeAirportState;
 }
@@ -55,24 +86,13 @@ export function loadHomeAirport(forceRefresh = false): Promise<Airport | null> {
   nextPromise = (async () => {
     try {
       const savedAirport = await storageService.getHomeAirport();
-
-      if (requestId === latestLoadRequestId) {
-        setHomeAirportState({ homeAirport: savedAirport, isLoading: false });
-      }
-
+      applyLoadedHomeAirport(requestId, savedAirport);
       return savedAirport;
     } catch (error) {
-      console.error('Failed to load home airport', error);
-
-      if (requestId === latestLoadRequestId) {
-        setHomeAirportState({ homeAirport: null, isLoading: false });
-      }
-
+      applyHomeAirportLoadError(requestId, error);
       throw error;
     } finally {
-      if (nextPromise !== null && loadPromise === nextPromise) {
-        loadPromise = null;
-      }
+      finalizeHomeAirportLoad(requestId, nextPromise);
     }
   })();
 

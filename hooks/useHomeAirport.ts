@@ -46,9 +46,19 @@ function finalizeHomeAirportLoad(
   requestId: number,
   nextPromise: Promise<Airport | null> | null
 ) {
-  if (nextPromise !== null && loadPromise === nextPromise && isLatestHomeAirportRequest(requestId)) {
-    loadPromise = null;
+  if (nextPromise === null) {
+    return;
   }
+
+  if (loadPromise !== nextPromise) {
+    return;
+  }
+
+  if (!isLatestHomeAirportRequest(requestId)) {
+    return;
+  }
+
+  loadPromise = null;
 }
 
 function applyLoadedHomeAirport(requestId: number, airport: Airport | null) {

@@ -2,45 +2,35 @@ import { Colors, Spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getDefaultTimeRange, getTimeInRange, snapToInterval } from "@/utils/timeSlider";
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
-import { useCallback, useEffect, useMemo } from "react";
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  runOnJS,
-  SharedValue,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  Animated,
+  LayoutChangeEvent,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 
 interface TimeSliderProps {
-  /** Current time value in seconds */
   value: number;
-  /** Callback when value changes */
   onValueChange: (value: number) => void;
-  /** Callback when gesture starts */
   onGestureStart?: () => void;
-  /** Callback when gesture ends */
   onGestureEnd?: () => void;
-  /** Minimum time in seconds (default: 30min) */
   min?: number;
-  /** Maximum time in seconds (default: 5h) */
   max?: number;
-  /** Snap interval in seconds (default: 10min) */
   interval?: number;
 }
 
 const TRACK_HEIGHT = 8;
 const THUMB_SIZE = 32;
-const HIT_SLOP = { top: 20, bottom: 20, left: 10, right: 10 };
-const SPRING_CONFIG = { damping: 20, stiffness: 200 };
+const SPRING_CONFIG = { damping: 20, stiffness: 200, useNativeDriver: true };
 
 const styles = StyleSheet.create({
   container: {
     width: "100%",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.lg,
-    position: "relative",
   },
   sliderSurface: {
     height: THUMB_SIZE,
@@ -50,7 +40,6 @@ const styles = StyleSheet.create({
     height: TRACK_HEIGHT,
     borderRadius: TRACK_HEIGHT / 2,
     overflow: "hidden",
-    position: "relative",
   },
   track: {
     flex: 1,
@@ -84,93 +73,28 @@ const styles = StyleSheet.create({
   },
 });
 
-interface SliderRange {
-  minValue: number;
-  maxValue: number;
-  snapValue: number;
+function clampPosition(trackWidth: number, position: number) {
+  return Math.max(0, Math.min(trackWidth, position));
 }
 
-interface SliderSharedState {
-  gestureStartX: SharedValue<number>;
-  isGestureActive: SharedValue<boolean>;
-  lastEmittedValue: SharedValue<number>;
-  trackWidth: SharedValue<number>;
-  translateX: SharedValue<number>;
+function valueToPosition(trackWidth: number, minValue: number, maxValue: number, value: number) {
+  if (trackWidth === 0) return 0;
+  const normalizedValue = (value - minValue) / (maxValue - minValue);
+  return normalizedValue * trackWidth;
 }
 
-function useSliderSharedState(value: number): SliderSharedState {
-  return {
-    trackWidth: useSharedValue(0),
-    translateX: useSharedValue(0),
-    gestureStartX: useSharedValue(0),
-    isGestureActive: useSharedValue(false),
-    lastEmittedValue: useSharedValue(value),
-  };
-}
-
-function clampPosition(trackWidth: SharedValue<number>, position: number) {
-  "worklet";
-  return Math.max(0, Math.min(trackWidth.value, position));
-}
-
-function valueToPosition(trackWidth: SharedValue<number>, range: SliderRange, value: number) {
-  "worklet";
-  if (trackWidth.value === 0) return 0;
-  const normalizedValue = (value - range.minValue) / (range.maxValue - range.minValue);
-  return normalizedValue * trackWidth.value;
-}
-
-function positionToValue(trackWidth: SharedValue<number>, range: SliderRange, position: number) {
-  "worklet";
-  if (trackWidth.value === 0) return range.minValue;
-  const normalizedPosition = position / trackWidth.value;
-  const rawValue = normalizedPosition * (range.maxValue - range.minValue) + range.minValue;
-  const constrained = getTimeInRange(rawValue, range.minValue, range.maxValue);
-  return snapToInterval(constrained, range.snapValue);
-}
-
-function createPanGesture(
-  range: SliderRange,
-  shared: SliderSharedState,
-  onGestureStart: (() => void) | undefined,
-  onGestureEnd: (() => void) | undefined,
-  onValueChange: (value: number) => void,
-  triggerHaptic: () => void
+function positionToValue(
+  trackWidth: number,
+  minValue: number,
+  maxValue: number,
+  snapValue: number,
+  position: number
 ) {
-  return Gesture.Pan()
-    .onBegin(() => {
-      shared.isGestureActive.value = true;
-      shared.gestureStartX.value = shared.translateX.value;
-      if (onGestureStart) {
-        runOnJS(onGestureStart)();
-      }
-      runOnJS(triggerHaptic)();
-    })
-    .onUpdate((event) => {
-      const nextPosition = clampPosition(shared.trackWidth, shared.gestureStartX.value + event.translationX);
-      shared.translateX.value = nextPosition;
-
-      const nextValue = positionToValue(shared.trackWidth, range, nextPosition);
-      if (nextValue !== shared.lastEmittedValue.value) {
-        shared.lastEmittedValue.value = nextValue;
-        runOnJS(onValueChange)(nextValue);
-        runOnJS(triggerHaptic)();
-      }
-    })
-    .onEnd(() => {
-      const finalValue = positionToValue(shared.trackWidth, range, shared.translateX.value);
-      shared.lastEmittedValue.value = finalValue;
-      shared.translateX.value = withSpring(
-        valueToPosition(shared.trackWidth, range, finalValue),
-        SPRING_CONFIG
-      );
-      shared.isGestureActive.value = false;
-
-      if (onGestureEnd) {
-        runOnJS(onGestureEnd)();
-      }
-    })
-    .hitSlop(HIT_SLOP);
+  if (trackWidth === 0) return minValue;
+  const normalizedPosition = position / trackWidth;
+  const rawValue = normalizedPosition * (maxValue - minValue) + minValue;
+  const constrained = getTimeInRange(rawValue, minValue, maxValue);
+  return snapToInterval(constrained, snapValue);
 }
 
 export function TimeSlider({
@@ -187,75 +111,146 @@ export function TimeSlider({
   const defaultRange = getDefaultTimeRange();
   const range = useMemo(
     () => ({
-    minValue: min ?? defaultRange.min,
-    maxValue: max ?? defaultRange.max,
-    snapValue: interval ?? defaultRange.interval,
+      minValue: min ?? defaultRange.min,
+      maxValue: max ?? defaultRange.max,
+      snapValue: interval ?? defaultRange.interval,
     }),
     [defaultRange.interval, defaultRange.max, defaultRange.min, interval, max, min]
   );
-  const {
-    gestureStartX,
-    isGestureActive,
-    lastEmittedValue,
-    trackWidth,
-    translateX,
-  } = useSliderSharedState(value);
+
+  const translateX = useRef(new Animated.Value(0)).current;
+  const trackWidthRef = useRef(0);
+  const currentPositionRef = useRef(0);
+  const gestureStartRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const lastEmittedValueRef = useRef(value);
 
   const triggerHaptic = useCallback(() => {
     impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    if (!isGestureActive.value) {
-      lastEmittedValue.value = value;
-      translateX.value = withSpring(
-        valueToPosition(trackWidth, range, value),
-        SPRING_CONFIG
-      );
+  const setPosition = useCallback((position: number) => {
+    currentPositionRef.current = position;
+    translateX.setValue(position);
+  }, [translateX]);
+
+  const animateToPosition = useCallback((position: number) => {
+    currentPositionRef.current = position;
+    Animated.spring(translateX, {
+      toValue: position,
+      ...SPRING_CONFIG,
+    }).start();
+  }, [translateX]);
+
+  const commitValue = useCallback((nextValue: number, withHaptic: boolean) => {
+    if (nextValue === lastEmittedValueRef.current) {
+      return;
     }
-  }, [isGestureActive, lastEmittedValue, range, trackWidth, translateX, value]);
 
-  const handleTrackLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const { width } = event.nativeEvent.layout;
-      trackWidth.value = width;
-      translateX.value = valueToPosition(trackWidth, range, value);
-    },
-    [range, trackWidth, translateX, value]
-  );
+    lastEmittedValueRef.current = nextValue;
+    animateToPosition(
+      valueToPosition(trackWidthRef.current, range.minValue, range.maxValue, nextValue)
+    );
+    onValueChange(nextValue);
 
-  const handleTrackPress = useCallback(
-    (locationX: number) => {
-      const nextValue = positionToValue(trackWidth, range, clampPosition(trackWidth, locationX));
-      if (nextValue === lastEmittedValue.value) {
-        return;
-      }
-
-      isGestureActive.value = false;
-      lastEmittedValue.value = nextValue;
-      translateX.value = withSpring(valueToPosition(trackWidth, range, nextValue), SPRING_CONFIG);
-      onValueChange(nextValue);
+    if (withHaptic) {
       triggerHaptic();
-    },
-    [isGestureActive, lastEmittedValue, onValueChange, range, trackWidth, translateX, triggerHaptic]
+    }
+  }, [animateToPosition, onValueChange, range.maxValue, range.minValue, triggerHaptic]);
+
+  useEffect(() => {
+    if (isDraggingRef.current) {
+      return;
+    }
+
+    lastEmittedValueRef.current = value;
+    animateToPosition(
+      valueToPosition(trackWidthRef.current, range.minValue, range.maxValue, value)
+    );
+  }, [animateToPosition, range.maxValue, range.minValue, value]);
+
+  const handleTrackLayout = useCallback((event: LayoutChangeEvent) => {
+    trackWidthRef.current = event.nativeEvent.layout.width;
+    animateToPosition(
+      valueToPosition(trackWidthRef.current, range.minValue, range.maxValue, lastEmittedValueRef.current)
+    );
+  }, [animateToPosition, range.maxValue, range.minValue]);
+
+  const handleTrackPress = useCallback((locationX: number) => {
+    const nextValue = positionToValue(
+      trackWidthRef.current,
+      range.minValue,
+      range.maxValue,
+      range.snapValue,
+      clampPosition(trackWidthRef.current, locationX)
+    );
+    commitValue(nextValue, true);
+  }, [commitValue, range.maxValue, range.minValue, range.snapValue]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          isDraggingRef.current = true;
+          gestureStartRef.current = currentPositionRef.current;
+          onGestureStart?.();
+          triggerHaptic();
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const nextPosition = clampPosition(
+            trackWidthRef.current,
+            gestureStartRef.current + gestureState.dx
+          );
+          setPosition(nextPosition);
+
+          const nextValue = positionToValue(
+            trackWidthRef.current,
+            range.minValue,
+            range.maxValue,
+            range.snapValue,
+            nextPosition
+          );
+
+          if (nextValue !== lastEmittedValueRef.current) {
+            lastEmittedValueRef.current = nextValue;
+            onValueChange(nextValue);
+            triggerHaptic();
+          }
+        },
+        onPanResponderRelease: () => {
+          const finalValue = positionToValue(
+            trackWidthRef.current,
+            range.minValue,
+            range.maxValue,
+            range.snapValue,
+            currentPositionRef.current
+          );
+          isDraggingRef.current = false;
+          animateToPosition(
+            valueToPosition(trackWidthRef.current, range.minValue, range.maxValue, finalValue)
+          );
+          lastEmittedValueRef.current = finalValue;
+          onGestureEnd?.();
+        },
+        onPanResponderTerminate: () => {
+          isDraggingRef.current = false;
+          onGestureEnd?.();
+        },
+      }),
+    [
+      animateToPosition,
+      onGestureEnd,
+      onGestureStart,
+      onValueChange,
+      range.maxValue,
+      range.minValue,
+      range.snapValue,
+      setPosition,
+      triggerHaptic,
+    ]
   );
-
-  const panGesture = createPanGesture(
-    range,
-    { gestureStartX, isGestureActive, lastEmittedValue, trackWidth, translateX },
-    onGestureStart,
-    onGestureEnd,
-    onValueChange,
-    triggerHaptic
-  );
-
-  const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  const activeTrackStyle = useAnimatedStyle(() => ({
-    width: translateX.value,
-  }));
 
   return (
     <View style={styles.container}>
@@ -269,17 +264,17 @@ export function TimeSlider({
           <Animated.View
             style={[
               styles.activeTrack,
-              { backgroundColor: colors.tint },
-              activeTrackStyle,
+              { backgroundColor: colors.tint, width: translateX },
             ]}
           />
         </Pressable>
 
-        <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.thumbContainer, thumbStyle]}>
-            <View style={[styles.thumb, { borderColor: colors.tint }]} />
-          </Animated.View>
-        </GestureDetector>
+        <Animated.View
+          style={[styles.thumbContainer, { transform: [{ translateX }] }]}
+          {...panResponder.panHandlers}
+        >
+          <View style={[styles.thumb, { borderColor: colors.tint }]} />
+        </Animated.View>
       </View>
     </View>
   );

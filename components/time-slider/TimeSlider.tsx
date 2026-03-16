@@ -22,6 +22,24 @@ interface TimeSliderProps {
   interval?: number;
 }
 
+interface SliderRange {
+  minValue: number;
+  maxValue: number;
+  snapValue: number;
+}
+
+interface SliderPositionArgs {
+  position: number;
+  range: SliderRange;
+  trackWidth: number;
+}
+
+interface SliderValueArgs {
+  range: SliderRange;
+  trackWidth: number;
+  value: number;
+}
+
 const TRACK_HEIGHT = 8;
 const THUMB_SIZE = 32;
 const SPRING_CONFIG = { damping: 20, stiffness: 200, useNativeDriver: false };
@@ -77,24 +95,18 @@ function clampPosition(trackWidth: number, position: number) {
   return Math.max(0, Math.min(trackWidth, position));
 }
 
-function valueToPosition(trackWidth: number, minValue: number, maxValue: number, value: number) {
+function valueToPosition({ range, trackWidth, value }: SliderValueArgs) {
   if (trackWidth === 0) return 0;
-  const normalizedValue = (value - minValue) / (maxValue - minValue);
+  const normalizedValue = (value - range.minValue) / (range.maxValue - range.minValue);
   return normalizedValue * trackWidth;
 }
 
-function positionToValue(
-  trackWidth: number,
-  minValue: number,
-  maxValue: number,
-  snapValue: number,
-  position: number
-) {
-  if (trackWidth === 0) return minValue;
+function positionToValue({ position, range, trackWidth }: SliderPositionArgs) {
+  if (trackWidth === 0) return range.minValue;
   const normalizedPosition = position / trackWidth;
-  const rawValue = normalizedPosition * (maxValue - minValue) + minValue;
-  const constrained = getTimeInRange(rawValue, minValue, maxValue);
-  return snapToInterval(constrained, snapValue);
+  const rawValue = normalizedPosition * (range.maxValue - range.minValue) + range.minValue;
+  const constrained = getTimeInRange(rawValue, range.minValue, range.maxValue);
+  return snapToInterval(constrained, range.snapValue);
 }
 
 export function TimeSlider({
@@ -139,12 +151,11 @@ export function TimeSlider({
 
   const animateToValue = useCallback(
     (nextValue: number) => {
-      const nextPosition = valueToPosition(
-        trackWidthRef.current,
-        range.minValue,
-        range.maxValue,
-        nextValue
-      );
+      const nextPosition = valueToPosition({
+        trackWidth: trackWidthRef.current,
+        range,
+        value: nextValue,
+      });
       currentPositionRef.current = nextPosition;
       Animated.spring(position, {
         toValue: nextPosition,
@@ -189,16 +200,14 @@ export function TimeSlider({
 
   const handleTrackPress = useCallback(
     (locationX: number) => {
-      const nextValue = positionToValue(
-        trackWidthRef.current,
-        range.minValue,
-        range.maxValue,
-        range.snapValue,
-        clampPosition(trackWidthRef.current, locationX)
-      );
+      const nextValue = positionToValue({
+        trackWidth: trackWidthRef.current,
+        range,
+        position: clampPosition(trackWidthRef.current, locationX),
+      });
       emitValue(nextValue, true);
     },
-    [emitValue, range.maxValue, range.minValue, range.snapValue]
+    [emitValue, range]
   );
 
   const panResponder = useMemo(
@@ -219,13 +228,11 @@ export function TimeSlider({
           );
           setPosition(nextPosition);
 
-          const nextValue = positionToValue(
-            trackWidthRef.current,
-            range.minValue,
-            range.maxValue,
-            range.snapValue,
-            nextPosition
-          );
+          const nextValue = positionToValue({
+            trackWidth: trackWidthRef.current,
+            range,
+            position: nextPosition,
+          });
 
           if (nextValue !== lastEmittedValueRef.current) {
             lastEmittedValueRef.current = nextValue;
@@ -234,13 +241,11 @@ export function TimeSlider({
           }
         },
         onPanResponderRelease: () => {
-          const finalValue = positionToValue(
-            trackWidthRef.current,
-            range.minValue,
-            range.maxValue,
-            range.snapValue,
-            currentPositionRef.current
-          );
+          const finalValue = positionToValue({
+            trackWidth: trackWidthRef.current,
+            range,
+            position: currentPositionRef.current,
+          });
           isDraggingRef.current = false;
           lastEmittedValueRef.current = finalValue;
           animateToValue(finalValue);

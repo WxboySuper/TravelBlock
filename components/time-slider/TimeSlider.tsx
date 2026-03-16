@@ -162,7 +162,7 @@ export function TimeSlider({
         ...SPRING_CONFIG,
       }).start();
     },
-    [position, range.maxValue, range.minValue]
+    [position, range]
   );
 
   const emitValue = useCallback(
@@ -217,7 +217,10 @@ export function TimeSlider({
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
           isDraggingRef.current = true;
-          gestureStartRef.current = currentPositionRef.current;
+          position.stopAnimation((animatedPosition) => {
+            currentPositionRef.current = animatedPosition;
+            gestureStartRef.current = animatedPosition;
+          });
           onGestureStart?.();
           triggerHaptic();
         },
@@ -261,9 +264,8 @@ export function TimeSlider({
       onGestureEnd,
       onGestureStart,
       onValueChange,
-      range.maxValue,
-      range.minValue,
-      range.snapValue,
+      position,
+      range,
       setPosition,
       triggerHaptic,
     ]

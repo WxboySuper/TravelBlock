@@ -1,25 +1,20 @@
-import { DestinationsList } from '@/components/destinations/DestinationsList';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TimeSlider } from '@/components/time-slider/TimeSlider';
-import { TimeValue } from '@/components/time-slider/TimeValue';
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BorderRadius, Colors, Spacing, Typography } from '@/constants/theme';
 import { useFlight } from '@/context/FlightContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useDestinations } from '@/hooks/useDestinations';
 import { useHomeAirport } from '@/hooks/useHomeAirport';
-import { getFlightTimeBucket } from '@/services/radiusService';
 import type { Airport } from '@/types/airport';
-import type { AirportWithFlightTime } from '@/types/radius';
-import { formatTimeValue, TIME_SLIDER_CONFIG } from '@/utils/timeSlider';
+import { formatFlightWindowLabel } from '@/utils/flightWindow';
+import { formatTimeValue } from '@/utils/timeSlider';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = StyleSheet.create({
   container: {
@@ -33,125 +28,188 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xs,
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.md,
   },
+  title: {
+    fontSize: Typography.fontSize.xxl,
+    fontWeight: Typography.fontWeight.bold,
+  },
   closeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   body: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.sm,
     gap: Spacing.md,
   },
-  topStack: {
-    gap: Spacing.md,
-  },
-  panel: {
+  card: {
     borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
     borderWidth: 1,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
   },
-  panelHeader: {
+  cardHeader: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: Spacing.sm,
+    gap: Spacing.sm,
   },
-  panelLabel: {
+  label: {
     fontSize: Typography.fontSize.xs,
     fontWeight: Typography.fontWeight.semibold,
-    textTransform: 'uppercase',
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  originCodeRow: {
+  helperText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  codeRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: Spacing.sm,
   },
-  originIata: {
-    fontSize: Typography.fontSize.sm,
+  airportCode: {
+    fontSize: Typography.fontSize.xxxl,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  iataCode: {
+    fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.semibold,
   },
-  originName: {
-    fontSize: Typography.fontSize.sm,
-    marginTop: 4,
-  },
-  originMeta: {
-    fontSize: Typography.fontSize.sm,
+  airportName: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.medium,
     marginTop: Spacing.xs,
   },
-  sliderPanelTop: {
-    marginBottom: Spacing.sm,
+  airportMeta: {
+    fontSize: Typography.fontSize.sm,
+    marginTop: 2,
   },
-  sliderValueRow: {
+  windowValueRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  windowValue: {
+    fontSize: Typography.fontSize.xxxl,
+    fontWeight: Typography.fontWeight.bold,
   },
   bucketPill: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 6,
   },
-  bucketPillText: {
+  bucketText: {
     fontSize: Typography.fontSize.xs,
     fontWeight: Typography.fontWeight.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  destinationsShell: {
-    flex: 1,
-    minHeight: 0,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-  },
   footer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 10,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
   },
 });
 
-function FlightSetupHeader({ onClose }: { onClose: () => void }) {
+export default function FlightSetupScreen() {
+  const { homeAirport } = useHomeAirport();
+  const { origin, flightDuration, setOrigin, setDestination, setFlightDuration } = useFlight();
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const [localFlightTime, setLocalFlightTime] = useState(flightDuration);
+
+  useEffect(() => {
+    if (homeAirport && (!origin || origin.icao !== homeAirport.icao)) {
+      setOrigin(homeAirport).catch(() => undefined);
+    }
+  }, [homeAirport, origin, setOrigin]);
+
+  const bucketLabel = useMemo(() => formatFlightWindowLabel(localFlightTime), [localFlightTime]);
+  const formattedDuration = useMemo(
+    () => formatTimeValue(localFlightTime).formatted,
+    [localFlightTime]
+  );
+
+  const handleFlightTimeChange = useCallback(
+    (time: number) => {
+      setLocalFlightTime(time);
+      setFlightDuration(time).catch(() => undefined);
+      setDestination(null).catch(() => undefined);
+    },
+    [setDestination, setFlightDuration]
+  );
+
+  const handleContinue = useCallback(async () => {
+    if (!homeAirport) {
+      return;
+    }
+
+    await Promise.all([
+      setOrigin(homeAirport),
+      setFlightDuration(localFlightTime),
+      setDestination(null),
+    ]);
+
+    await impactAsync(ImpactFeedbackStyle.Heavy).catch(() => undefined);
+    router.push('/flight/destination');
+  }, [homeAirport, localFlightTime, router, setDestination, setFlightDuration, setOrigin]);
+
+  const handleClose = useCallback(() => {
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
+    router.back();
+  }, [router]);
 
   return (
-    <View style={styles.header}>
-      <View>
-        <ThemedText type="title">Flight Setup</ThemedText>
-        <ThemedText style={{ color: colors.textSecondary }}>
-          Pick a flight window, then choose a destination.
-        </ThemedText>
-      </View>
-      <TouchableOpacity
-        onPress={onClose}
-        style={[styles.closeButton, { backgroundColor: colors.cardBackground }]}
-        accessibilityLabel="Close flight setup"
-        accessibilityRole="button"
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <IconSymbol name="xmark" size={20} color={colors.text} />
-      </TouchableOpacity>
-    </View>
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <ThemedText style={styles.title}>Flight Setup</ThemedText>
+          <TouchableOpacity
+            onPress={handleClose}
+            style={[styles.closeButton, { backgroundColor: colors.cardBackground }]}
+            accessibilityLabel="Close flight setup"
+            accessibilityRole="button"
+            testID="close-flight-setup"
+          >
+            <IconSymbol name="xmark" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.body}>
+          <DepartureCard airport={homeAirport} />
+          <FlightWindowCard
+            flightTime={localFlightTime}
+            flightTimeLabel={formattedDuration}
+            bucketLabel={bucketLabel}
+            onFlightTimeChange={handleFlightTimeChange}
+          />
+        </View>
+
+        <View style={styles.footer}>
+          <Button
+            title="Continue"
+            onPress={handleContinue}
+            disabled={!homeAirport}
+            testID="continue-to-destinations"
+          />
+        </View>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
-function OriginSummaryCard({ airport }: { airport: Airport | null }) {
+function DepartureCard({ airport }: { airport: Airport | null }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -159,14 +217,11 @@ function OriginSummaryCard({ airport }: { airport: Airport | null }) {
     return (
       <View
         style={[
-          styles.panel,
-          {
-            backgroundColor: colors.cardBackground,
-            borderColor: colors.border,
-          },
+          styles.card,
+          { backgroundColor: colors.cardBackground, borderColor: colors.border },
         ]}
       >
-        <ThemedText style={[styles.panelLabel, { color: colors.textSecondary }]}>
+        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
           Departure
         </ThemedText>
         <ThemedText>No home base selected</ThemedText>
@@ -177,259 +232,76 @@ function OriginSummaryCard({ airport }: { airport: Airport | null }) {
   return (
     <View
       style={[
-        styles.panel,
-        {
-          backgroundColor: colors.cardBackground,
-          borderColor: colors.border,
-        },
+        styles.card,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
       ]}
     >
-      <View style={styles.panelHeader}>
-        <ThemedText style={[styles.panelLabel, { color: colors.textSecondary }]}>
+      <View style={styles.cardHeader}>
+        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
           Departure
         </ThemedText>
-        <ThemedText style={[styles.originIata, { color: colors.textSecondary }]}>
+        <ThemedText style={[styles.helperText, { color: colors.textSecondary }]}>
           {airport.city}
         </ThemedText>
       </View>
-      <View style={styles.originCodeRow}>
-        <ThemedText type="title">{airport.icao}</ThemedText>
-        {Boolean(airport.iata) && (
-          <ThemedText style={[styles.originIata, { color: colors.primary }]}>
+
+      <View style={styles.codeRow}>
+        <ThemedText style={styles.airportCode}>{airport.icao}</ThemedText>
+        {airport.iata ? (
+          <ThemedText style={[styles.iataCode, { color: colors.primary }]}>
             {airport.iata}
           </ThemedText>
-        )}
+        ) : null}
       </View>
-      <ThemedText style={styles.originName}>{airport.name}</ThemedText>
-      <ThemedText style={[styles.originMeta, { color: colors.textSecondary }]}>
+
+      <ThemedText style={styles.airportName}>{airport.name}</ThemedText>
+      <ThemedText style={[styles.airportMeta, { color: colors.textSecondary }]}>
         {airport.state ? `${airport.city}, ${airport.state}` : airport.city}
       </ThemedText>
     </View>
   );
 }
 
-function FlightTimeCard({
+function FlightWindowCard({
   flightTime,
-  onFlightTimeChange,
+  flightTimeLabel,
   bucketLabel,
+  onFlightTimeChange,
 }: {
   flightTime: number;
-  onFlightTimeChange: (time: number) => void;
+  flightTimeLabel: string;
   bucketLabel: string;
+  onFlightTimeChange: (time: number) => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const bucketPill = (
-    <View style={[styles.bucketPill, { backgroundColor: colors.surfaceElevated }]}>
-      <ThemedText style={[styles.bucketPillText, { color: colors.primary }]}>
-        {bucketLabel}
-      </ThemedText>
-    </View>
-  );
 
   return (
     <View
       style={[
-        styles.panel,
-        {
-          backgroundColor: colors.cardBackground,
-          borderColor: colors.border,
-        },
+        styles.card,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
       ]}
     >
-      <View style={styles.sliderPanelTop}>
-        <FlightTimeCardHeader bucketPill={bucketPill} textSecondary={colors.textSecondary} />
-        <TimeValue seconds={flightTime} />
-      </View>
-      <TimeSlider value={flightTime} onValueChange={onFlightTimeChange} />
-    </View>
-  );
-}
-
-function FlightSetupFooter({
-  onStart,
-  isDisabled,
-  onLayout,
-}: {
-  onStart: () => void;
-  isDisabled: boolean;
-  onLayout: (event: LayoutChangeEvent) => void;
-}) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const insets = useSafeAreaInsets();
-
-  return (
-    <View
-      onLayout={onLayout}
-      style={[
-        styles.footer,
-        {
-          backgroundColor: colors.background,
-          paddingBottom: Math.max(insets.bottom, Spacing.md),
-        },
-      ]}
-    >
-      <Button
-        title="Review Flight"
-        onPress={onStart}
-        size="md"
-        disabled={isDisabled}
-        testID="review-flight-button"
-      />
-    </View>
-  );
-}
-
-function formatBucketLabel(flightTime: number): string {
-  const bucket = getFlightTimeBucket({
-    timeInSeconds: flightTime,
-    bucketSizeInSeconds: TIME_SLIDER_CONFIG.SNAP_INTERVAL,
-    initialBucketMaxTime: TIME_SLIDER_CONFIG.MIN_TIME,
-  });
-  const maxLabel = formatTimeValue(bucket.maxTimeInSeconds).formatted;
-
-  if (bucket.minTimeInSeconds === 0) {
-    return `Up to ${maxLabel}`;
-  }
-
-  const minLabel = formatTimeValue(bucket.minTimeInSeconds).formatted;
-  return `${minLabel} - ${maxLabel}`;
-}
-
-export default function FlightSetupScreen() {
-  const { homeAirport } = useHomeAirport();
-  const router = useRouter();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const {
-    origin,
-    destination,
-    flightDuration,
-    setOrigin,
-    setDestination,
-    setFlightDuration,
-  } = useFlight();
-
-  const [localFlightTime, setLocalFlightTime] = useState(flightDuration);
-  const [footerHeight, setFooterHeight] = useState(0);
-
-  useEffect(() => {
-    if (homeAirport && (!origin || origin.icao !== homeAirport.icao)) {
-      setOrigin(homeAirport);
-    }
-  }, [homeAirport, origin, setOrigin]);
-
-  const {
-    destinations,
-    isLoading: isLoadingDestinations,
-    error: destinationsError,
-  } = useDestinations({
-    origin: homeAirport,
-    flightTimeInSeconds: localFlightTime,
-    useTimeRange: false,
-    bucketIntervalSeconds: TIME_SLIDER_CONFIG.SNAP_INTERVAL,
-    initialBucketMaxTime: TIME_SLIDER_CONFIG.MIN_TIME,
-  });
-
-  const selectedDestinationWithTime = destination
-    ? destinations.find((currentDestination) => currentDestination.icao === destination.icao) || null
-    : null;
-
-  const bucketLabel = useMemo(() => formatBucketLabel(localFlightTime), [localFlightTime]);
-  const footerInset = footerHeight + Spacing.xl;
-
-  const handleFlightTimeChange = useCallback((time: number) => {
-    setLocalFlightTime(time);
-    setFlightDuration(time);
-  }, [setFlightDuration]);
-
-  const handleSelectDestination = useCallback(
-    (airport: AirportWithFlightTime) => {
-      setDestination(airport);
-    },
-    [setDestination]
-  );
-
-  const handleReviewFlight = useCallback(() => {
-    if (!destination) return;
-
-    impactAsync(ImpactFeedbackStyle.Heavy).catch(() => undefined);
-    router.push('/flight/review');
-  }, [destination, router]);
-
-  const handleClose = useCallback(() => {
-    impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
-    router.back();
-  }, [router]);
-
-  const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
-    const nextHeight = event.nativeEvent.layout.height;
-    setFooterHeight((currentHeight) => {
-      return currentHeight === nextHeight ? currentHeight : nextHeight;
-    });
-  }, []);
-
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <FlightSetupHeader onClose={handleClose} />
-        <View style={styles.body}>
-          <View style={styles.topStack}>
-            <OriginSummaryCard airport={homeAirport} />
-            <FlightTimeCard
-              flightTime={localFlightTime}
-              onFlightTimeChange={handleFlightTimeChange}
-              bucketLabel={bucketLabel}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.destinationsShell,
-              {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <DestinationsList
-              destinations={destinations}
-              selectedDestination={selectedDestinationWithTime}
-              onSelectDestination={handleSelectDestination}
-              isLoading={isLoadingDestinations}
-              error={destinationsError}
-              compactCards
-              contentBottomInset={footerInset}
-              headerSubtitle={bucketLabel}
-              testID="destinations-list"
-            />
-          </View>
+      <View style={styles.cardHeader}>
+        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
+          Flight Window
+        </ThemedText>
+        <View style={[styles.bucketPill, { backgroundColor: colors.surfaceElevated }]}>
+          <ThemedText style={[styles.bucketText, { color: colors.primary }]}>
+            {bucketLabel}
+          </ThemedText>
         </View>
+      </View>
 
-        <FlightSetupFooter
-          onStart={handleReviewFlight}
-          isDisabled={!destination || !homeAirport}
-          onLayout={handleFooterLayout}
-        />
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
+      <View style={styles.windowValueRow}>
+        <ThemedText style={styles.windowValue}>{flightTimeLabel}</ThemedText>
+        <ThemedText style={[styles.helperText, { color: colors.textSecondary }]}>
+          Current duration
+        </ThemedText>
+      </View>
 
-function FlightTimeCardHeader({
-  bucketPill,
-  textSecondary,
-}: {
-  bucketPill: ReactNode;
-  textSecondary: string;
-}) {
-  return (
-    <View style={styles.sliderValueRow}>
-      <ThemedText style={[styles.panelLabel, { color: textSecondary }]}>
-        Flight Window
-      </ThemedText>
-      {bucketPill}
+      <TimeSlider value={flightTime} onValueChange={onFlightTimeChange} />
     </View>
   );
 }

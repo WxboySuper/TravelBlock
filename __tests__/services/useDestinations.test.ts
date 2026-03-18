@@ -46,16 +46,19 @@ const mockDestinations: AirportWithFlightTime[] = [
   },
 ];
 
+type UseDestinationsProps = Parameters<typeof useDestinations>[0];
+type TestRendererInstance = ReturnType<typeof TestRenderer.create>;
+
 function renderUseDestinations({
   origin,
   flightTimeInSeconds,
   useTimeRange,
   debounceMs,
-}: Parameters<typeof useDestinations>[0]) {
+}: UseDestinationsProps) {
   let latestResult: ReturnType<typeof useDestinations> | null = null;
-  let renderer: any;
+  let renderer: TestRendererInstance | null = null;
 
-  function Harness(props: Parameters<typeof useDestinations>[0]) {
+  function Harness(props: UseDestinationsProps) {
     latestResult = useDestinations(props);
     return null;
   }
@@ -78,13 +81,21 @@ function renderUseDestinations({
       }
       return latestResult;
     },
-    rerender(nextProps: Parameters<typeof useDestinations>[0]) {
+    rerender(nextProps: UseDestinationsProps) {
       act(() => {
+        if (!renderer) {
+          throw new Error('Hook renderer not initialized');
+        }
+
         renderer.update(React.createElement(Harness, nextProps));
       });
     },
     unmount() {
       act(() => {
+        if (!renderer) {
+          throw new Error('Hook renderer not initialized');
+        }
+
         renderer.unmount();
       });
     },
@@ -95,7 +106,7 @@ describe('useDestinations', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    (loadAirports as jest.Mock).mockResolvedValue(undefined);
+    (loadAirports as jest.Mock).mockImplementation(() => Promise.resolve());
     (getDestinationsByFlightTime as jest.Mock).mockReturnValue(mockDestinations);
     (getDestinationsInTimeRange as jest.Mock).mockReturnValue([]);
   });

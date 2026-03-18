@@ -1,4 +1,3 @@
-/* global jest */
 /* eslint-env jest */
 /**
  * Jest setup file for Expo projects.

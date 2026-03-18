@@ -6,10 +6,9 @@ import { loadAirports } from '@/services/airportService';
 import { getDestinationsByFlightTime, getDestinationsInTimeRange } from '@/services/radiusService';
 
 jest.mock('react-native', () => {
-  const React = require('react');
-
+  type HostProps = React.PropsWithChildren<Record<string, unknown>>;
   const createHostComponent = (name: string) => {
-    return ({ children, ...props }: any) => React.createElement(name, props, children);
+    return ({ children, ...props }: HostProps) => React.createElement(name, props, children);
   };
 
   return {
@@ -30,7 +29,6 @@ jest.mock('react-native', () => {
 
 jest.mock('@/components/airport/AirportCard', () => ({
   AirportCard: ({ airport }: { airport: { icao: string } }) => {
-    const React = require('react');
     return React.createElement('Text', { testID: 'home-airport' }, airport.icao);
   },
 }));
@@ -45,7 +43,6 @@ jest.mock('@/components/destinations/DestinationsList', () => ({
     isLoading: boolean;
     error: string | null;
   }) => {
-    const React = require('react');
     if (isLoading) {
       return React.createElement('Text', { testID: 'destinations-state' }, 'loading');
     }
@@ -63,7 +60,6 @@ jest.mock('@/components/destinations/DestinationsList', () => ({
 
 jest.mock('@/components/time-slider/TimeSlider', () => ({
   TimeSlider: ({ onValueChange }: { onValueChange: (value: number) => void }) => {
-    const React = require('react');
     return React.createElement(
       'Pressable',
       {
@@ -77,41 +73,36 @@ jest.mock('@/components/time-slider/TimeSlider', () => ({
 
 jest.mock('@/components/time-slider/TimeValue', () => ({
   TimeValue: ({ seconds }: { seconds: number }) => {
-    const React = require('react');
     return React.createElement('Text', { testID: 'time-value' }, String(seconds));
   },
 }));
 
 jest.mock('@/components/themed-text', () => ({
   ThemedText: ({ children }: { children: React.ReactNode }) => {
-    const React = require('react');
     return React.createElement('Text', null, children);
   },
 }));
 
 jest.mock('@/components/themed-view', () => ({
   ThemedView: ({ children }: { children: React.ReactNode }) => {
-    const React = require('react');
     return React.createElement('View', null, children);
   },
 }));
 
 jest.mock('@/components/ui/Button', () => ({
   Button: ({ title }: { title: string }) => {
-    const React = require('react');
     return React.createElement('Text', { testID: 'review-flight-button' }, title);
   },
 }));
 
 jest.mock('@/components/ui/icon-symbol', () => ({
   IconSymbol: () => {
-    const React = require('react');
     return React.createElement('Text', { testID: 'icon-symbol' }, 'icon');
   },
 }));
 
 jest.mock('expo-haptics', () => ({
-  impactAsync: jest.fn().mockResolvedValue(undefined),
+  impactAsync: jest.fn().mockImplementation(() => Promise.resolve()),
   ImpactFeedbackStyle: {
     Light: 'light',
     Heavy: 'heavy',
@@ -120,7 +111,6 @@ jest.mock('expo-haptics', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children, ...props }: { children: React.ReactNode }) => {
-    const React = require('react');
     return React.createElement('SafeAreaView', props, children);
   },
 }));
@@ -208,7 +198,9 @@ const mockDestinations = [
   },
 ];
 
-function getText(renderer: any, testID: string) {
+type TestRendererInstance = ReturnType<typeof TestRenderer.create>;
+
+function getText(renderer: TestRendererInstance, testID: string) {
   return renderer.root.findByProps({ testID }).children.join('');
 }
 
@@ -216,7 +208,7 @@ describe('FlightSetupScreen', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    (loadAirports as jest.Mock).mockResolvedValue(undefined);
+    (loadAirports as jest.Mock).mockImplementation(() => Promise.resolve());
     (getDestinationsInTimeRange as jest.Mock).mockReturnValue([]);
     (getDestinationsByFlightTime as jest.Mock).mockImplementation((_origin, flightTime) => {
       return flightTime >= 10800 ? mockDestinations : mockDestinations.slice(0, 1);
@@ -228,7 +220,7 @@ describe('FlightSetupScreen', () => {
   });
 
   it('updates the available destinations after the slider changes', async () => {
-    let renderer: any;
+    let renderer: TestRendererInstance | null = null;
 
     act(() => {
       renderer = TestRenderer.create(<FlightSetupScreen />);
@@ -241,6 +233,10 @@ describe('FlightSetupScreen', () => {
     await act(async () => {
       await Promise.resolve();
     });
+
+    if (!renderer) {
+      throw new Error('Screen renderer not initialized');
+    }
 
     expect(getText(renderer, 'destinations-state')).toBe('Norman');
 
@@ -255,6 +251,10 @@ describe('FlightSetupScreen', () => {
     await act(async () => {
       await Promise.resolve();
     });
+
+    if (!renderer) {
+      throw new Error('Screen renderer not initialized');
+    }
 
     expect(getText(renderer, 'destinations-state')).toBe('Norman,Stillwater');
     expect(getDestinationsByFlightTime).toHaveBeenCalledWith(

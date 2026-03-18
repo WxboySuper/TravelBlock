@@ -112,10 +112,6 @@ export function useDestinations({
         results = getDestinationsByFlightTime(originCoords, flightTimeInSeconds);
       }
 
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-
       setDestinations(results);
       setError(null);
     } catch (err) {
@@ -126,11 +122,9 @@ export function useDestinations({
       setError(err instanceof Error ? err.message : "Failed to fetch destinations");
       setDestinations([]);
     } finally {
-      if (requestId !== requestIdRef.current) {
-        return;
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     }
   }, [originCoords, flightTimeInSeconds, useTimeRange, tolerance]);
 
@@ -143,7 +137,7 @@ export function useDestinations({
 
     // Set new timer
     const timer = setTimeout(() => {
-      void fetchDestinations();
+      fetchDestinations();
     }, debounceMs);
 
     debounceTimerRef.current = timer;
@@ -158,7 +152,7 @@ export function useDestinations({
   }, [debounceMs, fetchDestinations]);
 
   const refresh = useCallback(() => {
-    void fetchDestinations();
+    fetchDestinations();
   }, [fetchDestinations]);
 
   return {

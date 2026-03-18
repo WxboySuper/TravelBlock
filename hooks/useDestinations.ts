@@ -21,9 +21,9 @@ interface UseDestinationsOptions {
   origin: Airport | null;
   /** Flight time in seconds */
   flightTimeInSeconds: number;
-  /** Whether to use exact time range (true) or max time (false) */
+  /** Whether to use exact time range (true) or max time (false) when no bucket is configured */
   useTimeRange?: boolean;
-  /** Whether to use a snapped time bucket instead of cumulative max time */
+  /** If provided, bucketed lookup is used regardless of useTimeRange */
   bucketIntervalSeconds?: number;
   /** Maximum time for the first bucket */
   initialBucketMaxTime?: number;
@@ -81,26 +81,42 @@ function isCurrentRequest(
   return requestId === requestIdRef.current;
 }
 
-function resolveDestinations(
-  originCoords: Coordinates,
-  flightTimeInSeconds: number,
-  useTimeRange: boolean,
-  bucketIntervalSeconds?: number,
-  initialBucketMaxTime?: number,
-  tolerance?: number
-) {
+interface DestinationResolutionConfig {
+  originCoords: Coordinates;
+  flightTimeInSeconds: number;
+  useTimeRange: boolean;
+  bucketIntervalSeconds?: number;
+  initialBucketMaxTime?: number;
+  tolerance?: number;
+}
+
+function resolveDestinations({
+  originCoords,
+  flightTimeInSeconds,
+  useTimeRange,
+  bucketIntervalSeconds,
+  initialBucketMaxTime,
+  tolerance,
+}: DestinationResolutionConfig) {
   if (bucketIntervalSeconds) {
-    return getDestinationsInTimeBucket(
-      originCoords,
-      flightTimeInSeconds,
-      bucketIntervalSeconds,
-      initialBucketMaxTime
-    );
+    return getDestinationsInTimeBucket({
+      origin: originCoords,
+      timeInSeconds: flightTimeInSeconds,
+      bucketSizeInSeconds: bucketIntervalSeconds,
+      initialBucketMaxTime,
+    });
   }
 
   return useTimeRange
-    ? getDestinationsInTimeRange(originCoords, flightTimeInSeconds, tolerance)
-    : getDestinationsByFlightTime(originCoords, flightTimeInSeconds);
+    ? getDestinationsInTimeRange({
+        origin: originCoords,
+        timeInSeconds: flightTimeInSeconds,
+        tolerance,
+      })
+    : getDestinationsByFlightTime({
+        origin: originCoords,
+        maxFlightTime: flightTimeInSeconds,
+      });
 }
 
 async function fetchDestinations({
@@ -141,14 +157,14 @@ async function fetchDestinations({
       return;
     }
 
-    const results = resolveDestinations(
+    const results = resolveDestinations({
       originCoords,
       flightTimeInSeconds,
       useTimeRange,
       bucketIntervalSeconds,
       initialBucketMaxTime,
       tolerance
-    );
+    });
     if (!isCurrentRequest(requestIdRef, requestId)) {
       return;
     }

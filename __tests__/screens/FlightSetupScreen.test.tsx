@@ -184,7 +184,7 @@ jest.mock('@/services/airportService', () => ({
 jest.mock('@/services/radiusService', () => ({
   getDestinationsInTimeBucket: jest.fn(),
   getDestinationsInTimeRange: jest.fn(),
-  getFlightTimeBucket: jest.fn((timeInSeconds: number) => {
+  getFlightTimeBucket: jest.fn(({ timeInSeconds }: { timeInSeconds: number }) => {
     if (timeInSeconds <= 1800) {
       return { minTimeInSeconds: 0, maxTimeInSeconds: 1800 };
     }
@@ -239,7 +239,7 @@ describe('FlightSetupScreen', () => {
     jest.clearAllMocks();
     (loadAirports as jest.Mock).mockImplementation(() => Promise.resolve());
     (getDestinationsInTimeRange as jest.Mock).mockReturnValue([]);
-    (getFlightTimeBucket as jest.Mock).mockImplementation((timeInSeconds: number) => {
+    (getFlightTimeBucket as jest.Mock).mockImplementation(({ timeInSeconds }: { timeInSeconds: number }) => {
       if (timeInSeconds <= 1800) {
         return { minTimeInSeconds: 0, maxTimeInSeconds: 1800 };
       }
@@ -249,9 +249,11 @@ describe('FlightSetupScreen', () => {
         maxTimeInSeconds: timeInSeconds,
       };
     });
-    (getDestinationsInTimeBucket as jest.Mock).mockImplementation((_origin, flightTime) => {
-      return flightTime >= 4200 ? mockDestinations : mockDestinations.slice(0, 1);
-    });
+    (getDestinationsInTimeBucket as jest.Mock).mockImplementation(
+      ({ timeInSeconds }: { timeInSeconds: number }) => {
+        return timeInSeconds >= 4200 ? mockDestinations : mockDestinations.slice(0, 1);
+      }
+    );
   });
 
   afterEach(() => {
@@ -298,12 +300,12 @@ describe('FlightSetupScreen', () => {
 
     expect(getText(renderer, 'destinations-state')).toBe('Norman,Stillwater');
     expect(getText(renderer, 'destinations-meta')).toContain('1h 0m - 1h 10m');
-    expect(getText(renderer, 'destinations-meta')).toContain('|146');
-    expect(getDestinationsInTimeBucket).toHaveBeenCalledWith(
-      { lat: 35.3931, lon: -97.6007 },
-      4200,
-      600,
-      1800
-    );
+    expect(getText(renderer, 'destinations-meta')).toContain('|32');
+    expect(getDestinationsInTimeBucket).toHaveBeenCalledWith({
+      origin: { lat: 35.3931, lon: -97.6007 },
+      timeInSeconds: 4200,
+      bucketSizeInSeconds: 600,
+      initialBucketMaxTime: 1800,
+    });
   });
 });

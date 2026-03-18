@@ -9,7 +9,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing, Typography } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { AirportWithFlightTime } from "@/types/radius";
+import type { AirportWithFlightTime } from "@/types/radius";
 import { formatTimeValue } from "@/utils/timeSlider";
 import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
@@ -129,6 +129,7 @@ export function DestinationCard({
 
   const { formatted: flightTimeFormatted } = formatTimeValue(airport.flightTime);
   const distanceFormatted = `${Math.round(airport.distance)} mi`;
+  const cardBorderColor = isSelected ? colors.tint : colors.border;
 
   const handlePress = () => {
     impactAsync(ImpactFeedbackStyle.Medium).catch(() => {
@@ -145,62 +146,129 @@ export function DestinationCard({
           compact && styles.compactCard,
           {
             backgroundColor: colors.cardBackground,
-            borderColor: isSelected ? colors.tint : colors.border,
+            borderColor: cardBorderColor,
           },
         ]}
       >
-        <View style={styles.header}>
-          <View style={styles.nameContainer}>
-            <ThemedText style={[styles.airportName, compact && styles.compactAirportName]}>
-              {airport.name}
-            </ThemedText>
-            <ThemedText
-              style={[
-                styles.cityCountry,
-                compact && styles.compactCityCountry,
-                { color: colors.textSecondary },
-              ]}
-            >
-              {airport.city}, {airport.country}
-            </ThemedText>
-          </View>
-          <View style={styles.codes}>
-            <ThemedText style={[styles.codeText, { color: colors.textSecondary }]}>
-              {airport.icao}
-            </ThemedText>
-            {airport.iata && (
-              <ThemedText style={[styles.codeText, { color: colors.textSecondary }]}>
-                {airport.iata}
-              </ThemedText>
-            )}
-          </View>
-        </View>
-
-        <View
-          style={[
-            styles.metadata,
-            compact && styles.compactMetadata,
-            { borderTopColor: colors.border },
-          ]}
-        >
-          <View style={styles.metadataItem}>
-            <ThemedText style={[styles.metadataLabel, { color: colors.textSecondary }]}>
-              Flight Time
-            </ThemedText>
-            <ThemedText style={[styles.metadataValue, compact && styles.compactMetadataValue]}>
-              {flightTimeFormatted}
-            </ThemedText>
-          </View>
-          <View style={styles.metadataItem}>
-            <ThemedText style={[styles.metadataLabel, { color: colors.textSecondary }]}>
-              Distance
-            </ThemedText>
-            <ThemedText style={[styles.metadataValue, compact && styles.compactMetadataValue]}>
-              {distanceFormatted}
-            </ThemedText>
-          </View>
-        </View>
+        <DestinationHeader airport={airport} compact={compact} textSecondary={colors.textSecondary} />
+        <DestinationMetadata
+          compact={compact}
+          textSecondary={colors.textSecondary}
+          borderColor={colors.border}
+          flightTimeFormatted={flightTimeFormatted}
+          distanceFormatted={distanceFormatted}
+        />
       </ThemedView>
     </TouchableOpacity>
+  );
+}
+
+function DestinationHeader({
+  airport,
+  compact,
+  textSecondary,
+}: {
+  airport: AirportWithFlightTime;
+  compact: boolean;
+  textSecondary: string;
+}) {
+  return (
+    <View style={styles.header}>
+      <View style={styles.nameContainer}>
+        <ThemedText style={[styles.airportName, compact && styles.compactAirportName]}>
+          {airport.name}
+        </ThemedText>
+        <ThemedText
+          style={[
+            styles.cityCountry,
+            compact && styles.compactCityCountry,
+            { color: textSecondary },
+          ]}
+        >
+          {airport.city}, {airport.country}
+        </ThemedText>
+      </View>
+      <DestinationCodes airport={airport} textSecondary={textSecondary} />
+    </View>
+  );
+}
+
+function DestinationCodes({
+  airport,
+  textSecondary,
+}: {
+  airport: AirportWithFlightTime;
+  textSecondary: string;
+}) {
+  const codeColor = { color: textSecondary };
+  const iataCode = airport.iata ? (
+    <ThemedText style={[styles.codeText, codeColor]}>{airport.iata}</ThemedText>
+  ) : null;
+
+  return (
+    <View style={styles.codes}>
+      <ThemedText style={[styles.codeText, codeColor]}>{airport.icao}</ThemedText>
+      {iataCode}
+    </View>
+  );
+}
+
+function DestinationMetadata({
+  compact,
+  textSecondary,
+  borderColor,
+  flightTimeFormatted,
+  distanceFormatted,
+}: {
+  compact: boolean;
+  textSecondary: string;
+  borderColor: string;
+  flightTimeFormatted: string;
+  distanceFormatted: string;
+}) {
+  return (
+    <View
+      style={[
+        styles.metadata,
+        compact && styles.compactMetadata,
+        { borderTopColor: borderColor },
+      ]}
+    >
+      <MetadataItem
+        label="Flight Time"
+        value={flightTimeFormatted}
+        compact={compact}
+        textSecondary={textSecondary}
+      />
+      <MetadataItem
+        label="Distance"
+        value={distanceFormatted}
+        compact={compact}
+        textSecondary={textSecondary}
+      />
+    </View>
+  );
+}
+
+function MetadataItem({
+  label,
+  value,
+  compact,
+  textSecondary,
+}: {
+  label: string;
+  value: string;
+  compact: boolean;
+  textSecondary: string;
+}) {
+  return (
+    <View style={styles.metadataItem}>
+      <ThemedText style={[styles.metadataLabel, { color: textSecondary }]}>
+        {label}
+      </ThemedText>
+      <ThemedText style={[styles.metadataValue, compact && styles.compactMetadataValue]}>
+        {value}
+      </ThemedText>
+    </View>
   );
 }

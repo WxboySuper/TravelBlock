@@ -33,6 +33,38 @@ export interface FlightTimeBucket {
   maxTimeInSeconds: number;
 }
 
+interface TimeConfig {
+  timeInSeconds: number;
+}
+
+interface FlightTimeBucketConfig extends TimeConfig {
+  bucketSizeInSeconds?: number;
+  initialBucketMaxTime?: number;
+}
+
+interface TimeRangeConfig extends TimeConfig {
+  origin: Coordinates;
+  tolerance?: number;
+}
+
+interface MaxFlightTimeConfig {
+  origin: Coordinates;
+  maxFlightTime: number;
+}
+
+interface TimeBucketLookupConfig extends FlightTimeBucketConfig {
+  origin: Coordinates;
+}
+
+interface DistanceConfig {
+  distanceInMiles: number;
+}
+
+interface FlightBucketMembershipConfig {
+  flightTime: number;
+  bucket: FlightTimeBucket;
+}
+
 const PRIORITY_KEYWORDS = [
   ["international", 0],
   ["world", 0],
@@ -57,7 +89,7 @@ const PRIORITY_KEYWORDS = [
  * calculateMaxDistance(18000); // Returns ~2062.5 miles
  * ```
  */
-export function calculateMaxDistance(timeInSeconds: number): number {
+export function calculateMaxDistance({ timeInSeconds }: TimeConfig): number {
   // Subtract overhead time (takeoff, landing, taxi)
   const cruiseTimeSeconds = Math.max(
     0,
@@ -90,7 +122,7 @@ export function calculateMaxDistance(timeInSeconds: number): number {
  * estimateFlightTime(2500); // Returns ~21500 seconds (~6 hours)
  * ```
  */
-export function estimateFlightTime(distanceInMiles: number): number {
+export function estimateFlightTime({ distanceInMiles }: DistanceConfig): number {
   // Calculate cruise time
   const cruiseTimeHours = distanceInMiles / FLIGHT_CONSTANTS.CRUISE_SPEED_MPH;
   const cruiseTimeSeconds = cruiseTimeHours * 3600;
@@ -107,8 +139,8 @@ export function estimateFlightTime(distanceInMiles: number): number {
  * @param timeInSeconds - Flight duration in seconds
  * @returns Flight estimation details
  */
-export function getFlightEstimate(timeInSeconds: number): FlightEstimate {
-  const distanceInMiles = calculateMaxDistance(timeInSeconds);
+export function getFlightEstimate({ timeInSeconds }: TimeConfig): FlightEstimate {
+  const distanceInMiles = calculateMaxDistance({ timeInSeconds });
 
   return {
     timeInSeconds,
@@ -127,7 +159,7 @@ function mapAirportsWithFlightTime(
       lat: airport.lat,
       lon: airport.lon,
     });
-    const flightTime = estimateFlightTime(distance);
+    const flightTime = estimateFlightTime({ distanceInMiles: distance });
 
     return {
       ...airport,
@@ -162,12 +194,19 @@ export function prioritizeDestinations(
   });
 }
 
-export function getFlightTimeBucket(
-  timeInSeconds: number,
-  bucketSizeInSeconds: number = TIME_SLIDER_CONFIG.SNAP_INTERVAL,
-  initialBucketMaxTime: number = TIME_SLIDER_CONFIG.MIN_TIME
-): FlightTimeBucket {
-  if (timeInSeconds <= initialBucketMaxTime) {
+export function getFlightTimeBucket({
+  timeInSeconds,
+  bucketSizeInSeconds = TIME_SLIDER_CONFIG.SNAP_INTERVAL,
+  initialBucketMaxTime = TIME_SLIDER_CONFIG.MIN_TIME,
+}: FlightTimeBucketConfig): FlightTimeBucket {
+  const boundedTime = Math.max(initialBucketMaxTime, timeInSeconds);
+  const stepsFromInitialBucket = Math.ceil(
+    (boundedTime - initialBucketMaxTime) / bucketSizeInSeconds
+  );
+  const snappedMaxTime =
+    initialBucketMaxTime + stepsFromInitialBucket * bucketSizeInSeconds;
+
+  if (snappedMaxTime <= initialBucketMaxTime) {
     return {
       minTimeInSeconds: 0,
       maxTimeInSeconds: initialBucketMaxTime,
@@ -175,15 +214,15 @@ export function getFlightTimeBucket(
   }
 
   return {
-    minTimeInSeconds: timeInSeconds - bucketSizeInSeconds,
-    maxTimeInSeconds: timeInSeconds,
+    minTimeInSeconds: snappedMaxTime - bucketSizeInSeconds,
+    maxTimeInSeconds: snappedMaxTime,
   };
 }
 
-function isInFlightTimeBucket(
-  flightTime: number,
-  bucket: FlightTimeBucket
-): boolean {
+function isInFlightTimeBucket({
+  flightTime,
+  bucket,
+}: FlightBucketMembershipConfig): boolean {
   if (bucket.minTimeInSeconds === 0) {
     return flightTime <= bucket.maxTimeInSeconds;
   }
@@ -214,13 +253,13 @@ function isInFlightTimeBucket(
  * // Returns airports within ~2000 miles (includes LA, Seattle, Miami, etc.)
  * ```
  */
-export function getDestinationsInTimeRange(
-  origin: Coordinates,
-  timeInSeconds: number,
-  tolerance: number = FLIGHT_CONSTANTS.DEFAULT_TOLERANCE
-): AirportWithFlightTime[] {
+export function getDestinationsInTimeRange({
+  origin,
+  timeInSeconds,
+  tolerance = FLIGHT_CONSTANTS.DEFAULT_TOLERANCE,
+}: TimeRangeConfig): AirportWithFlightTime[] {
   // Calculate maximum distance with tolerance
-  const baseDistance = calculateMaxDistance(timeInSeconds);
+  const baseDistance = calculateMaxDistance({ timeInSeconds });
   const maxDistance = baseDistance * (1 + tolerance);
 
   // Get airports within distance range
@@ -259,12 +298,12 @@ export function getDestinationsInTimeRange(
  * // Returns all airports within ~525 miles
  * ```
  */
-export function getDestinationsByFlightTime(
-  origin: Coordinates,
-  maxFlightTime: number
-): AirportWithFlightTime[] {
+export function getDestinationsByFlightTime({
+  origin,
+  maxFlightTime,
+}: MaxFlightTimeConfig): AirportWithFlightTime[] {
   // Calculate maximum distance
-  const maxDistance = calculateMaxDistance(maxFlightTime);
+  const maxDistance = calculateMaxDistance({ timeInSeconds: maxFlightTime });
 
   // Get all airports within distance
   const airports = getAirportsWithinDistance(origin, maxDistance);
@@ -276,18 +315,22 @@ export function getDestinationsByFlightTime(
   return airportsWithTime.sort((a, b) => a.distance - b.distance);
 }
 
-export function getDestinationsInTimeBucket(
-  origin: Coordinates,
-  timeInSeconds: number,
-  bucketSizeInSeconds: number = TIME_SLIDER_CONFIG.SNAP_INTERVAL,
-  initialBucketMaxTime: number = TIME_SLIDER_CONFIG.MIN_TIME
-): AirportWithFlightTime[] {
-  const bucket = getFlightTimeBucket(timeInSeconds, bucketSizeInSeconds, initialBucketMaxTime);
-  const maxDistance = calculateMaxDistance(bucket.maxTimeInSeconds);
+export function getDestinationsInTimeBucket({
+  origin,
+  timeInSeconds,
+  bucketSizeInSeconds = TIME_SLIDER_CONFIG.SNAP_INTERVAL,
+  initialBucketMaxTime = TIME_SLIDER_CONFIG.MIN_TIME,
+}: TimeBucketLookupConfig): AirportWithFlightTime[] {
+  const bucket = getFlightTimeBucket({
+    timeInSeconds,
+    bucketSizeInSeconds,
+    initialBucketMaxTime,
+  });
+  const maxDistance = calculateMaxDistance({ timeInSeconds: bucket.maxTimeInSeconds });
   const airports = getAirportsWithinDistance(origin, maxDistance);
   const airportsWithTime = mapAirportsWithFlightTime(origin, airports);
   const filtered = airportsWithTime.filter((airport) => {
-    return isInFlightTimeBucket(airport.flightTime, bucket);
+    return isInFlightTimeBucket({ flightTime: airport.flightTime, bucket });
   });
 
   return prioritizeDestinations(filtered);

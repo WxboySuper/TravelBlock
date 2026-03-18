@@ -161,10 +161,10 @@ describe('useDestinations', () => {
     });
 
     expect(getDestinationsByFlightTime).toHaveBeenCalledTimes(1);
-    expect(getDestinationsByFlightTime).toHaveBeenCalledWith(
-      { lat: mockOrigin.lat, lon: mockOrigin.lon },
-      7200
-    );
+    expect(getDestinationsByFlightTime).toHaveBeenCalledWith({
+      origin: { lat: mockOrigin.lat, lon: mockOrigin.lon },
+      maxFlightTime: 7200,
+    });
     expect(hook.current.destinations).toEqual(mockDestinations);
     expect(hook.current.isLoading).toBe(false);
 
@@ -222,12 +222,12 @@ describe('useDestinations', () => {
       await Promise.resolve();
     });
 
-    expect(getDestinationsInTimeBucket).toHaveBeenCalledWith(
-      { lat: mockOrigin.lat, lon: mockOrigin.lon },
-      4200,
-      600,
-      1800
-    );
+    expect(getDestinationsInTimeBucket).toHaveBeenCalledWith({
+      origin: { lat: mockOrigin.lat, lon: mockOrigin.lon },
+      timeInSeconds: 4200,
+      bucketSizeInSeconds: 600,
+      initialBucketMaxTime: 1800,
+    });
     expect(hook.current.destinations).toEqual(mockDestinations);
     hook.unmount();
   });

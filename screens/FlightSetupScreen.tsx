@@ -12,15 +12,14 @@ import { useDestinations } from '@/hooks/useDestinations';
 import { useHomeAirport } from '@/hooks/useHomeAirport';
 import { getFlightTimeBucket } from '@/services/radiusService';
 import type { Airport } from '@/types/airport';
-import { AirportWithFlightTime } from '@/types/radius';
+import type { AirportWithFlightTime } from '@/types/radius';
 import { formatTimeValue, TIME_SLIDER_CONFIG } from '@/utils/timeSlider';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const FOOTER_HEIGHT = 94;
 
 const styles = StyleSheet.create({
   container: {
@@ -195,7 +194,7 @@ function OriginSummaryCard({ airport }: { airport: Airport | null }) {
       </View>
       <View style={styles.originCodeRow}>
         <ThemedText type="title">{airport.icao}</ThemedText>
-        {!!airport.iata && (
+        {Boolean(airport.iata) && (
           <ThemedText style={[styles.originIata, { color: colors.primary }]}>
             {airport.iata}
           </ThemedText>
@@ -220,6 +219,13 @@ function FlightTimeCard({
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const bucketPill = (
+    <View style={[styles.bucketPill, { backgroundColor: colors.surfaceElevated }]}>
+      <ThemedText style={[styles.bucketPillText, { color: colors.primary }]}>
+        {bucketLabel}
+      </ThemedText>
+    </View>
+  );
 
   return (
     <View
@@ -232,16 +238,7 @@ function FlightTimeCard({
       ]}
     >
       <View style={styles.sliderPanelTop}>
-        <View style={styles.sliderValueRow}>
-          <ThemedText style={[styles.panelLabel, { color: colors.textSecondary }]}>
-            Flight Window
-          </ThemedText>
-          <View style={[styles.bucketPill, { backgroundColor: colors.surfaceElevated }]}>
-            <ThemedText style={[styles.bucketPillText, { color: colors.primary }]}>
-              {bucketLabel}
-            </ThemedText>
-          </View>
-        </View>
+        <FlightTimeCardHeader bucketPill={bucketPill} textSecondary={colors.textSecondary} />
         <TimeValue seconds={flightTime} />
       </View>
       <TimeSlider value={flightTime} onValueChange={onFlightTimeChange} />
@@ -252,9 +249,11 @@ function FlightTimeCard({
 function FlightSetupFooter({
   onStart,
   isDisabled,
+  onLayout,
 }: {
   onStart: () => void;
   isDisabled: boolean;
+  onLayout: (event: LayoutChangeEvent) => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -262,6 +261,7 @@ function FlightSetupFooter({
 
   return (
     <View
+      onLayout={onLayout}
       style={[
         styles.footer,
         {
@@ -282,11 +282,11 @@ function FlightSetupFooter({
 }
 
 function formatBucketLabel(flightTime: number): string {
-  const bucket = getFlightTimeBucket(
-    flightTime,
-    TIME_SLIDER_CONFIG.SNAP_INTERVAL,
-    TIME_SLIDER_CONFIG.MIN_TIME
-  );
+  const bucket = getFlightTimeBucket({
+    timeInSeconds: flightTime,
+    bucketSizeInSeconds: TIME_SLIDER_CONFIG.SNAP_INTERVAL,
+    initialBucketMaxTime: TIME_SLIDER_CONFIG.MIN_TIME,
+  });
   const maxLabel = formatTimeValue(bucket.maxTimeInSeconds).formatted;
 
   if (bucket.minTimeInSeconds === 0) {
@@ -302,7 +302,6 @@ export default function FlightSetupScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const insets = useSafeAreaInsets();
   const {
     origin,
     destination,
@@ -313,6 +312,7 @@ export default function FlightSetupScreen() {
   } = useFlight();
 
   const [localFlightTime, setLocalFlightTime] = useState(flightDuration);
+  const [footerHeight, setFooterHeight] = useState(0);
 
   useEffect(() => {
     if (homeAirport && (!origin || origin.icao !== homeAirport.icao)) {
@@ -337,7 +337,7 @@ export default function FlightSetupScreen() {
     : null;
 
   const bucketLabel = useMemo(() => formatBucketLabel(localFlightTime), [localFlightTime]);
-  const footerInset = FOOTER_HEIGHT + insets.bottom + Spacing.xl;
+  const footerInset = footerHeight + Spacing.xl;
 
   const handleFlightTimeChange = useCallback((time: number) => {
     setLocalFlightTime(time);
@@ -362,6 +362,13 @@ export default function FlightSetupScreen() {
     impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
     router.back();
   }, [router]);
+
+  const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextHeight = event.nativeEvent.layout.height;
+    setFooterHeight((currentHeight) => {
+      return currentHeight === nextHeight ? currentHeight : nextHeight;
+    });
+  }, []);
 
   return (
     <ThemedView style={styles.container}>
@@ -392,7 +399,7 @@ export default function FlightSetupScreen() {
               onSelectDestination={handleSelectDestination}
               isLoading={isLoadingDestinations}
               error={destinationsError}
-              compactCards={true}
+              compactCards
               contentBottomInset={footerInset}
               headerSubtitle={bucketLabel}
               testID="destinations-list"
@@ -403,8 +410,26 @@ export default function FlightSetupScreen() {
         <FlightSetupFooter
           onStart={handleReviewFlight}
           isDisabled={!destination || !homeAirport}
+          onLayout={handleFooterLayout}
         />
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+function FlightTimeCardHeader({
+  bucketPill,
+  textSecondary,
+}: {
+  bucketPill: ReactNode;
+  textSecondary: string;
+}) {
+  return (
+    <View style={styles.sliderValueRow}>
+      <ThemedText style={[styles.panelLabel, { color: textSecondary }]}>
+        Flight Window
+      </ThemedText>
+      {bucketPill}
+    </View>
   );
 }

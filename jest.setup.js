@@ -16,6 +16,9 @@ jest.mock('expo-constants', () => ({
     nativeAppBuildVersion: '1',
   },
 }));
+
+// Tell React we are running tests so act() works without noisy warnings.
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
  
 
 

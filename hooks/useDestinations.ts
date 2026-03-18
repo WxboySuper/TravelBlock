@@ -5,10 +5,11 @@
  */
 
 import { getDestinationsByFlightTime, getDestinationsInTimeRange } from "@/services/radiusService";
+import { loadAirports } from "@/services/airportService";
 import { Airport } from "@/types/airport";
 import { Coordinates } from "@/types/location";
 import { AirportWithFlightTime } from "@/types/radius";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface UseDestinationsOptions {
   /** Origin airport */
@@ -70,7 +71,8 @@ export function useDestinations({
   const [destinations, setDestinations] = useState<AirportWithFlightTime[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
 
   // Convert origin to coordinates
   const originCoords: Coordinates | null = useMemo(() => {
@@ -79,7 +81,9 @@ export function useDestinations({
   }, [origin]);
 
   // Fetch destinations
-  const fetchDestinations = useCallback(() => {
+  const fetchDestinations = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+
     if (!originCoords) {
       setDestinations([]);
       setError("No origin airport selected");
@@ -91,6 +95,11 @@ export function useDestinations({
     setError(null);
 
     try {
+      await loadAirports();
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       let results: AirportWithFlightTime[];
 
       if (useTimeRange) {
@@ -103,12 +112,24 @@ export function useDestinations({
         results = getDestinationsByFlightTime(originCoords, flightTimeInSeconds);
       }
 
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       setDestinations(results);
       setError(null);
     } catch (err) {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       setError(err instanceof Error ? err.message : "Failed to fetch destinations");
       setDestinations([]);
     } finally {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       setIsLoading(false);
     }
   }, [originCoords, flightTimeInSeconds, useTimeRange, tolerance]);
@@ -116,27 +137,28 @@ export function useDestinations({
   // Debounced fetch
   useEffect(() => {
     // Clear existing timer
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
     // Set new timer
     const timer = setTimeout(() => {
-      fetchDestinations();
+      void fetchDestinations();
     }, debounceMs);
 
-    setDebounceTimer(timer);
+    debounceTimerRef.current = timer;
 
     // Cleanup
     return () => {
-      if (timer) {
-        clearTimeout(timer);
+      if (debounceTimerRef.current === timer) {
+        debounceTimerRef.current = null;
       }
+      clearTimeout(timer);
     };
-  }, [flightTimeInSeconds, originCoords, useTimeRange, tolerance]);
+  }, [debounceMs, fetchDestinations]);
 
   const refresh = useCallback(() => {
-    fetchDestinations();
+    void fetchDestinations();
   }, [fetchDestinations]);
 
   return {

@@ -42,7 +42,8 @@ interface SliderValueArgs {
 
 const TRACK_HEIGHT = 8;
 const THUMB_SIZE = 32;
-const SPRING_CONFIG = { damping: 20, stiffness: 200, useNativeDriver: false };
+const THUMB_SPRING_CONFIG = { damping: 20, stiffness: 200, useNativeDriver: true };
+const TRACK_SPRING_CONFIG = { damping: 20, stiffness: 200, useNativeDriver: false };
 
 const styles = StyleSheet.create({
   container: {
@@ -97,7 +98,9 @@ function clampPosition(trackWidth: number, position: number) {
 
 function valueToPosition({ range, trackWidth, value }: SliderValueArgs) {
   if (trackWidth === 0) return 0;
-  const normalizedValue = (value - range.minValue) / (range.maxValue - range.minValue);
+  const constrainedValue = getTimeInRange(value, range.minValue, range.maxValue);
+  const normalizedValue =
+    (constrainedValue - range.minValue) / (range.maxValue - range.minValue);
   return normalizedValue * trackWidth;
 }
 
@@ -130,7 +133,8 @@ export function TimeSlider({
     [defaultRange.interval, defaultRange.max, defaultRange.min, interval, max, min]
   );
 
-  const position = useRef(new Animated.Value(0)).current;
+  const thumbPosition = useRef(new Animated.Value(0)).current;
+  const activeTrackWidth = useRef(new Animated.Value(0)).current;
   const trackWidthRef = useRef(0);
   const currentPositionRef = useRef(0);
   const gestureStartRef = useRef(0);
@@ -144,9 +148,10 @@ export function TimeSlider({
   const setPosition = useCallback(
     (nextPosition: number) => {
       currentPositionRef.current = nextPosition;
-      position.setValue(nextPosition);
+      thumbPosition.setValue(nextPosition);
+      activeTrackWidth.setValue(nextPosition);
     },
-    [position]
+    [activeTrackWidth, thumbPosition]
   );
 
   const animateToValue = useCallback(
@@ -157,13 +162,31 @@ export function TimeSlider({
         value: nextValue,
       });
       currentPositionRef.current = nextPosition;
-      Animated.spring(position, {
-        toValue: nextPosition,
-        ...SPRING_CONFIG,
-      }).start();
+      Animated.parallel([
+        Animated.spring(thumbPosition, {
+          toValue: nextPosition,
+          ...THUMB_SPRING_CONFIG,
+        }),
+        Animated.spring(activeTrackWidth, {
+          toValue: nextPosition,
+          ...TRACK_SPRING_CONFIG,
+        }),
+      ]).start();
     },
-    [position, range]
+    [activeTrackWidth, range, thumbPosition]
   );
+
+  const finishGesture = useCallback(() => {
+    const finalValue = positionToValue({
+      trackWidth: trackWidthRef.current,
+      range,
+      position: currentPositionRef.current,
+    });
+    isDraggingRef.current = false;
+    lastEmittedValueRef.current = finalValue;
+    animateToValue(finalValue);
+    onGestureEnd?.();
+  }, [animateToValue, onGestureEnd, range]);
 
   const emitValue = useCallback(
     (nextValue: number, withHaptic: boolean) => {
@@ -217,7 +240,7 @@ export function TimeSlider({
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
           isDraggingRef.current = true;
-          position.stopAnimation((animatedPosition) => {
+          thumbPosition.stopAnimation((animatedPosition) => {
             currentPositionRef.current = animatedPosition;
             gestureStartRef.current = animatedPosition;
           });
@@ -243,32 +266,10 @@ export function TimeSlider({
             triggerHaptic();
           }
         },
-        onPanResponderRelease: () => {
-          const finalValue = positionToValue({
-            trackWidth: trackWidthRef.current,
-            range,
-            position: currentPositionRef.current,
-          });
-          isDraggingRef.current = false;
-          lastEmittedValueRef.current = finalValue;
-          animateToValue(finalValue);
-          onGestureEnd?.();
-        },
-        onPanResponderTerminate: () => {
-          isDraggingRef.current = false;
-          onGestureEnd?.();
-        },
+        onPanResponderRelease: finishGesture,
+        onPanResponderTerminate: finishGesture,
       }),
-    [
-      animateToValue,
-      onGestureEnd,
-      onGestureStart,
-      onValueChange,
-      position,
-      range,
-      setPosition,
-      triggerHaptic,
-    ]
+    [finishGesture, onGestureStart, onValueChange, range, setPosition, thumbPosition, triggerHaptic]
   );
 
   return (
@@ -283,13 +284,13 @@ export function TimeSlider({
           <Animated.View
             style={[
               styles.activeTrack,
-              { backgroundColor: colors.tint, width: position },
+              { backgroundColor: colors.tint, width: activeTrackWidth },
             ]}
           />
         </Pressable>
 
         <Animated.View
-          style={[styles.thumbContainer, { transform: [{ translateX: position }] }]}
+          style={[styles.thumbContainer, { transform: [{ translateX: thumbPosition }] }]}
           {...panResponder.panHandlers}
         >
           <View style={[styles.thumb, { borderColor: colors.tint }]} />

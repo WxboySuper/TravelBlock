@@ -3,8 +3,8 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>'],
-  testMatch: ['**/__tests__/utils/**/*.test.ts', '**/__tests__/services/**/*.test.ts'],
-  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
+  testMatch: ['**/__tests__/utils/**/*.test.ts', '**/__tests__/services/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'json', 'node'],
   testPathIgnorePatterns: ['/node_modules/', '/.expo/'],
   collectCoverageFrom: [
     'utils/**/*.ts',

@@ -5,10 +5,12 @@
  */
 
 import { getDestinationsByFlightTime, getDestinationsInTimeRange } from "@/services/radiusService";
+import { loadAirports } from "@/services/airportService";
 import { Airport } from "@/types/airport";
 import { Coordinates } from "@/types/location";
 import { AirportWithFlightTime } from "@/types/radius";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 
 interface UseDestinationsOptions {
   /** Origin airport */
@@ -32,6 +34,114 @@ interface UseDestinationsResult {
   error: string | null;
   /** Refresh destinations */
   refresh: () => void;
+}
+
+interface DestinationStateSetters {
+  setDestinations: Dispatch<SetStateAction<AirportWithFlightTime[]>>;
+  setError: Dispatch<SetStateAction<string | null>>;
+  setIsLoading: Dispatch<SetStateAction<boolean>>;
+}
+
+function getOriginCoordinates(origin: Airport | null): Coordinates | null {
+  if (!origin) return null;
+  return { lat: origin.lat, lon: origin.lon };
+}
+
+function clearDebounceTimer(
+  debounceTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
+) {
+  if (!debounceTimerRef.current) {
+    return;
+  }
+
+  clearTimeout(debounceTimerRef.current);
+  debounceTimerRef.current = null;
+}
+
+function invalidateDestinationRequests(
+  requestIdRef: MutableRefObject<number>,
+  debounceTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
+) {
+  requestIdRef.current += 1;
+  clearDebounceTimer(debounceTimerRef);
+}
+
+function isCurrentRequest(
+  requestIdRef: MutableRefObject<number>,
+  requestId: number
+) {
+  return requestId === requestIdRef.current;
+}
+
+function resolveDestinations(
+  originCoords: Coordinates,
+  flightTimeInSeconds: number,
+  useTimeRange: boolean,
+  tolerance?: number
+) {
+  return useTimeRange
+    ? getDestinationsInTimeRange(originCoords, flightTimeInSeconds, tolerance)
+    : getDestinationsByFlightTime(originCoords, flightTimeInSeconds);
+}
+
+async function fetchDestinations({
+  requestIdRef,
+  originCoords,
+  flightTimeInSeconds,
+  useTimeRange,
+  tolerance,
+  setDestinations,
+  setError,
+  setIsLoading,
+}: {
+  requestIdRef: MutableRefObject<number>;
+  originCoords: Coordinates | null;
+  flightTimeInSeconds: number;
+  useTimeRange: boolean;
+  tolerance?: number;
+} & DestinationStateSetters) {
+  const requestId = ++requestIdRef.current;
+
+  if (!originCoords) {
+    setDestinations([]);
+    setError("No origin airport selected");
+    setIsLoading(false);
+    return;
+  }
+
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    await loadAirports();
+    if (!isCurrentRequest(requestIdRef, requestId)) {
+      return;
+    }
+
+    const results = resolveDestinations(
+      originCoords,
+      flightTimeInSeconds,
+      useTimeRange,
+      tolerance
+    );
+    if (!isCurrentRequest(requestIdRef, requestId)) {
+      return;
+    }
+
+    setDestinations(results);
+    setError(null);
+  } catch (err) {
+    if (!isCurrentRequest(requestIdRef, requestId)) {
+      return;
+    }
+
+    setError(err instanceof Error ? err.message : "Failed to fetch destinations");
+    setDestinations([]);
+  } finally {
+    if (isCurrentRequest(requestIdRef, requestId)) {
+      setIsLoading(false);
+    }
+  }
 }
 
 /**
@@ -70,74 +180,51 @@ export function useDestinations({
   const [destinations, setDestinations] = useState<AirportWithFlightTime[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
 
-  // Convert origin to coordinates
-  const originCoords: Coordinates | null = useMemo(() => {
-    if (!origin) return null;
-    return { lat: origin.lat, lon: origin.lon };
-  }, [origin]);
+  useEffect(() => {
+    return () => invalidateDestinationRequests(requestIdRef, debounceTimerRef);
+  }, []);
 
-  // Fetch destinations
-  const fetchDestinations = useCallback(() => {
-    if (!originCoords) {
-      setDestinations([]);
-      setError("No origin airport selected");
-      setIsLoading(false);
-      return;
-    }
+  const originCoords = useMemo(() => getOriginCoordinates(origin), [origin]);
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      let results: AirportWithFlightTime[];
-
-      if (useTimeRange) {
-        results = getDestinationsInTimeRange(
-          originCoords,
-          flightTimeInSeconds,
-          tolerance
-        );
-      } else {
-        results = getDestinationsByFlightTime(originCoords, flightTimeInSeconds);
-      }
-
-      setDestinations(results);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch destinations");
-      setDestinations([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [originCoords, flightTimeInSeconds, useTimeRange, tolerance]);
+  const fetchAndStoreDestinations = useCallback(() => {
+    return fetchDestinations({
+      requestIdRef,
+      originCoords,
+      flightTimeInSeconds,
+      useTimeRange,
+      tolerance,
+      setDestinations,
+      setError,
+      setIsLoading,
+    });
+  }, [flightTimeInSeconds, originCoords, tolerance, useTimeRange]);
 
   // Debounced fetch
   useEffect(() => {
-    // Clear existing timer
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
+    clearDebounceTimer(debounceTimerRef);
 
     // Set new timer
     const timer = setTimeout(() => {
-      fetchDestinations();
+      fetchAndStoreDestinations().catch(() => undefined);
     }, debounceMs);
 
-    setDebounceTimer(timer);
+    debounceTimerRef.current = timer;
 
     // Cleanup
     return () => {
-      if (timer) {
-        clearTimeout(timer);
+      if (debounceTimerRef.current === timer) {
+        debounceTimerRef.current = null;
       }
+      clearTimeout(timer);
     };
-  }, [flightTimeInSeconds, originCoords, useTimeRange, tolerance]);
+  }, [debounceMs, fetchAndStoreDestinations]);
 
   const refresh = useCallback(() => {
-    fetchDestinations();
-  }, [fetchDestinations]);
+    fetchAndStoreDestinations().catch(() => undefined);
+  }, [fetchAndStoreDestinations]);
 
   return {
     destinations,

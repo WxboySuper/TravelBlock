@@ -176,6 +176,18 @@ export function TimeSlider({
     [activeTrackWidth, range, thumbPosition]
   );
 
+  const finishGesture = useCallback(() => {
+    const finalValue = positionToValue({
+      trackWidth: trackWidthRef.current,
+      range,
+      position: currentPositionRef.current,
+    });
+    isDraggingRef.current = false;
+    lastEmittedValueRef.current = finalValue;
+    animateToValue(finalValue);
+    onGestureEnd?.();
+  }, [animateToValue, onGestureEnd, range]);
+
   const emitValue = useCallback(
     (nextValue: number, withHaptic: boolean) => {
       if (nextValue === lastEmittedValueRef.current) {
@@ -254,39 +266,10 @@ export function TimeSlider({
             triggerHaptic();
           }
         },
-        onPanResponderRelease: () => {
-          const finalValue = positionToValue({
-            trackWidth: trackWidthRef.current,
-            range,
-            position: currentPositionRef.current,
-          });
-          isDraggingRef.current = false;
-          lastEmittedValueRef.current = finalValue;
-          animateToValue(finalValue);
-          onGestureEnd?.();
-        },
-        onPanResponderTerminate: () => {
-          const finalValue = positionToValue({
-            trackWidth: trackWidthRef.current,
-            range,
-            position: currentPositionRef.current,
-          });
-          isDraggingRef.current = false;
-          lastEmittedValueRef.current = finalValue;
-          animateToValue(finalValue);
-          onGestureEnd?.();
-        },
+        onPanResponderRelease: finishGesture,
+        onPanResponderTerminate: finishGesture,
       }),
-    [
-      animateToValue,
-      onGestureEnd,
-      onGestureStart,
-      onValueChange,
-      range,
-      setPosition,
-      triggerHaptic,
-      thumbPosition,
-    ]
+    [finishGesture, onGestureStart, onValueChange, range, setPosition, thumbPosition, triggerHaptic]
   );
 
   return (

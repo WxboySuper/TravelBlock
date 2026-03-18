@@ -4,7 +4,11 @@
  * @module hooks/useDestinations
  */
 
-import { getDestinationsByFlightTime, getDestinationsInTimeRange } from "@/services/radiusService";
+import {
+  getDestinationsByFlightTime,
+  getDestinationsInTimeBucket,
+  getDestinationsInTimeRange,
+} from "@/services/radiusService";
 import { loadAirports } from "@/services/airportService";
 import { Airport } from "@/types/airport";
 import { Coordinates } from "@/types/location";
@@ -17,8 +21,12 @@ interface UseDestinationsOptions {
   origin: Airport | null;
   /** Flight time in seconds */
   flightTimeInSeconds: number;
-  /** Whether to use exact time range (true) or max time (false) */
+  /** Whether to use exact time range (true) or max time (false) when no bucket is configured */
   useTimeRange?: boolean;
+  /** If provided, bucketed lookup is used regardless of useTimeRange */
+  bucketIntervalSeconds?: number;
+  /** Maximum time for the first bucket */
+  initialBucketMaxTime?: number;
   /** Tolerance for time range matching (default: 5%) */
   tolerance?: number;
   /** Debounce delay in milliseconds (default: 300ms) */
@@ -73,15 +81,42 @@ function isCurrentRequest(
   return requestId === requestIdRef.current;
 }
 
-function resolveDestinations(
-  originCoords: Coordinates,
-  flightTimeInSeconds: number,
-  useTimeRange: boolean,
-  tolerance?: number
-) {
+interface DestinationResolutionConfig {
+  originCoords: Coordinates;
+  flightTimeInSeconds: number;
+  useTimeRange: boolean;
+  bucketIntervalSeconds?: number;
+  initialBucketMaxTime?: number;
+  tolerance?: number;
+}
+
+function resolveDestinations({
+  originCoords,
+  flightTimeInSeconds,
+  useTimeRange,
+  bucketIntervalSeconds,
+  initialBucketMaxTime,
+  tolerance,
+}: DestinationResolutionConfig) {
+  if (bucketIntervalSeconds) {
+    return getDestinationsInTimeBucket({
+      origin: originCoords,
+      timeInSeconds: flightTimeInSeconds,
+      bucketSizeInSeconds: bucketIntervalSeconds,
+      initialBucketMaxTime,
+    });
+  }
+
   return useTimeRange
-    ? getDestinationsInTimeRange(originCoords, flightTimeInSeconds, tolerance)
-    : getDestinationsByFlightTime(originCoords, flightTimeInSeconds);
+    ? getDestinationsInTimeRange({
+        origin: originCoords,
+        timeInSeconds: flightTimeInSeconds,
+        tolerance,
+      })
+    : getDestinationsByFlightTime({
+        origin: originCoords,
+        maxFlightTime: flightTimeInSeconds,
+      });
 }
 
 async function fetchDestinations({
@@ -89,6 +124,8 @@ async function fetchDestinations({
   originCoords,
   flightTimeInSeconds,
   useTimeRange,
+  bucketIntervalSeconds,
+  initialBucketMaxTime,
   tolerance,
   setDestinations,
   setError,
@@ -98,6 +135,8 @@ async function fetchDestinations({
   originCoords: Coordinates | null;
   flightTimeInSeconds: number;
   useTimeRange: boolean;
+  bucketIntervalSeconds?: number;
+  initialBucketMaxTime?: number;
   tolerance?: number;
 } & DestinationStateSetters) {
   const requestId = ++requestIdRef.current;
@@ -118,12 +157,14 @@ async function fetchDestinations({
       return;
     }
 
-    const results = resolveDestinations(
+    const results = resolveDestinations({
       originCoords,
       flightTimeInSeconds,
       useTimeRange,
+      bucketIntervalSeconds,
+      initialBucketMaxTime,
       tolerance
-    );
+    });
     if (!isCurrentRequest(requestIdRef, requestId)) {
       return;
     }
@@ -174,6 +215,8 @@ export function useDestinations({
   origin,
   flightTimeInSeconds,
   useTimeRange = true,
+  bucketIntervalSeconds,
+  initialBucketMaxTime,
   tolerance,
   debounceMs = 300,
 }: UseDestinationsOptions): UseDestinationsResult {
@@ -195,12 +238,21 @@ export function useDestinations({
       originCoords,
       flightTimeInSeconds,
       useTimeRange,
+      bucketIntervalSeconds,
+      initialBucketMaxTime,
       tolerance,
       setDestinations,
       setError,
       setIsLoading,
     });
-  }, [flightTimeInSeconds, originCoords, tolerance, useTimeRange]);
+  }, [
+    bucketIntervalSeconds,
+    flightTimeInSeconds,
+    initialBucketMaxTime,
+    originCoords,
+    tolerance,
+    useTimeRange,
+  ]);
 
   // Debounced fetch
   useEffect(() => {

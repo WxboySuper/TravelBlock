@@ -3,7 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 
 import FlightSetupScreen from '@/screens/FlightSetupScreen';
 import { loadAirports } from '@/services/airportService';
-import { getDestinationsByFlightTime, getDestinationsInTimeRange } from '@/services/radiusService';
+import { getDestinationsInTimeBucket, getDestinationsInTimeRange, getFlightTimeBucket } from '@/services/radiusService';
 
 jest.mock('react-native', () => {
   type HostProps = React.PropsWithChildren<Record<string, unknown>>;
@@ -38,10 +38,14 @@ jest.mock('@/components/destinations/DestinationsList', () => ({
     destinations,
     isLoading,
     error,
+    contentBottomInset,
+    headerSubtitle,
   }: {
     destinations: Array<{ city: string }>;
     isLoading: boolean;
     error: string | null;
+    contentBottomInset?: number;
+    headerSubtitle?: string;
   }) => {
     if (isLoading) {
       return React.createElement('Text', { testID: 'destinations-state' }, 'loading');
@@ -51,9 +55,18 @@ jest.mock('@/components/destinations/DestinationsList', () => ({
     }
 
     return React.createElement(
-      'Text',
-      { testID: 'destinations-state' },
-      destinations.map((destination) => destination.city).join(',')
+      'View',
+      null,
+      React.createElement(
+        'Text',
+        { testID: 'destinations-state' },
+        destinations.map((destination) => destination.city).join(',')
+      ),
+      React.createElement(
+        'Text',
+        { testID: 'destinations-meta' },
+        `${headerSubtitle ?? ''}|${contentBottomInset ?? 0}`
+      )
     );
   },
 }));
@@ -64,7 +77,7 @@ jest.mock('@/components/time-slider/TimeSlider', () => ({
       'Pressable',
       {
         testID: 'mock-time-slider',
-        onPress: () => onValueChange(10800),
+        onPress: () => onValueChange(4200),
       },
       React.createElement('Text', null, 'Mock Slider')
     );
@@ -113,6 +126,12 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children, ...props }: { children: React.ReactNode }) => {
     return React.createElement('SafeAreaView', props, children);
   },
+  useSafeAreaInsets: () => ({
+    top: 0,
+    right: 0,
+    bottom: 20,
+    left: 0,
+  }),
 }));
 
 jest.mock('@/hooks/use-color-scheme', () => ({
@@ -163,8 +182,18 @@ jest.mock('@/services/airportService', () => ({
 }));
 
 jest.mock('@/services/radiusService', () => ({
-  getDestinationsByFlightTime: jest.fn(),
+  getDestinationsInTimeBucket: jest.fn(),
   getDestinationsInTimeRange: jest.fn(),
+  getFlightTimeBucket: jest.fn(({ timeInSeconds }: { timeInSeconds: number }) => {
+    if (timeInSeconds <= 1800) {
+      return { minTimeInSeconds: 0, maxTimeInSeconds: 1800 };
+    }
+
+    return {
+      minTimeInSeconds: timeInSeconds - 600,
+      maxTimeInSeconds: timeInSeconds,
+    };
+  }),
 }));
 
 const mockDestinations = [
@@ -210,9 +239,21 @@ describe('FlightSetupScreen', () => {
     jest.clearAllMocks();
     (loadAirports as jest.Mock).mockImplementation(() => Promise.resolve());
     (getDestinationsInTimeRange as jest.Mock).mockReturnValue([]);
-    (getDestinationsByFlightTime as jest.Mock).mockImplementation((_origin, flightTime) => {
-      return flightTime >= 10800 ? mockDestinations : mockDestinations.slice(0, 1);
+    (getFlightTimeBucket as jest.Mock).mockImplementation(({ timeInSeconds }: { timeInSeconds: number }) => {
+      if (timeInSeconds <= 1800) {
+        return { minTimeInSeconds: 0, maxTimeInSeconds: 1800 };
+      }
+
+      return {
+        minTimeInSeconds: timeInSeconds - 600,
+        maxTimeInSeconds: timeInSeconds,
+      };
     });
+    (getDestinationsInTimeBucket as jest.Mock).mockImplementation(
+      ({ timeInSeconds }: { timeInSeconds: number }) => {
+        return timeInSeconds >= 4200 ? mockDestinations : mockDestinations.slice(0, 1);
+      }
+    );
   });
 
   afterEach(() => {
@@ -239,6 +280,7 @@ describe('FlightSetupScreen', () => {
     }
 
     expect(getText(renderer, 'destinations-state')).toBe('Norman');
+    expect(getText(renderer, 'destinations-meta')).toContain('50m - 1h 0m');
 
     act(() => {
       renderer.root.findByProps({ testID: 'mock-time-slider' }).props.onPress();
@@ -257,9 +299,13 @@ describe('FlightSetupScreen', () => {
     }
 
     expect(getText(renderer, 'destinations-state')).toBe('Norman,Stillwater');
-    expect(getDestinationsByFlightTime).toHaveBeenCalledWith(
-      { lat: 35.3931, lon: -97.6007 },
-      10800
-    );
+    expect(getText(renderer, 'destinations-meta')).toContain('1h 0m - 1h 10m');
+    expect(getText(renderer, 'destinations-meta')).toContain('|32');
+    expect(getDestinationsInTimeBucket).toHaveBeenCalledWith({
+      origin: { lat: 35.3931, lon: -97.6007 },
+      timeInSeconds: 4200,
+      bucketSizeInSeconds: 600,
+      initialBucketMaxTime: 1800,
+    });
   });
 });

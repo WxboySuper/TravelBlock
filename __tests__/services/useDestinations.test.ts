@@ -3,7 +3,11 @@ import TestRenderer, { act } from 'react-test-renderer';
 
 import { useDestinations } from '@/hooks/useDestinations';
 import { loadAirports } from '@/services/airportService';
-import { getDestinationsByFlightTime, getDestinationsInTimeRange } from '@/services/radiusService';
+import {
+  getDestinationsByFlightTime,
+  getDestinationsInTimeBucket,
+  getDestinationsInTimeRange,
+} from '@/services/radiusService';
 import type { Airport } from '@/types/airport';
 import type { AirportWithFlightTime } from '@/types/radius';
 
@@ -13,6 +17,7 @@ jest.mock('@/services/airportService', () => ({
 
 jest.mock('@/services/radiusService', () => ({
   getDestinationsByFlightTime: jest.fn(),
+  getDestinationsInTimeBucket: jest.fn(),
   getDestinationsInTimeRange: jest.fn(),
 }));
 
@@ -53,6 +58,8 @@ function renderUseDestinations({
   origin,
   flightTimeInSeconds,
   useTimeRange,
+  bucketIntervalSeconds,
+  initialBucketMaxTime,
   debounceMs,
 }: UseDestinationsProps) {
   let latestResult: ReturnType<typeof useDestinations> | null = null;
@@ -69,6 +76,8 @@ function renderUseDestinations({
         origin,
         flightTimeInSeconds,
         useTimeRange,
+        bucketIntervalSeconds,
+        initialBucketMaxTime,
         debounceMs,
       })
     );
@@ -108,6 +117,7 @@ describe('useDestinations', () => {
     jest.clearAllMocks();
     (loadAirports as jest.Mock).mockImplementation(() => Promise.resolve());
     (getDestinationsByFlightTime as jest.Mock).mockReturnValue(mockDestinations);
+    (getDestinationsInTimeBucket as jest.Mock).mockReturnValue(mockDestinations);
     (getDestinationsInTimeRange as jest.Mock).mockReturnValue([]);
   });
 
@@ -151,10 +161,10 @@ describe('useDestinations', () => {
     });
 
     expect(getDestinationsByFlightTime).toHaveBeenCalledTimes(1);
-    expect(getDestinationsByFlightTime).toHaveBeenCalledWith(
-      { lat: mockOrigin.lat, lon: mockOrigin.lon },
-      7200
-    );
+    expect(getDestinationsByFlightTime).toHaveBeenCalledWith({
+      origin: { lat: mockOrigin.lat, lon: mockOrigin.lon },
+      maxFlightTime: 7200,
+    });
     expect(hook.current.destinations).toEqual(mockDestinations);
     expect(hook.current.isLoading).toBe(false);
 
@@ -192,5 +202,33 @@ describe('useDestinations', () => {
     });
 
     expect(getDestinationsByFlightTime).not.toHaveBeenCalled();
+  });
+
+  it('uses the bucketed lookup when a bucket interval is provided', async () => {
+    const hook = renderUseDestinations({
+      origin: mockOrigin,
+      flightTimeInSeconds: 4200,
+      useTimeRange: false,
+      bucketIntervalSeconds: 600,
+      initialBucketMaxTime: 1800,
+      debounceMs: 5,
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(5);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getDestinationsInTimeBucket).toHaveBeenCalledWith({
+      origin: { lat: mockOrigin.lat, lon: mockOrigin.lon },
+      timeInSeconds: 4200,
+      bucketSizeInSeconds: 600,
+      initialBucketMaxTime: 1800,
+    });
+    expect(hook.current.destinations).toEqual(mockDestinations);
+    hook.unmount();
   });
 });

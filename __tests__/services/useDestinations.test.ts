@@ -160,4 +160,37 @@ describe('useDestinations', () => {
 
     hook.unmount();
   });
+
+  it('ignores in-flight destination work after unmount', async () => {
+    let resolveLoadAirports: (() => void) | null = null;
+    (loadAirports as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveLoadAirports = resolve;
+        })
+    );
+
+    const hook = renderUseDestinations({
+      origin: mockOrigin,
+      flightTimeInSeconds: 7200,
+      useTimeRange: false,
+      debounceMs: 5,
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(5);
+    });
+
+    hook.unmount();
+
+    act(() => {
+      resolveLoadAirports?.();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getDestinationsByFlightTime).not.toHaveBeenCalled();
+  });
 });

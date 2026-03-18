@@ -74,6 +74,17 @@ export function useDestinations({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
 
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // Convert origin to coordinates
   const originCoords: Coordinates | null = useMemo(() => {
     if (!origin) return null;

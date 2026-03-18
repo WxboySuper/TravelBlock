@@ -4,7 +4,11 @@
  * @module hooks/useDestinations
  */
 
-import { getDestinationsByFlightTime, getDestinationsInTimeRange } from "@/services/radiusService";
+import {
+  getDestinationsByFlightTime,
+  getDestinationsInTimeBucket,
+  getDestinationsInTimeRange,
+} from "@/services/radiusService";
 import { loadAirports } from "@/services/airportService";
 import { Airport } from "@/types/airport";
 import { Coordinates } from "@/types/location";
@@ -19,6 +23,10 @@ interface UseDestinationsOptions {
   flightTimeInSeconds: number;
   /** Whether to use exact time range (true) or max time (false) */
   useTimeRange?: boolean;
+  /** Whether to use a snapped time bucket instead of cumulative max time */
+  bucketIntervalSeconds?: number;
+  /** Maximum time for the first bucket */
+  initialBucketMaxTime?: number;
   /** Tolerance for time range matching (default: 5%) */
   tolerance?: number;
   /** Debounce delay in milliseconds (default: 300ms) */
@@ -77,8 +85,19 @@ function resolveDestinations(
   originCoords: Coordinates,
   flightTimeInSeconds: number,
   useTimeRange: boolean,
+  bucketIntervalSeconds?: number,
+  initialBucketMaxTime?: number,
   tolerance?: number
 ) {
+  if (bucketIntervalSeconds) {
+    return getDestinationsInTimeBucket(
+      originCoords,
+      flightTimeInSeconds,
+      bucketIntervalSeconds,
+      initialBucketMaxTime
+    );
+  }
+
   return useTimeRange
     ? getDestinationsInTimeRange(originCoords, flightTimeInSeconds, tolerance)
     : getDestinationsByFlightTime(originCoords, flightTimeInSeconds);
@@ -89,6 +108,8 @@ async function fetchDestinations({
   originCoords,
   flightTimeInSeconds,
   useTimeRange,
+  bucketIntervalSeconds,
+  initialBucketMaxTime,
   tolerance,
   setDestinations,
   setError,
@@ -98,6 +119,8 @@ async function fetchDestinations({
   originCoords: Coordinates | null;
   flightTimeInSeconds: number;
   useTimeRange: boolean;
+  bucketIntervalSeconds?: number;
+  initialBucketMaxTime?: number;
   tolerance?: number;
 } & DestinationStateSetters) {
   const requestId = ++requestIdRef.current;
@@ -122,6 +145,8 @@ async function fetchDestinations({
       originCoords,
       flightTimeInSeconds,
       useTimeRange,
+      bucketIntervalSeconds,
+      initialBucketMaxTime,
       tolerance
     );
     if (!isCurrentRequest(requestIdRef, requestId)) {
@@ -174,6 +199,8 @@ export function useDestinations({
   origin,
   flightTimeInSeconds,
   useTimeRange = true,
+  bucketIntervalSeconds,
+  initialBucketMaxTime,
   tolerance,
   debounceMs = 300,
 }: UseDestinationsOptions): UseDestinationsResult {
@@ -195,12 +222,21 @@ export function useDestinations({
       originCoords,
       flightTimeInSeconds,
       useTimeRange,
+      bucketIntervalSeconds,
+      initialBucketMaxTime,
       tolerance,
       setDestinations,
       setError,
       setIsLoading,
     });
-  }, [flightTimeInSeconds, originCoords, tolerance, useTimeRange]);
+  }, [
+    bucketIntervalSeconds,
+    flightTimeInSeconds,
+    initialBucketMaxTime,
+    originCoords,
+    tolerance,
+    useTimeRange,
+  ]);
 
   // Debounced fetch
   useEffect(() => {

@@ -25,6 +25,14 @@ interface DestinationsListProps {
   isLoading?: boolean;
   /** Error message if data loading failed */
   error?: string | null;
+  /** Whether the cards should use the denser Flight Setup layout */
+  compactCards?: boolean;
+  /** Extra bottom space reserved for overlapping UI like a pinned footer */
+  contentBottomInset?: number;
+  /** Optional summary text for the current destination window */
+  headerSubtitle?: string;
+  /** Test identifier */
+  testID?: string;
 }
 
 const styles = StyleSheet.create({
@@ -32,17 +40,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
   },
   header: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
   headerText: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.medium,
     textTransform: "uppercase",
+    opacity: 0.7,
+  },
+  headerSubtext: {
+    fontSize: Typography.fontSize.xs,
     opacity: 0.7,
   },
   emptyContainer: {
@@ -116,6 +135,10 @@ export function DestinationsList({
   onSelectDestination,
   isLoading = false,
   error = null,
+  compactCards = false,
+  contentBottomInset = 0,
+  headerSubtitle,
+  testID,
 }: DestinationsListProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -164,12 +187,20 @@ export function DestinationsList({
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <ThemedText style={[styles.headerText, { color: colors.textSecondary }]}>
-          {destinations.length} Available Destination{destinations.length !== 1 ? "s" : ""}
-        </ThemedText>
+        <View style={styles.headerRow}>
+          <ThemedText style={[styles.headerText, { color: colors.textSecondary }]}>
+            {destinations.length} Destination{destinations.length !== 1 ? "s" : ""}
+          </ThemedText>
+          {headerSubtitle ? (
+            <ThemedText style={[styles.headerSubtext, { color: colors.textSecondary }]}>
+              {headerSubtitle}
+            </ThemedText>
+          ) : null}
+        </View>
       </View>
 
       <FlatList
+        testID={testID}
         data={destinations}
         keyExtractor={(item) => item.icao}
         renderItem={({ item }) => (
@@ -177,9 +208,13 @@ export function DestinationsList({
             airport={item}
             onSelect={onSelectDestination}
             isSelected={selectedDestination?.icao === item.icao}
+            compact={compactCards}
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: contentBottomInset },
+        ]}
         showsVerticalScrollIndicator={true}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}

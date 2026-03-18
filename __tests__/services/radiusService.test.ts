@@ -7,10 +7,14 @@ import {
     estimateFlightTime,
     FLIGHT_CONSTANTS,
     getDestinationsByFlightTime,
+    getDestinationsInTimeBucket,
     getDestinationsInTimeRange,
+    getFlightTimeBucket,
     getFlightEstimate,
+    prioritizeDestinations,
 } from "@/services/radiusService";
 import { Coordinates } from "@/types/location";
+import { AirportWithFlightTime } from "@/types/radius";
 
 // Mock the airportService
 jest.mock("@/services/airportService", () => ({
@@ -72,6 +76,24 @@ jest.mock("@/utils/distance", () => ({
 }));
 
 describe("radiusService", () => {
+  const buildAirportWithFlightTime = (
+    overrides: Partial<AirportWithFlightTime>
+  ): AirportWithFlightTime => ({
+    icao: "KTEST",
+    iata: "TST",
+    name: "Test Airport",
+    city: "Test City",
+    country: "US",
+    state: "OK",
+    lat: 35,
+    lon: -97,
+    elevation: 1000,
+    tz: "America/Chicago",
+    distance: 100,
+    flightTime: 3600,
+    ...overrides,
+  });
+
   describe("FLIGHT_CONSTANTS", () => {
     it("should have correct constant values", () => {
       expect(FLIGHT_CONSTANTS.CRUISE_SPEED_MPH).toBe(450);
@@ -264,6 +286,117 @@ describe("radiusService", () => {
         expect(airport.distance).toBeGreaterThan(0);
         expect(airport.flightTime).toBeGreaterThan(0);
       });
+    });
+  });
+
+  describe("getFlightTimeBucket", () => {
+    it("uses the full 30 minute range for the first bucket", () => {
+      expect(getFlightTimeBucket(1800)).toEqual({
+        minTimeInSeconds: 0,
+        maxTimeInSeconds: 1800,
+      });
+    });
+
+    it("uses the previous 10 minute step for later buckets", () => {
+      expect(getFlightTimeBucket(4200)).toEqual({
+        minTimeInSeconds: 3600,
+        maxTimeInSeconds: 4200,
+      });
+    });
+  });
+
+  describe("prioritizeDestinations", () => {
+    it("prioritizes major airport keywords before smaller fields", () => {
+      const prioritized = prioritizeDestinations([
+        buildAirportWithFlightTime({
+          icao: "KREG",
+          iata: "REG",
+          name: "Prairie Regional Airport",
+          city: "Prairie",
+          distance: 200,
+          flightTime: 3900,
+        }),
+        buildAirportWithFlightTime({
+          icao: "KINT",
+          iata: "INT",
+          name: "Metro International Airport",
+          city: "Metro",
+          distance: 240,
+          flightTime: 4000,
+        }),
+        buildAirportWithFlightTime({
+          icao: "KWLD",
+          iata: "WLD",
+          name: "Global World Airport",
+          city: "Global",
+          distance: 210,
+          flightTime: 4010,
+        }),
+        buildAirportWithFlightTime({
+          icao: "KNAT",
+          iata: "NAT",
+          name: "Capital National Airport",
+          city: "Capital",
+          distance: 180,
+          flightTime: 3950,
+        }),
+        buildAirportWithFlightTime({
+          icao: "KLOC",
+          iata: "",
+          name: "Odom's Roost Airport",
+          city: "Odom",
+          distance: 120,
+          flightTime: 3850,
+        }),
+      ]);
+
+      expect(prioritized.map((airport) => airport.icao)).toEqual([
+        "KWLD",
+        "KINT",
+        "KNAT",
+        "KREG",
+        "KLOC",
+      ]);
+    });
+
+    it("uses distance to break ties inside the same priority level", () => {
+      const prioritized = prioritizeDestinations([
+        buildAirportWithFlightTime({
+          icao: "KINT",
+          iata: "INT",
+          name: "Metro International Airport",
+          city: "Metro",
+          distance: 240,
+          flightTime: 4000,
+        }),
+        buildAirportWithFlightTime({
+          icao: "KWLD",
+          iata: "WLD",
+          name: "Global World Airport",
+          city: "Global",
+          distance: 210,
+          flightTime: 4010,
+        }),
+      ]);
+
+      expect(prioritized.map((airport) => airport.icao)).toEqual(["KWLD", "KINT"]);
+    });
+  });
+
+  describe("getDestinationsInTimeBucket", () => {
+    const jfk = { lat: 40.6413, lon: -73.7781 };
+
+    it("treats the first bucket as up to 30 minutes", () => {
+      const destinations = getDestinationsInTimeBucket(jfk, 1800);
+      expect(destinations).toEqual([]);
+    });
+
+    it("returns only airports inside the selected 10 minute window", () => {
+      const destinations = getDestinationsInTimeBucket(jfk, 3600);
+
+      expect(destinations.map((airport) => airport.icao)).toEqual(["KBOS"]);
+      expect(destinations[0].flightTime).toBeGreaterThan(3000);
+      expect(destinations[0].flightTime).toBeLessThanOrEqual(3600);
     });
   });
 

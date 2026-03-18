@@ -13,6 +13,7 @@
 import { Coordinates } from "@/types/location";
 import { AirportWithFlightTime, FlightEstimate } from "@/types/radius";
 import { calculateDistance } from "@/utils/distance";
+import { TIME_SLIDER_CONFIG } from "@/utils/timeSlider";
 import { getAirportsWithinDistance } from "./airportService";
 
 /**
@@ -26,6 +27,18 @@ export const FLIGHT_CONSTANTS = {
   /** Default tolerance for flight time variation (±5%) */
   DEFAULT_TOLERANCE: 0.05,
 } as const;
+
+export interface FlightTimeBucket {
+  minTimeInSeconds: number;
+  maxTimeInSeconds: number;
+}
+
+const PRIORITY_KEYWORDS = [
+  ["international", 0],
+  ["world", 0],
+  ["national", 1],
+  ["regional", 2],
+] as const;
 
 /**
  * Calculates the maximum distance that can be traveled in the given flight time.
@@ -105,6 +118,79 @@ export function getFlightEstimate(timeInSeconds: number): FlightEstimate {
   };
 }
 
+function mapAirportsWithFlightTime(
+  origin: Coordinates,
+  airports: ReturnType<typeof getAirportsWithinDistance>
+): AirportWithFlightTime[] {
+  return airports.map((airport) => {
+    const distance = calculateDistance(origin, {
+      lat: airport.lat,
+      lon: airport.lon,
+    });
+    const flightTime = estimateFlightTime(distance);
+
+    return {
+      ...airport,
+      distance,
+      flightTime,
+    };
+  });
+}
+
+function getAirportPriority(airport: Pick<AirportWithFlightTime, "name">): number {
+  const normalizedName = airport.name.toLowerCase();
+
+  for (const [keyword, priority] of PRIORITY_KEYWORDS) {
+    if (normalizedName.includes(keyword)) {
+      return priority;
+    }
+  }
+
+  return PRIORITY_KEYWORDS.length;
+}
+
+export function prioritizeDestinations(
+  destinations: AirportWithFlightTime[]
+): AirportWithFlightTime[] {
+  return [...destinations].sort((left, right) => {
+    const priorityDelta = getAirportPriority(left) - getAirportPriority(right);
+    if (priorityDelta !== 0) {
+      return priorityDelta;
+    }
+
+    return left.distance - right.distance;
+  });
+}
+
+export function getFlightTimeBucket(
+  timeInSeconds: number,
+  bucketSizeInSeconds: number = TIME_SLIDER_CONFIG.SNAP_INTERVAL,
+  initialBucketMaxTime: number = TIME_SLIDER_CONFIG.MIN_TIME
+): FlightTimeBucket {
+  if (timeInSeconds <= initialBucketMaxTime) {
+    return {
+      minTimeInSeconds: 0,
+      maxTimeInSeconds: initialBucketMaxTime,
+    };
+  }
+
+  return {
+    minTimeInSeconds: timeInSeconds - bucketSizeInSeconds,
+    maxTimeInSeconds: timeInSeconds,
+  };
+}
+
+function isInFlightTimeBucket(
+  flightTime: number,
+  bucket: FlightTimeBucket
+): boolean {
+  if (bucket.minTimeInSeconds === 0) {
+    return flightTime <= bucket.maxTimeInSeconds;
+  }
+
+  return flightTime > bucket.minTimeInSeconds && flightTime <= bucket.maxTimeInSeconds;
+}
+
 /**
  * Finds airports reachable within the specified flight time from an origin.
  *
@@ -141,19 +227,7 @@ export function getDestinationsInTimeRange(
   const airports = getAirportsWithinDistance(origin, maxDistance);
 
   // Map to AirportWithFlightTime and add flight estimates
-  const airportsWithTime: AirportWithFlightTime[] = airports.map((airport) => {
-    const distance = calculateDistance(origin, {
-      lat: airport.lat,
-      lon: airport.lon,
-    });
-    const flightTime = estimateFlightTime(distance);
-
-    return {
-      ...airport,
-      distance,
-      flightTime,
-    };
-  });
+  const airportsWithTime = mapAirportsWithFlightTime(origin, airports);
 
   // Filter to only include airports within the time range (considering tolerance)
   const minTime = timeInSeconds * (1 - tolerance);
@@ -196,20 +270,25 @@ export function getDestinationsByFlightTime(
   const airports = getAirportsWithinDistance(origin, maxDistance);
 
   // Map to AirportWithFlightTime with flight estimates
-  const airportsWithTime: AirportWithFlightTime[] = airports.map((airport) => {
-    const distance = calculateDistance(origin, {
-      lat: airport.lat,
-      lon: airport.lon,
-    });
-    const flightTime = estimateFlightTime(distance);
-
-    return {
-      ...airport,
-      distance,
-      flightTime,
-    };
-  });
+  const airportsWithTime = mapAirportsWithFlightTime(origin, airports);
 
   // Sort by distance (closest first)
   return airportsWithTime.sort((a, b) => a.distance - b.distance);
+}
+
+export function getDestinationsInTimeBucket(
+  origin: Coordinates,
+  timeInSeconds: number,
+  bucketSizeInSeconds: number = TIME_SLIDER_CONFIG.SNAP_INTERVAL,
+  initialBucketMaxTime: number = TIME_SLIDER_CONFIG.MIN_TIME
+): AirportWithFlightTime[] {
+  const bucket = getFlightTimeBucket(timeInSeconds, bucketSizeInSeconds, initialBucketMaxTime);
+  const maxDistance = calculateMaxDistance(bucket.maxTimeInSeconds);
+  const airports = getAirportsWithinDistance(origin, maxDistance);
+  const airportsWithTime = mapAirportsWithFlightTime(origin, airports);
+  const filtered = airportsWithTime.filter((airport) => {
+    return isInFlightTimeBucket(airport.flightTime, bucket);
+  });
+
+  return prioritizeDestinations(filtered);
 }

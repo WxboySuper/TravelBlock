@@ -21,15 +21,21 @@ interface DestinationCardProps {
   onSelect: (airport: AirportWithFlightTime) => void;
   /** Whether this destination is currently selected */
   isSelected?: boolean;
+  /** Whether to render the denser flight setup presentation */
+  compact?: boolean;
 }
 
 const styles = StyleSheet.create({
   card: {
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
     borderRadius: 12,
-    marginHorizontal: Spacing.md,
-    marginVertical: Spacing.sm,
-    borderWidth: 2,
+    marginVertical: Spacing.xs,
+    borderWidth: 1.5,
+  },
+  compactCard: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   header: {
     flexDirection: "row",
@@ -46,9 +52,15 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.semibold,
     marginBottom: 2,
   },
+  compactAirportName: {
+    fontSize: Typography.fontSize.sm,
+  },
   cityCountry: {
     fontSize: Typography.fontSize.sm,
     opacity: 0.7,
+  },
+  compactCityCountry: {
+    fontSize: Typography.fontSize.xs,
   },
   codes: {
     alignItems: "flex-end",
@@ -65,6 +77,10 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
   },
+  compactMetadata: {
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.xs,
+  },
   metadataItem: {
     flex: 1,
   },
@@ -78,6 +94,9 @@ const styles = StyleSheet.create({
   metadataValue: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold,
+  },
+  compactMetadataValue: {
+    fontSize: Typography.fontSize.xs,
   },
 });
 
@@ -103,6 +122,7 @@ export function DestinationCard({
   airport,
   onSelect,
   isSelected = false,
+  compact = false,
 }: DestinationCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -122,6 +142,7 @@ export function DestinationCard({
       <ThemedView
         style={[
           styles.card,
+          compact && styles.compactCard,
           {
             backgroundColor: colors.cardBackground,
             borderColor: isSelected ? colors.tint : colors.border,
@@ -130,8 +151,16 @@ export function DestinationCard({
       >
         <View style={styles.header}>
           <View style={styles.nameContainer}>
-            <ThemedText style={styles.airportName}>{airport.name}</ThemedText>
-            <ThemedText style={[styles.cityCountry, { color: colors.textSecondary }]}>
+            <ThemedText style={[styles.airportName, compact && styles.compactAirportName]}>
+              {airport.name}
+            </ThemedText>
+            <ThemedText
+              style={[
+                styles.cityCountry,
+                compact && styles.compactCityCountry,
+                { color: colors.textSecondary },
+              ]}
+            >
               {airport.city}, {airport.country}
             </ThemedText>
           </View>
@@ -148,19 +177,27 @@ export function DestinationCard({
         </View>
 
         <View
-          style={[styles.metadata, { borderTopColor: colors.border }]}
+          style={[
+            styles.metadata,
+            compact && styles.compactMetadata,
+            { borderTopColor: colors.border },
+          ]}
         >
           <View style={styles.metadataItem}>
             <ThemedText style={[styles.metadataLabel, { color: colors.textSecondary }]}>
               Flight Time
             </ThemedText>
-            <ThemedText style={styles.metadataValue}>{flightTimeFormatted}</ThemedText>
+            <ThemedText style={[styles.metadataValue, compact && styles.compactMetadataValue]}>
+              {flightTimeFormatted}
+            </ThemedText>
           </View>
           <View style={styles.metadataItem}>
             <ThemedText style={[styles.metadataLabel, { color: colors.textSecondary }]}>
               Distance
             </ThemedText>
-            <ThemedText style={styles.metadataValue}>{distanceFormatted}</ThemedText>
+            <ThemedText style={[styles.metadataValue, compact && styles.compactMetadataValue]}>
+              {distanceFormatted}
+            </ThemedText>
           </View>
         </View>
       </ThemedView>

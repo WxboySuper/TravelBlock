@@ -11,8 +11,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export type CockpitTab = 'map' | 'metrics' | 'info';
 
@@ -23,11 +23,12 @@ export interface CockpitTabsProps {
   onTabChange: (tab: CockpitTab) => void;
 }
 
-const TABS: Array<{ id: CockpitTab; label: string; icon: string }> = [
+const TABS: { id: CockpitTab; label: string; icon: string }[] = [
   { id: 'map', label: 'Map', icon: '🗺️' },
   { id: 'metrics', label: 'Metrics', icon: '📊' },
   { id: 'info', label: 'Info', icon: 'ℹ️' },
 ];
+const TAB_GAP = Spacing.xs;
 
 const styles = StyleSheet.create({
   container: {
@@ -81,22 +82,34 @@ const styles = StyleSheet.create({
 export function CockpitTabs({ selectedTab, onTabChange }: CockpitTabsProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
-  // Animated indicator position
+  const [tabsWidth, setTabsWidth] = useState(0);
   const indicatorPosition = useRef(new Animated.Value(0)).current;
-  
-  // Calculate indicator position based on selected tab
+  const selectedTabIndex = useMemo(() => {
+    return Math.max(
+      TABS.findIndex((tab) => tab.id === selectedTab),
+      0
+    );
+  }, [selectedTab]);
+  const indicatorWidth = useMemo(() => {
+    if (tabsWidth === 0) {
+      return 0;
+    }
+
+    return (tabsWidth - TAB_GAP * (TABS.length - 1)) / TABS.length;
+  }, [tabsWidth]);
+
   useEffect(() => {
-    const tabIndex = TABS.findIndex(tab => tab.id === selectedTab);
-    const position = tabIndex / TABS.length;
-    
     Animated.spring(indicatorPosition, {
-      toValue: position,
+      toValue: selectedTabIndex * (indicatorWidth + TAB_GAP),
       friction: 8,
       tension: 40,
       useNativeDriver: true,
     }).start();
-  }, [selectedTab, indicatorPosition]);
+  }, [indicatorPosition, indicatorWidth, selectedTabIndex]);
+
+  const handleTabsLayout = (event: LayoutChangeEvent) => {
+    setTabsWidth(event.nativeEvent.layout.width);
+  };
 
   const handleTabPress = (tab: CockpitTab) => {
     if (tab !== selectedTab) {
@@ -107,7 +120,7 @@ export function CockpitTabs({ selectedTab, onTabChange }: CockpitTabsProps) {
 
   return (
     <View style={[styles.container, { borderBottomColor: colors.border }]}>
-      <View style={styles.tabsRow}>
+      <View style={styles.tabsRow} onLayout={handleTabsLayout}>
         {TABS.map((tab) => {
           const isSelected = tab.id === selectedTab;
           const textColor = isSelected ? colors.tint : colors.textSecondary;
@@ -138,15 +151,8 @@ export function CockpitTabs({ selectedTab, onTabChange }: CockpitTabsProps) {
             styles.indicator,
             {
               backgroundColor: colors.tint,
-              width: `${100 / TABS.length}%`,
-              transform: [
-                {
-                  translateX: indicatorPosition.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 100 * (TABS.length - 1)],
-                  }),
-                },
-              ],
+              width: indicatorWidth,
+              transform: [{ translateX: indicatorPosition }],
             },
           ]}
         />

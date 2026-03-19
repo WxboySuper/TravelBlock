@@ -25,13 +25,17 @@ export interface TimerDisplayProps {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
   },
   timerText: {
-    fontSize: 64,
+    fontSize: 56,
     fontWeight: Typography.fontWeight.bold as any,
     letterSpacing: -2,
+    lineHeight: 64,
     fontVariant: ['tabular-nums'] as any,
+    includeFontPadding: false,
   },
   phaseContainer: {
     flexDirection: 'row',
@@ -126,7 +130,12 @@ export function TimerDisplay({ remainingSeconds, phase, progressPercent }: Timer
 
   return (
     <View style={styles.container}>
-      <ThemedText style={[styles.timerText, { color: timerColor }]}>
+      <ThemedText
+        style={[styles.timerText, { color: timerColor }]}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+        numberOfLines={1}
+      >
         {formattedTime}
       </ThemedText>
       

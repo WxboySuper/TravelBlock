@@ -60,6 +60,25 @@ export default function RootLayout() {
               name="flight/setup"
               options={{ presentation: "modal", headerShown: false }}
             />
+            <Stack.Screen
+              name="flight/destination"
+              options={{ presentation: "modal", headerShown: false }}
+            />
+            <Stack.Screen name="flight/review" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="flight/seat-selection"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="flight/booking-confirmation"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen name="flight/check-in" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="flight/boarding-pass"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen name="flight/cockpit" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           </Stack>
           <StatusBar

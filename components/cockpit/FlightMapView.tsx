@@ -12,7 +12,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Airport } from '@/types/airport';
 import type { Position } from '@/utils/flightInterpolation';
 import { generateRouteWaypoints } from '@/utils/flightInterpolation';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
@@ -63,27 +63,35 @@ export function FlightMapView({
   const mapRef = useRef<MapView>(null);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const [isMapReady, setIsMapReady] = useState(false);
 
-  // Generate route waypoints (100 points for smooth curve)
   const routeWaypoints = useMemo(() => {
     return generateRouteWaypoints(origin, destination, 100);
-  }, [origin.lat, origin.lon, destination.lat, destination.lon]);
+  }, [destination, origin]);
 
-  // Fit map to show full route on mount
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.fitToCoordinates(
-        [
-          { latitude: origin.lat, longitude: origin.lon },
-          { latitude: destination.lat, longitude: destination.lon },
-        ],
-        {
-          edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
-          animated: true,
-        }
-      );
+  const routeCoordinates = useMemo(() => {
+    return routeWaypoints.map((waypoint) => ({
+      latitude: waypoint.lat,
+      longitude: waypoint.lon,
+    }));
+  }, [routeWaypoints]);
+
+  const fitRoute = useCallback(() => {
+    if (!mapRef.current || !isMapReady || routeCoordinates.length === 0) {
+      return;
     }
-  }, [origin, destination]);
+
+    setTimeout(() => {
+      mapRef.current?.fitToCoordinates(routeCoordinates, {
+        edgePadding: { top: 120, right: 56, bottom: 120, left: 56 },
+        animated: true,
+      });
+    }, 150);
+  }, [isMapReady, routeCoordinates]);
+
+  useEffect(() => {
+    fitRoute();
+  }, [fitRoute]);
 
   return (
     <View style={styles.container}>
@@ -98,6 +106,7 @@ export function FlightMapView({
         showsScale={true}
         rotateEnabled={true}
         pitchEnabled={false}
+        onMapReady={() => setIsMapReady(true)}
       >
         {/* Route polyline */}
         <Polyline

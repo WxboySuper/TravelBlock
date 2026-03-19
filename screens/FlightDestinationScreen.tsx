@@ -179,83 +179,16 @@ export default function FlightDestinationScreen() {
   }, []);
 
   if (!origin) {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={handleBack}
-              style={[styles.headerButton, { backgroundColor: colors.cardBackground }]}
-              accessibilityLabel="Back to flight setup"
-              accessibilityRole="button"
-            >
-              <IconSymbol name="chevron.left" size={20} color={colors.text} />
-            </TouchableOpacity>
-            <ThemedText style={styles.headerTitle}>Choose Destination</ThemedText>
-            <View style={styles.headerButton} />
-          </View>
-          <View style={styles.emptyState}>
-            <ThemedText type="subtitle">No departure selected</ThemedText>
-            <ThemedText style={{ color: colors.textSecondary, textAlign: 'center' }}>
-              Go back and choose your departure airport and flight window first.
-            </ThemedText>
-          </View>
-        </SafeAreaView>
-      </ThemedView>
-    );
+    return <MissingOriginState onBack={handleBack} colors={colors} />;
   }
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            style={[styles.headerButton, { backgroundColor: colors.cardBackground }]}
-            accessibilityLabel="Back to flight setup"
-            accessibilityRole="button"
-            testID="back-to-flight-setup"
-          >
-            <IconSymbol name="chevron.left" size={20} color={colors.text} />
-          </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Choose Destination</ThemedText>
-          <View style={styles.headerButton} />
-        </View>
+        <DestinationStepHeader onBack={handleBack} colors={colors} />
 
         <View style={styles.body}>
-          <View
-            style={[
-              styles.summaryCard,
-              { backgroundColor: colors.cardBackground, borderColor: colors.border },
-            ]}
-          >
-            <View style={styles.summaryTopRow}>
-              <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
-                Departing From
-              </ThemedText>
-              <View style={[styles.bucketPill, { backgroundColor: colors.surfaceElevated }]}>
-                <ThemedText style={[styles.bucketText, { color: colors.primary }]} testID="destination-summary-bucket">
-                  {bucketLabel}
-                </ThemedText>
-              </View>
-            </View>
-
-            <View style={styles.summaryCodeRow}>
-              <ThemedText style={styles.airportCode} testID="destination-summary-airport">
-                {origin.icao}
-              </ThemedText>
-              {origin.iata ? (
-                <ThemedText style={[styles.airportIata, { color: colors.primary }]}>
-                  {origin.iata}
-                </ThemedText>
-              ) : null}
-            </View>
-
-            <ThemedText style={styles.airportMeta}>{origin.name}</ThemedText>
-            <ThemedText style={[styles.airportMeta, { color: colors.textSecondary }]}>
-              {origin.state ? `${origin.city}, ${origin.state}` : origin.city}
-            </ThemedText>
-          </View>
+          <DestinationSummaryCard origin={origin} bucketLabel={bucketLabel} colors={colors} />
 
           <View
             style={[
@@ -276,22 +209,142 @@ export default function FlightDestinationScreen() {
           </View>
         </View>
 
-        <View
+        <DestinationReviewFooter
           onLayout={handleFooterLayout}
-          style={[
-            styles.footer,
-            {
-              backgroundColor: colors.background,
-              paddingBottom: Math.max(insets.bottom, Spacing.md),
-            },
-          ]}
-        >
-          <Button
-            title="Review Flight"
-            onPress={handleReviewFlight}
-            disabled={!selectedDestinationWithTime}
-            testID="review-flight-button"
-          />
+          onReview={handleReviewFlight}
+          disabled={!selectedDestinationWithTime}
+          bottomInset={Math.max(insets.bottom, Spacing.md)}
+          backgroundColor={colors.background}
+        />
+      </SafeAreaView>
+    </ThemedView>
+  );
+}
+
+function DestinationStepHeader({
+  onBack,
+  colors,
+}: {
+  onBack: () => void;
+  colors: typeof Colors.light;
+}) {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={onBack}
+        style={[styles.headerButton, { backgroundColor: colors.cardBackground }]}
+        accessibilityLabel="Back to flight setup"
+        accessibilityRole="button"
+        testID="back-to-flight-setup"
+        hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+      >
+        <IconSymbol name="chevron.left" size={20} color={colors.text} />
+      </TouchableOpacity>
+      <ThemedText style={styles.headerTitle}>Choose Destination</ThemedText>
+      <View style={styles.headerButton} />
+    </View>
+  );
+}
+
+function DestinationSummaryCard({
+  origin,
+  bucketLabel,
+  colors,
+}: {
+  origin: NonNullable<ReturnType<typeof useFlight>['origin']>;
+  bucketLabel: string;
+  colors: typeof Colors.light;
+}) {
+  return (
+    <View
+      style={[
+        styles.summaryCard,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+      ]}
+    >
+      <View style={styles.summaryTopRow}>
+        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
+          Departing From
+        </ThemedText>
+        <View style={[styles.bucketPill, { backgroundColor: colors.surfaceElevated }]}>
+          <ThemedText
+            style={[styles.bucketText, { color: colors.primary }]}
+            testID="destination-summary-bucket"
+          >
+            {bucketLabel}
+          </ThemedText>
+        </View>
+      </View>
+
+      <View style={styles.summaryCodeRow}>
+        <ThemedText style={styles.airportCode} testID="destination-summary-airport">
+          {origin.icao}
+        </ThemedText>
+        {origin.iata ? (
+          <ThemedText style={[styles.airportIata, { color: colors.primary }]}>
+            {origin.iata}
+          </ThemedText>
+        ) : null}
+      </View>
+
+      <ThemedText style={styles.airportMeta}>{origin.name}</ThemedText>
+      <ThemedText style={[styles.airportMeta, { color: colors.textSecondary }]}>
+        {origin.state ? `${origin.city}, ${origin.state}` : origin.city}
+      </ThemedText>
+    </View>
+  );
+}
+
+function DestinationReviewFooter({
+  onLayout,
+  onReview,
+  disabled,
+  bottomInset,
+  backgroundColor,
+}: {
+  onLayout: (event: LayoutChangeEvent) => void;
+  onReview: () => void;
+  disabled: boolean;
+  bottomInset: number;
+  backgroundColor: string;
+}) {
+  return (
+    <View
+      onLayout={onLayout}
+      style={[
+        styles.footer,
+        {
+          backgroundColor,
+          paddingBottom: bottomInset,
+        },
+      ]}
+    >
+      <Button
+        title="Review Flight"
+        onPress={onReview}
+        disabled={disabled}
+        testID="review-flight-button"
+      />
+    </View>
+  );
+}
+
+function MissingOriginState({
+  onBack,
+  colors,
+}: {
+  onBack: () => void;
+  colors: typeof Colors.light;
+}) {
+  return (
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <DestinationStepHeader onBack={onBack} colors={colors} />
+        <View style={styles.emptyState}>
+          <ThemedText type="subtitle">No departure selected</ThemedText>
+          <ThemedText style={{ color: colors.textSecondary, textAlign: 'center' }}>
+            Go back and choose your departure airport and flight window first.
+          </ThemedText>
         </View>
       </SafeAreaView>
     </ThemedView>

@@ -148,9 +148,9 @@ type TestRendererInstance = ReturnType<typeof TestRenderer.create>;
 describe('FlightSetupScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSetOrigin.mockResolvedValue(undefined);
-    mockSetDestination.mockResolvedValue(undefined);
-    mockSetFlightDuration.mockResolvedValue(undefined);
+    mockSetOrigin.mockImplementation(() => Promise.resolve());
+    mockSetDestination.mockImplementation(() => Promise.resolve());
+    mockSetFlightDuration.mockImplementation(() => Promise.resolve());
   });
 
   it('continues to the destination step after selecting a flight window', async () => {

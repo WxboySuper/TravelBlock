@@ -185,7 +185,7 @@ describe('FlightDestinationScreen', () => {
       destination: null,
       flightDuration: 3600,
     };
-    mockSetDestination.mockResolvedValue(undefined);
+    mockSetDestination.mockImplementation(() => Promise.resolve());
   });
 
   it('shows the destination summary and keeps review disabled until a destination is selected', () => {

@@ -135,6 +135,10 @@ export default function FlightSetupScreen() {
     }
   }, [homeAirport, origin, setOrigin]);
 
+  useEffect(() => {
+    setLocalFlightTime(flightDuration);
+  }, [flightDuration]);
+
   const bucketLabel = useMemo(() => formatFlightWindowLabel(localFlightTime), [localFlightTime]);
   const formattedDuration = useMemo(
     () => formatTimeValue(localFlightTime).formatted,
@@ -158,7 +162,6 @@ export default function FlightSetupScreen() {
     await Promise.all([
       setOrigin(homeAirport),
       setFlightDuration(localFlightTime),
-      setDestination(null),
     ]);
 
     await impactAsync(ImpactFeedbackStyle.Heavy).catch(() => undefined);
@@ -181,6 +184,7 @@ export default function FlightSetupScreen() {
             accessibilityLabel="Close flight setup"
             accessibilityRole="button"
             testID="close-flight-setup"
+            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
           >
             <IconSymbol name="xmark" size={20} color={colors.text} />
           </TouchableOpacity>

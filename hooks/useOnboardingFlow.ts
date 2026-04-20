@@ -1,4 +1,5 @@
 import { storageService } from '@/services/storageService';
+import { loadHomeAirport } from '@/hooks/useHomeAirport';
 import { Airport, AirportWithDistance } from '@/types/airport';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -37,6 +38,7 @@ export function useOnboardingFlow() {
     try {
       if (selectedAirport) {
         await storageService.saveHomeAirport(selectedAirport);
+        await loadHomeAirport(true);
       }
       await storageService.setOnboardingCompleted(true);
 

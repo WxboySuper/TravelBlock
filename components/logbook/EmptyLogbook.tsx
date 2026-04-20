@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -35,7 +35,20 @@ export function EmptyLogbook(): React.JSX.Element {
   return (
     <View style={styles.container} testID="EmptyLogbook.Root">
       <View style={styles.iconContainer} testID="EmptyLogbook.IconContainer">
-        <IconSymbol name="book.fill" size={72} color={colors.textTertiary} />
+        <View
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.cockpitAccentSoft,
+            borderWidth: 1,
+            borderColor: colors.cockpitBorder,
+          }}
+        >
+          <AppIcon name="logbook" size={42} color={colors.cockpitAccent} />
+        </View>
       </View>
       <View style={styles.textContainer}>
         <ThemedText

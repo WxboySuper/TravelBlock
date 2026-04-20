@@ -14,7 +14,7 @@ import {
     Seat,
     SeatClass,
 } from '@/types/flight';
-import { calculateDistance } from './distance';
+import { calculateDistanceKm } from './distance';
 
 /** TravelBlock airline code */
 const AIRLINE_CODE = 'TB';
@@ -265,12 +265,7 @@ export function generateFlightBooking(
   const boardingTime = generateBoardingTime(departureTime);
   const aircraft = getAircraftForFlightTime(durationSeconds);
   const bookingReference = generateBookingReference();
-  const distanceKm = calculateDistance(
-    origin.lat,
-    origin.lon,
-    destination.lat,
-    destination.lon
-  );
+  const distanceKm = calculateDistanceKm(origin, destination);
 
   return {
     flightNumber,

@@ -34,6 +34,18 @@ export const Colors = {
     cardBackground: "#FFFFFF",
     cardBorder: "#E2E8F0",
     cardShadow: "rgba(15, 23, 42, 0.04)",
+    // Cockpit surfaces
+    cockpitBackground: "#081120",
+    cockpitSurface: "rgba(13, 24, 43, 0.94)",
+    cockpitSurfaceMuted: "rgba(148, 163, 184, 0.08)",
+    cockpitGlass: "rgba(15, 23, 42, 0.4)",
+    cockpitBorder: "rgba(148, 163, 184, 0.14)",
+    cockpitTextSecondary: "#B8C7DC",
+    cockpitAccent: "#4C8DFF",
+    cockpitAccentSoft: "rgba(76, 141, 255, 0.18)",
+    cockpitSuccess: "#22C55E",
+    cockpitWarning: "#F59E0B",
+    cockpitDanger: "#FB7185",
   },
   dark: {
     text: "#F8FAFC", // Slate 50
@@ -59,6 +71,18 @@ export const Colors = {
     cardBackground: "#1E293B",
     cardBorder: "#334155",
     cardShadow: "rgba(0, 0, 0, 0.3)",
+    // Cockpit surfaces
+    cockpitBackground: "#040B17",
+    cockpitSurface: "rgba(10, 20, 36, 0.96)",
+    cockpitSurfaceMuted: "rgba(148, 163, 184, 0.1)",
+    cockpitGlass: "rgba(15, 23, 42, 0.55)",
+    cockpitBorder: "rgba(148, 163, 184, 0.16)",
+    cockpitTextSecondary: "#B7C6DA",
+    cockpitAccent: "#79A8FF",
+    cockpitAccentSoft: "rgba(121, 168, 255, 0.2)",
+    cockpitSuccess: "#34D399",
+    cockpitWarning: "#FBBF24",
+    cockpitDanger: "#FB7185",
   },
 };
 
@@ -76,6 +100,7 @@ export const BorderRadius = {
   md: 12,
   lg: 16,
   xl: 20,
+  xxl: 28,
   full: 9999,
 };
 
@@ -88,6 +113,7 @@ export const Typography = {
     xl: 20,
     xxl: 24,
     xxxl: 32,
+    display: 56,
   },
   fontWeight: {
     regular: "400" as const,
@@ -99,6 +125,21 @@ export const Typography = {
     tight: 1.2,
     normal: 1.5,
     relaxed: 1.75,
+  },
+};
+
+export const Elevation = {
+  soft: {
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  floating: {
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 18,
   },
 };
 

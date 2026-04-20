@@ -7,6 +7,7 @@
  * @module components/cockpit/DivertModal
  */
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/Button';
@@ -46,6 +47,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     maxHeight: '80%',
+    overflow: 'hidden',
   },
   header: {
     padding: Spacing.lg,
@@ -92,9 +94,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  detailIcon: {
-    fontSize: Typography.fontSize.sm,
   },
   detailText: {
     fontSize: Typography.fontSize.xs,
@@ -160,11 +159,25 @@ export function DivertModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <ThemedView style={styles.modalContent}>
+        <ThemedView style={[styles.modalContent, { backgroundColor: colors.cockpitSurface }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <ThemedText style={styles.title}>⚠️ Flight Divert</ThemedText>
-            <ThemedText style={styles.reason}>{reason}</ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: colors.cockpitWarning,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AppIcon color="#FFFFFF" name="warning" size={20} />
+              </View>
+              <ThemedText style={[styles.title, { color: colors.text }]}>Flight Divert</ThemedText>
+            </View>
+            <ThemedText style={[styles.reason, { color: colors.cockpitTextSecondary }]}>{reason}</ThemedText>
           </View>
 
           {/* Airport list */}
@@ -218,19 +231,19 @@ export function DivertModal({
 
                   <View style={styles.airportDetails}>
                     <View style={styles.detail}>
-                      <ThemedText style={styles.detailIcon}>📍</ThemedText>
+                      <AppIcon color={colors.cockpitAccent} name="distance" size={14} />
                       <ThemedText style={styles.detailText}>
                         {option.distanceFromCurrent.toFixed(1)} km
                       </ThemedText>
                     </View>
                     <View style={styles.detail}>
-                      <ThemedText style={styles.detailIcon}>⏱️</ThemedText>
+                      <AppIcon color={colors.cockpitAccent} name="time" size={14} />
                       <ThemedText style={styles.detailText}>
                         {formatTime(option.estimatedTime)}
                       </ThemedText>
                     </View>
                     <View style={styles.detail}>
-                      <ThemedText style={styles.detailIcon}>🌐</ThemedText>
+                      <AppIcon color={colors.cockpitAccent} name="airport" size={14} />
                       <ThemedText style={styles.detailText}>
                         {option.airport.icao}
                       </ThemedText>

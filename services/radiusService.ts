@@ -22,8 +22,10 @@ import { getAirportsWithinDistance } from "./airportService";
 export const FLIGHT_CONSTANTS = {
   /** Average cruise speed in mph (typical commercial aircraft) */
   CRUISE_SPEED_MPH: 450,
-  /** Takeoff and landing overhead in seconds (taxi, climb, descent) */
-  OVERHEAD_SECONDS: 25 * 60, // 25 minutes
+  /** Minimum gate-to-gate buffer for very short hops */
+  MIN_OVERHEAD_SECONDS: 8 * 60,
+  /** Maximum operational buffer for longer domestic sectors */
+  MAX_OVERHEAD_SECONDS: 18 * 60,
   /** Default tolerance for flight time variation (±5%) */
   DEFAULT_TOLERANCE: 0.05,
 } as const;
@@ -72,6 +74,26 @@ const PRIORITY_KEYWORDS = [
   ["regional", 2],
 ] as const;
 
+function calculateOperationalBufferSeconds(distanceInMiles: number): number {
+  if (distanceInMiles <= 40) {
+    return 8 * 60;
+  }
+
+  if (distanceInMiles <= 120) {
+    return 10 * 60;
+  }
+
+  if (distanceInMiles <= 300) {
+    return 12 * 60;
+  }
+
+  if (distanceInMiles <= 800) {
+    return 15 * 60;
+  }
+
+  return FLIGHT_CONSTANTS.MAX_OVERHEAD_SECONDS;
+}
+
 /**
  * Calculates the maximum distance that can be traveled in the given flight time.
  *
@@ -90,19 +112,28 @@ const PRIORITY_KEYWORDS = [
  * ```
  */
 export function calculateMaxDistance({ timeInSeconds }: TimeConfig): number {
-  // Subtract overhead time (takeoff, landing, taxi)
-  const cruiseTimeSeconds = Math.max(
-    0,
-    timeInSeconds - FLIGHT_CONSTANTS.OVERHEAD_SECONDS
-  );
+  if (timeInSeconds <= 0 || timeInSeconds <= FLIGHT_CONSTANTS.MIN_OVERHEAD_SECONDS) {
+    return 0;
+  }
 
-  // Convert to hours
-  const cruiseTimeHours = cruiseTimeSeconds / 3600;
+  let low = 0;
+  let high = Math.max((timeInSeconds / 3600) * FLIGHT_CONSTANTS.CRUISE_SPEED_MPH, 1);
 
-  // Calculate distance at cruise speed
-  const distanceInMiles = cruiseTimeHours * FLIGHT_CONSTANTS.CRUISE_SPEED_MPH;
+  while (estimateFlightTime({ distanceInMiles: high }) < timeInSeconds) {
+    high *= 2;
+  }
 
-  return distanceInMiles;
+  for (let i = 0; i < 32; i += 1) {
+    const mid = (low + high) / 2;
+
+    if (estimateFlightTime({ distanceInMiles: mid }) <= timeInSeconds) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+
+  return low;
 }
 
 /**
@@ -127,8 +158,9 @@ export function estimateFlightTime({ distanceInMiles }: DistanceConfig): number 
   const cruiseTimeHours = distanceInMiles / FLIGHT_CONSTANTS.CRUISE_SPEED_MPH;
   const cruiseTimeSeconds = cruiseTimeHours * 3600;
 
-  // Add overhead time
-  const totalTimeSeconds = cruiseTimeSeconds + FLIGHT_CONSTANTS.OVERHEAD_SECONDS;
+  // Add a short-haul-aware operational buffer
+  const totalTimeSeconds =
+    cruiseTimeSeconds + calculateOperationalBufferSeconds(distanceInMiles);
 
   return Math.round(totalTimeSeconds);
 }
@@ -146,7 +178,7 @@ export function getFlightEstimate({ timeInSeconds }: TimeConfig): FlightEstimate
     timeInSeconds,
     distanceInMiles,
     cruiseSpeed: FLIGHT_CONSTANTS.CRUISE_SPEED_MPH,
-    overhead: FLIGHT_CONSTANTS.OVERHEAD_SECONDS,
+    overhead: calculateOperationalBufferSeconds(distanceInMiles),
   };
 }
 

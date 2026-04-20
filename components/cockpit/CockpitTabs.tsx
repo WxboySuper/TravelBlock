@@ -7,12 +7,13 @@
  * @module components/cockpit/CockpitTabs
  */
 
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 
 export type CockpitTab = 'map' | 'metrics' | 'info';
 
@@ -23,21 +24,22 @@ export interface CockpitTabsProps {
   onTabChange: (tab: CockpitTab) => void;
 }
 
-const TABS: { id: CockpitTab; label: string; icon: string }[] = [
-  { id: 'map', label: 'Map', icon: '🗺️' },
-  { id: 'metrics', label: 'Metrics', icon: '📊' },
-  { id: 'info', label: 'Info', icon: 'ℹ️' },
+const TABS: { id: CockpitTab; label: string; icon: AppIconName }[] = [
+  { id: 'map', label: 'Map', icon: 'map' },
+  { id: 'metrics', label: 'Metrics', icon: 'metrics' },
+  { id: 'info', label: 'Info', icon: 'info' },
 ];
 const TAB_GAP = Spacing.xs;
 
 const styles = StyleSheet.create({
   container: {
-    borderBottomWidth: 1,
     paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
   tabsRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
+    position: 'relative',
   },
   tab: {
     flex: 1,
@@ -46,21 +48,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: Spacing.md,
     gap: Spacing.xs,
-  },
-  tabIcon: {
-    fontSize: Typography.fontSize.base,
+    borderRadius: 999,
   },
   tabLabel: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold as any,
+    letterSpacing: 0.3,
   },
   indicatorContainer: {
-    height: 3,
-    marginTop: -3,
+    height: 0,
   },
   indicator: {
-    height: 3,
-    borderRadius: 2,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    borderRadius: 999,
   },
 });
 
@@ -119,44 +121,44 @@ export function CockpitTabs({ selectedTab, onTabChange }: CockpitTabsProps) {
   };
 
   return (
-    <View style={[styles.container, { borderBottomColor: colors.border }]}>
+    <View style={styles.container}>
       <View style={styles.tabsRow} onLayout={handleTabsLayout}>
+        {indicatorWidth > 0 ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.indicator,
+              {
+                backgroundColor: colors.cockpitAccentSoft,
+                borderColor: colors.cockpitBorder,
+                borderWidth: 1,
+                width: indicatorWidth,
+                transform: [{ translateX: indicatorPosition }],
+              },
+            ]}
+          />
+        ) : null}
         {TABS.map((tab) => {
           const isSelected = tab.id === selectedTab;
-          const textColor = isSelected ? colors.tint : colors.textSecondary;
+          const textColor = isSelected ? colors.cockpitAccent : colors.cockpitTextSecondary;
 
           return (
-            <TouchableOpacity
+            <Pressable
               key={tab.id}
               style={styles.tab}
               onPress={() => handleTabPress(tab.id)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
             >
-              <ThemedText style={[styles.tabIcon, { color: textColor }]}>
-                {tab.icon}
-              </ThemedText>
+              <AppIcon color={textColor} name={tab.icon} size={18} />
               <ThemedText style={[styles.tabLabel, { color: textColor }]}>
                 {tab.label}
               </ThemedText>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
-
-      {/* Animated indicator */}
-      <View style={styles.indicatorContainer}>
-        <Animated.View
-          style={[
-            styles.indicator,
-            {
-              backgroundColor: colors.tint,
-              width: indicatorWidth,
-              transform: [{ translateX: indicatorPosition }],
-            },
-          ]}
-        />
-      </View>
+      <View style={styles.indicatorContainer} />
     </View>
   );
 }

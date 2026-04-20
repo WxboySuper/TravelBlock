@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "lastScan": "2026-03-26T00:06:49.438Z",
+  "items": {
+    "dc291424": {
+      "title": "No Pause Rule: Timer/diversion flow exists; intentional no-pause enforcement still needs polish.",
+      "prdFile": "01-no-pause-rule-timer-diversion-flow-exists-intentional-no-pause-enforcement-still-needs-polish.md",
+      "createdAt": "2026-03-25T18:16:20.234Z"
+    },
+    "448fc260": {
+      "title": "Add \"Seatbelt Chime\" sound on start.",
+      "prdFile": "02-add-seatbelt-chime-sound-on-start.md",
+      "createdAt": "2026-03-25T18:22:47.955Z"
+    },
+    "559928cb": {
+      "title": "Add \"Landing Gear\" sound on finish.",
+      "prdFile": "03-add-landing-gear-sound-on-finish.md",
+      "createdAt": "2026-03-26T00:06:49.436Z"
+    }
+  }
+}

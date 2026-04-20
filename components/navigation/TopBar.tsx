@@ -3,8 +3,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { AppIcon } from '@/components/ui/AppIcon';
+import { BorderRadius, Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface TopBarProps {
@@ -54,11 +54,17 @@ export function SettingsButton() {
       style={({ pressed }) => ({
         opacity: pressed ? 0.7 : 1,
         padding: Spacing.xs,
+        width: 40,
+        height: 40,
+        borderRadius: BorderRadius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.cockpitAccentSoft,
       })}
       accessibilityRole="button"
       accessibilityLabel="Settings"
     >
-      <IconSymbol size={28} name="gearshape.fill" color={colors.text} />
+      <AppIcon size={20} name="settings" color={colors.cockpitAccent} />
     </Pressable>
   );
 }
@@ -83,7 +89,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.medium,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginTop: Spacing.xs,
   },
   actionContainer: {

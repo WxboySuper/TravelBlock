@@ -6,13 +6,14 @@
  * 
  * Simulates typical commercial flight profiles:
  * - Climbing: 0-10% of flight, climbing to cruise altitude
- * - Cruising: 10-80% of flight, steady altitude and speed
- * - Descending: 80-100% of flight, descending to landing
+ * - Cruising: after climb until computed top-of-descent
+ * - Descending: from computed top-of-descent to landing
  * 
  * @module utils/flightMetrics
  */
 
 import { FlightPhase } from '@/types/flight';
+import { calculateCruiseProfile, resolveCruiseAircraftType } from './cruiseProfile';
 
 /**
  * Flight simulation constants
@@ -25,7 +26,7 @@ export const FLIGHT_CONSTANTS = {
   CLIMB_RATE_FPM: 2000,
   
   /** Typical descent rate in feet per minute */
-  DESCENT_RATE_FPM: 1500,
+  DESCENT_RATE_FPM: 1100,
   
   /** Approach speed in mph (slower for landing) */
   APPROACH_SPEED_MPH: 250,
@@ -33,20 +34,16 @@ export const FLIGHT_CONSTANTS = {
   /** Takeoff speed in mph */
   TAKEOFF_SPEED_MPH: 180,
   
-  /** Phase transition points (as percentage of flight) */
+  /** Climb transition point (as percentage of flight) */
   CLIMB_END_PERCENT: 10,
-  DESCENT_START_PERCENT: 80,
   
-  /** Maximum altitude for very long flights (feet) */
-  MAX_ALTITUDE_FT: 40000,
-  
-  /** Minimum altitude for short flights (feet) */
-  MIN_CRUISE_ALTITUDE_FT: 20000,
-  
-  /** Distance thresholds for altitude assignment (km) */
-  SHORT_FLIGHT_THRESHOLD_KM: 200,
-  LONG_FLIGHT_THRESHOLD_KM: 1000,
+  /** Minimum operational cruise altitude floor */
+  MIN_CRUISE_ALTITUDE_FT: 3000,
 } as const;
+
+export interface FlightPhaseConfig {
+  descentStartPercent?: number;
+}
 
 /**
  * Determine flight phase based on progress percentage
@@ -61,11 +58,16 @@ export const FLIGHT_CONSTANTS = {
  * getFlightPhase(90); // FlightPhase.Descending
  * ```
  */
-export function getFlightPhase(progressPercent: number): FlightPhase {
+export function getFlightPhase(
+  progressPercent: number,
+  config: FlightPhaseConfig = {}
+): FlightPhase {
+  const descentStartPercent = config.descentStartPercent ?? 72;
+
   if (progressPercent < FLIGHT_CONSTANTS.CLIMB_END_PERCENT) {
     return FlightPhase.Climbing;
   }
-  if (progressPercent < FLIGHT_CONSTANTS.DESCENT_START_PERCENT) {
+  if (progressPercent < descentStartPercent) {
     return FlightPhase.Cruising;
   }
   return FlightPhase.Descending;
@@ -87,25 +89,40 @@ export function getFlightPhase(progressPercent: number): FlightPhase {
  * getMaxAltitude(2000); // ~40,000 ft (long haul)
  * ```
  */
-export function getMaxAltitude(distanceKm: number): number {
-  const { SHORT_FLIGHT_THRESHOLD_KM, LONG_FLIGHT_THRESHOLD_KM,
-          MIN_CRUISE_ALTITUDE_FT, MAX_ALTITUDE_FT } = FLIGHT_CONSTANTS;
-  
-  if (distanceKm <= SHORT_FLIGHT_THRESHOLD_KM) {
-    // Short flights: 20,000-25,000 ft
-    const ratio = distanceKm / SHORT_FLIGHT_THRESHOLD_KM;
-    return MIN_CRUISE_ALTITUDE_FT + (ratio * 5000);
-  }
-  
-  if (distanceKm >= LONG_FLIGHT_THRESHOLD_KM) {
-    // Long flights: max altitude
-    return MAX_ALTITUDE_FT;
-  }
-  
-  // Medium flights: interpolate between 25,000 and 40,000 ft
-  const ratio = (distanceKm - SHORT_FLIGHT_THRESHOLD_KM) / 
-                (LONG_FLIGHT_THRESHOLD_KM - SHORT_FLIGHT_THRESHOLD_KM);
-  return 25000 + (ratio * 15000);
+export function getMaxAltitude(distanceKm: number, aircraftName: string, heading: number): number {
+  const distanceNm = distanceKm * 0.539957;
+  const cruiseProfile = calculateCruiseProfile(
+    resolveCruiseAircraftType(aircraftName),
+    distanceNm,
+    heading
+  );
+  const cruiseAltitudeFeet = Number.parseInt(cruiseProfile.formattedAltitude.slice(2), 10) * 100;
+
+  return Math.max(FLIGHT_CONSTANTS.MIN_CRUISE_ALTITUDE_FT, cruiseAltitudeFeet);
+}
+
+export function getDescentStartPercent(
+  distanceKm: number,
+  aircraftName: string,
+  heading: number
+): number {
+  const totalDistanceNm = Math.max(distanceKm * 0.539957, 1);
+  const cruiseProfile = calculateCruiseProfile(
+    resolveCruiseAircraftType(aircraftName),
+    totalDistanceNm,
+    heading
+  );
+  const cruiseAltitudeFeet = Number.parseInt(cruiseProfile.formattedAltitude.slice(2), 10) * 100;
+
+  const altitudeDrivenDistanceNm = (cruiseAltitudeFeet / 1000) * 3;
+  const speedAllowanceNm = Math.max(8, (cruiseProfile.trueAirspeed - 250) / 10);
+  const requiredDescentDistanceNm = altitudeDrivenDistanceNm + speedAllowanceNm;
+  const descentStartPercent = (1 - requiredDescentDistanceNm / totalDistanceNm) * 100;
+
+  return Math.max(
+    FLIGHT_CONSTANTS.CLIMB_END_PERCENT + 5,
+    Math.min(92, descentStartPercent)
+  );
 }
 
 /**
@@ -132,9 +149,11 @@ export function getMaxAltitude(distanceKm: number): number {
 export function calculateAltitude(
   progressPercent: number,
   phase: FlightPhase,
-  maxAltitude: number
+  maxAltitude: number,
+  config: FlightPhaseConfig = {}
 ): number {
-  const { CLIMB_END_PERCENT, DESCENT_START_PERCENT } = FLIGHT_CONSTANTS;
+  const { CLIMB_END_PERCENT } = FLIGHT_CONSTANTS;
+  const descentStartPercent = config.descentStartPercent ?? 72;
   
   switch (phase) {
     case FlightPhase.Climbing: {
@@ -154,11 +173,11 @@ export function calculateAltitude(
     
     case FlightPhase.Descending: {
       // Progress within descending phase (0-1)
-      const descendProgress = (progressPercent - DESCENT_START_PERCENT) / 
-                              (100 - DESCENT_START_PERCENT);
+      const descendProgress = (progressPercent - descentStartPercent) / 
+                              (100 - descentStartPercent);
       
-      // Use smooth exponential curve (easeInQuad)
-      const easedProgress = Math.pow(1 - descendProgress, 2);
+      // Use a gentler profile so descent starts earlier and shallower.
+      const easedProgress = Math.pow(1 - descendProgress, 1.55);
       
       return maxAltitude * easedProgress;
     }
@@ -189,10 +208,12 @@ export function calculateAltitude(
  */
 export function calculateSpeed(
   progressPercent: number,
-  phase: FlightPhase
+  phase: FlightPhase,
+  config: FlightPhaseConfig = {}
 ): number {
   const { TAKEOFF_SPEED_MPH, CRUISE_SPEED_MPH, APPROACH_SPEED_MPH,
-          CLIMB_END_PERCENT, DESCENT_START_PERCENT } = FLIGHT_CONSTANTS;
+          CLIMB_END_PERCENT } = FLIGHT_CONSTANTS;
+  const descentStartPercent = config.descentStartPercent ?? 72;
   
   switch (phase) {
     case FlightPhase.Climbing: {
@@ -213,8 +234,8 @@ export function calculateSpeed(
     
     case FlightPhase.Descending: {
       // Decelerate from cruise speed to approach speed
-      const descendProgress = (progressPercent - DESCENT_START_PERCENT) / 
-                              (100 - DESCENT_START_PERCENT);
+      const descendProgress = (progressPercent - descentStartPercent) / 
+                              (100 - descentStartPercent);
       
       // Use smooth deceleration curve
       const easedProgress = Math.pow(1 - descendProgress, 2);

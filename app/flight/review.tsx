@@ -21,6 +21,8 @@ import { BorderRadius, Colors, Spacing, Typography } from '@/constants/theme';
 import { useFlight } from '@/context/FlightContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { generateFlightBooking } from '@/utils/flightGenerator';
+import { estimateFlightTime } from '@/services/radiusService';
+import { calculateDistance } from '@/utils/distance';
 import { formatTimeValue } from '@/utils/timeSlider';
 
 const styles = StyleSheet.create({
@@ -127,13 +129,15 @@ export default function FlightReviewScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { origin, destination, flightDuration, setBooking } = useFlight();
 
-  // Generate booking on mount (memoized)
+  // Generate booking on mount (memoized) — compute route ETA from distance for realism
   const booking = useMemo(() => {
     if (!origin || !destination) return null;
-    return generateFlightBooking(origin, destination, flightDuration);
-  }, [origin, destination, flightDuration]);
+    const distanceMiles = calculateDistance(origin, destination);
+    const routeDurationSeconds = estimateFlightTime({ distanceInMiles: distanceMiles });
+    return generateFlightBooking(origin, destination, routeDurationSeconds);
+  }, [origin, destination]);
 
-  const formattedTime = formatTimeValue(flightDuration);
+  const formattedTime = formatTimeValue(booking?.durationSeconds ?? flightDuration);
   const distanceKm = booking?.distanceKm ?? 0;
   const distanceMiles = Math.round(distanceKm * 0.621371);
 

@@ -10,7 +10,7 @@
  */
 
 import { Spacing } from '@/constants/theme';
-import type { FlightProgress } from '@/types/flight';
+import { FlightPhase, type FlightProgress } from '@/types/flight';
 import {
     formatAltitude,
     formatHeading,
@@ -46,20 +46,6 @@ function formatDistance(distanceKm: number): string {
 }
 
 /**
- * Format time for display
- */
-function formatTime(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  
-  return `${minutes}m`;
-}
-
-/**
  * Calculate vertical speed from progress
  * (This would normally come from the timer service, but we can estimate it)
  */
@@ -71,6 +57,32 @@ function estimateVerticalSpeed(progress: FlightProgress): number {
       return -1500; // -1500 fpm
     default:
       return 0; // Level flight
+  }
+}
+
+function getPhaseBanner(progress: FlightProgress) {
+  switch (progress.currentPhase) {
+    case FlightPhase.Cruising:
+      return {
+        detail: 'Cruise altitude reached. Cabin metrics are now in steady-state.',
+        eyebrow: 'Flight Phase',
+        value: 'Cruise Locked',
+        variant: 'cruising' as const,
+      };
+    case FlightPhase.Descending:
+      return {
+        detail: 'Descent profile active. Expect altitude and speed to taper down.',
+        eyebrow: 'Flight Phase',
+        value: 'Descent Active',
+        variant: 'descending' as const,
+      };
+    default:
+      return {
+        detail: 'Climb profile active. Aircraft is still accelerating toward cruise.',
+        eyebrow: 'Flight Phase',
+        value: 'Climb Active',
+        variant: 'climbing' as const,
+      };
   }
 }
 
@@ -87,21 +99,32 @@ function estimateVerticalSpeed(progress: FlightProgress): number {
 export function MetricsGrid({ progress }: MetricsGridProps) {
   const phaseVariant = progress.currentPhase;
   const verticalSpeed = estimateVerticalSpeed(progress);
+  const phaseBanner = getPhaseBanner(progress);
 
   return (
     <View style={styles.container}>
+      <MetricCard
+        description={phaseBanner.detail}
+        emphasisLabel={progress.currentPhase === FlightPhase.Cruising ? 'Stable' : 'Tracking'}
+        fullWidth
+        icon={progress.currentPhase === FlightPhase.Cruising ? 'check' : progress.currentPhase === FlightPhase.Descending ? 'descend' : 'climb'}
+        label={phaseBanner.eyebrow}
+        value={phaseBanner.value}
+        variant={phaseBanner.variant}
+      />
+
       {/* Top row: Speed & Altitude */}
       <View style={styles.row}>
         <MetricCard
           label="Speed"
           value={formatSpeed(progress.currentSpeed)}
-          icon="🚀"
+          icon="speed"
           variant={phaseVariant}
         />
         <MetricCard
           label="Altitude"
           value={formatAltitude(progress.currentAltitude)}
-          icon="📈"
+          icon="altitude"
           variant={phaseVariant}
         />
       </View>
@@ -111,12 +134,12 @@ export function MetricsGrid({ progress }: MetricsGridProps) {
         <MetricCard
           label="Heading"
           value={formatHeading(progress.heading)}
-          icon="🧭"
+          icon="heading"
         />
         <MetricCard
           label="V/S"
           value={formatVerticalSpeed(verticalSpeed)}
-          icon={verticalSpeed > 0 ? '⬆️' : verticalSpeed < 0 ? '⬇️' : '➡️'}
+          icon={verticalSpeed > 0 ? 'climb' : verticalSpeed < 0 ? 'descend' : 'cruise'}
         />
       </View>
 
@@ -125,12 +148,12 @@ export function MetricsGrid({ progress }: MetricsGridProps) {
         <MetricCard
           label="Flown"
           value={formatDistance(progress.distanceFlown)}
-          icon="✓"
+          icon="check"
         />
         <MetricCard
           label="Remaining"
           value={formatDistance(progress.distanceRemaining)}
-          icon="→"
+          icon="distance"
         />
       </View>
     </View>

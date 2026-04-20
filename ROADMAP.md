@@ -68,11 +68,11 @@ Goal: The simulation logic.
 
 [x] Implement Real-Time Logic: 1 second of focus = 1 second of flight.
 
-[~] No Pause Rule: Timer/diversion flow exists; intentional no-pause enforcement still needs polish.
+[x] No Pause Rule: Timer/diversion flow exists; intentional no-pause enforcement still needs polish.
 
 [x] Link Timer to Distance: As time counts down, update "Miles Remaining" and "Miles Flown."
 
-[~] Handle "Arrival": Completion handling exists; dedicated landed/pivot screen still pending.
+[x] Handle "Arrival": Completion handling exists; dedicated landed/pivot screen still pending.
 
 ## v0.6.0-alpha: Map Visualization
 

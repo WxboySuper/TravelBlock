@@ -19,6 +19,7 @@ import { calculateIntermediateBearing, interpolatePosition } from '@/utils/fligh
 import {
     calculateAltitude,
     calculateSpeed,
+    getDescentStartPercent,
     getFlightPhase,
     getMaxAltitude
 } from '@/utils/flightMetrics';
@@ -162,6 +163,8 @@ class FlightTimerService {
     this.booking = newBooking;
     this.startTime = Date.now() - (newElapsedSeconds * 1000);
     this.elapsedSeconds = newElapsedSeconds;
+    // Clear pausedAt so resumeFlight does not double-adjust startTime
+    this.pausedAt = null;
     this.lastPhase = null; // Reset phase to trigger new phase change events
 
     console.log('[FlightTimer] Flight updated (diverted)', {
@@ -269,21 +272,30 @@ class FlightTimerService {
     const distanceFlown = distanceKm * progressRatio;
     const distanceRemaining = distanceKm * (1 - progressRatio);
 
-    // Determine flight phase
-    const currentPhase = getFlightPhase(progressPercent);
-
     // Calculate position along route
     const currentPosition = interpolatePosition(origin, destination, progressRatio);
 
     // Calculate heading
     const heading = calculateIntermediateBearing(origin, destination, progressRatio);
+    const descentStartPercent = getDescentStartPercent(
+      distanceKm,
+      this.booking.aircraft.name,
+      heading
+    );
+
+    // Determine flight phase
+    const currentPhase = getFlightPhase(progressPercent, { descentStartPercent });
 
     // Calculate altitude
-    const maxAltitude = getMaxAltitude(distanceKm);
-    const currentAltitude = calculateAltitude(progressPercent, currentPhase, maxAltitude);
+    const maxAltitude = getMaxAltitude(distanceKm, this.booking.aircraft.name, heading);
+    const currentAltitude = calculateAltitude(progressPercent, currentPhase, maxAltitude, {
+      descentStartPercent,
+    });
 
     // Calculate speed
-    const currentSpeed = calculateSpeed(progressPercent, currentPhase);
+    const currentSpeed = calculateSpeed(progressPercent, currentPhase, {
+      descentStartPercent,
+    });
 
     return {
       elapsedSeconds: Math.round(this.elapsedSeconds),

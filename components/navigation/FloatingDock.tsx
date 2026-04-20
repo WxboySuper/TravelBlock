@@ -3,8 +3,9 @@ import { StyleSheet, View, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 
-import { IconSymbol, IconSymbolName } from '@/components/ui/icon-symbol';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
+import { ThemedText } from '@/components/themed-text';
+import { Colors, Spacing, BorderRadius, Elevation, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface TabItemProps {
@@ -43,9 +44,16 @@ function TabItem({ route, index, state, descriptors, navigation, colors }: TabIt
   };
 
   // Map route names to icons
-  let iconName: IconSymbolName = 'house.fill'; // Default
-  if (route.name === 'index') iconName = 'house.fill';
-  if (route.name === 'explore') iconName = 'book.fill';
+  let iconName: AppIconName = 'home';
+  let label = options.title ?? route.name;
+  if (route.name === 'index') {
+    iconName = 'home';
+    label = 'Home';
+  }
+  if (route.name === 'explore') {
+    iconName = 'logbook';
+    label = 'Logbook';
+  }
 
   const color = isFocused ? colors.tabIconSelected : colors.tabIconDefault;
 
@@ -57,11 +65,13 @@ function TabItem({ route, index, state, descriptors, navigation, colors }: TabIt
       testID={options.tabBarButtonTestID}
       onPress={handlePress}
       onLongPress={handleLongPress}
-      style={styles.tabButton}
+      style={[styles.tabButton, isFocused ? { backgroundColor: colors.cockpitAccentSoft } : undefined]}
       android_ripple={{ borderless: true, color: colors.border }}
     >
-      {isFocused && <View style={[styles.activeIndicator, { backgroundColor: colors.tint }]} />}
-      <IconSymbol size={28} name={iconName} color={color} />
+      <View style={[styles.iconShell, isFocused ? { backgroundColor: colors.cockpitGlass } : undefined]}>
+        <AppIcon size={22} name={iconName} color={color} />
+      </View>
+      <ThemedText style={[styles.tabLabel, { color }]}>{label}</ThemedText>
     </Pressable>
   );
 }
@@ -75,10 +85,10 @@ export function FloatingDock({ state, descriptors, navigation }: BottomTabBarPro
     <View style={[
       styles.container, 
       { 
-        bottom: Spacing.lg + insets.bottom, 
+        bottom: Math.max(Spacing.md, insets.bottom + Spacing.sm),
         backgroundColor: colors.surfaceElevated,
-        borderColor: colors.borderLight,
-        shadowColor: colors.cardShadow,
+        borderColor: colors.cockpitBorder,
+        shadowColor: '#000000',
       }
     ]}>
       {state.routes.map((route, index) => (
@@ -99,35 +109,36 @@ export function FloatingDock({ state, descriptors, navigation }: BottomTabBarPro
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: Spacing.xl,
-    right: Spacing.xl,
+    left: Spacing.lg,
+    right: Spacing.lg,
     flexDirection: 'row',
-    borderRadius: BorderRadius.full,
-    height: 64,
+    borderRadius: BorderRadius.xxl,
+    minHeight: 72,
     alignItems: 'center',
-    justifyContent: 'space-around',
-    // Shadow for depth
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    justifyContent: 'space-between',
     borderWidth: 1,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    ...Elevation.floating,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100%',
-    borderRadius: BorderRadius.full,
+    minHeight: 56,
+    borderRadius: BorderRadius.xl,
+    gap: 2,
   },
-  activeIndicator: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    opacity: 0.1,
-  }
+  iconShell: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabLabel: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semibold as any,
+    letterSpacing: 0.3,
+  },
 });

@@ -97,7 +97,8 @@ describe("radiusService", () => {
   describe("FLIGHT_CONSTANTS", () => {
     it("should have correct constant values", () => {
       expect(FLIGHT_CONSTANTS.CRUISE_SPEED_MPH).toBe(450);
-      expect(FLIGHT_CONSTANTS.OVERHEAD_SECONDS).toBe(1500); // 25 minutes
+      expect(FLIGHT_CONSTANTS.MIN_OVERHEAD_SECONDS).toBe(480);
+      expect(FLIGHT_CONSTANTS.MAX_OVERHEAD_SECONDS).toBe(1080);
       expect(FLIGHT_CONSTANTS.DEFAULT_TOLERANCE).toBe(0.05);
     });
   });
@@ -105,34 +106,30 @@ describe("radiusService", () => {
   describe("calculateMaxDistance", () => {
     it("should calculate distance for 1 hour flight", () => {
       const distance = calculateMaxDistance({ timeInSeconds: 3600 }); // 1 hour
-      // 3600s - 1500s overhead = 2100s = 0.583h
-      // 0.583h * 450mph = 262.5 miles
-      expect(distance).toBeCloseTo(262.5, 1);
+      expect(distance).toBeGreaterThan(330);
+      expect(distance).toBeLessThan(380);
     });
 
     it("should calculate distance for 2 hour flight", () => {
       const distance = calculateMaxDistance({ timeInSeconds: 7200 }); // 2 hours
-      // 7200s - 1500s = 5700s = 1.583h
-      // 1.583h * 450mph = 712.5 miles
-      expect(distance).toBeCloseTo(712.5, 1);
+      expect(distance).toBeGreaterThan(780);
+      expect(distance).toBeLessThan(820);
     });
 
     it("should calculate distance for 5 hour flight", () => {
       const distance = calculateMaxDistance({ timeInSeconds: 18000 }); // 5 hours
-      // 18000s - 1500s = 16500s = 4.583h
-      // 4.583h * 450mph = 2062.5 miles
-      expect(distance).toBeCloseTo(2062.5, 1);
+      expect(distance).toBeGreaterThan(2100);
+      expect(distance).toBeLessThan(2180);
     });
 
     it("should handle 30 minute flight", () => {
       const distance = calculateMaxDistance({ timeInSeconds: 1800 }); // 30 minutes
-      // 1800s - 1500s = 300s = 0.083h
-      // 0.083h * 450mph = 37.5 miles
-      expect(distance).toBeCloseTo(37.5, 1);
+      expect(distance).toBeGreaterThan(130);
+      expect(distance).toBeLessThan(145);
     });
 
     it("should return 0 for very short flights (less than overhead)", () => {
-      const distance = calculateMaxDistance({ timeInSeconds: 1000 }); // Less than 25 min overhead
+      const distance = calculateMaxDistance({ timeInSeconds: 400 });
       expect(distance).toBe(0);
     });
 
@@ -145,28 +142,22 @@ describe("radiusService", () => {
   describe("estimateFlightTime", () => {
     it("should estimate time for ~190 mile flight", () => {
       const time = estimateFlightTime({ distanceInMiles: 190 }); // Boston from NYC
-      // 190 miles / 450mph = 0.422h = 1520s
-      // Add 1500s overhead = 3020s (~50 minutes)
-      expect(time).toBeCloseTo(3020, 0);
+      expect(time).toBeCloseTo(2240, 0);
     });
 
     it("should estimate time for ~250 mile flight", () => {
       const time = estimateFlightTime({ distanceInMiles: 250 });
-      // 250 / 450 = 0.556h = 2000s
-      // Add 1500s = 3500s (~58 minutes)
-      expect(time).toBeCloseTo(3500, 0);
+      expect(time).toBeCloseTo(2720, 0);
     });
 
     it("should estimate time for ~2450 mile flight", () => {
       const time = estimateFlightTime({ distanceInMiles: 2450 }); // LA from NYC
-      // 2450 / 450 = 5.444h = 19600s
-      // Add 1500s = 21100s (~5.86 hours)
-      expect(time).toBeCloseTo(21100, 0);
+      expect(time).toBeCloseTo(20680, 0);
     });
 
     it("should handle zero distance", () => {
       const time = estimateFlightTime({ distanceInMiles: 0 });
-      expect(time).toBe(FLIGHT_CONSTANTS.OVERHEAD_SECONDS);
+      expect(time).toBe(FLIGHT_CONSTANTS.MIN_OVERHEAD_SECONDS);
     });
 
     it("should return integer seconds", () => {
@@ -180,9 +171,11 @@ describe("radiusService", () => {
       const estimate = getFlightEstimate({ timeInSeconds: 3600 });
 
       expect(estimate.timeInSeconds).toBe(3600);
-      expect(estimate.distanceInMiles).toBeCloseTo(262.5, 1);
+      expect(estimate.distanceInMiles).toBeGreaterThan(330);
+      expect(estimate.distanceInMiles).toBeLessThan(380);
       expect(estimate.cruiseSpeed).toBe(450);
-      expect(estimate.overhead).toBe(1500);
+      expect(estimate.overhead).toBeGreaterThanOrEqual(480);
+      expect(estimate.overhead).toBeLessThanOrEqual(1080);
     });
   });
 
@@ -224,7 +217,7 @@ describe("radiusService", () => {
 
     it("should return empty array for very short time with no nearby airports", () => {
       const destinations = getDestinationsInTimeRange({ origin: jfk, timeInSeconds: 1800 }); // 30 min
-      // With 30min = 37.5 miles max, and overhead, no airports should match
+      // With the updated short-haul model there is still no mocked airport inside range.
       expect(destinations.length).toBe(0);
     });
 
@@ -392,11 +385,11 @@ describe("radiusService", () => {
     });
 
     it("returns only airports inside the selected 10 minute window", () => {
-      const destinations = getDestinationsInTimeBucket({ origin: jfk, timeInSeconds: 3600 });
+      const destinations = getDestinationsInTimeBucket({ origin: jfk, timeInSeconds: 2400 });
 
       expect(destinations.map((airport) => airport.icao)).toEqual(["KBOS"]);
-      expect(destinations[0].flightTime).toBeGreaterThan(3000);
-      expect(destinations[0].flightTime).toBeLessThanOrEqual(3600);
+      expect(destinations[0].flightTime).toBeGreaterThan(1800);
+      expect(destinations[0].flightTime).toBeLessThanOrEqual(2400);
     });
   });
 
@@ -406,8 +399,8 @@ describe("radiusService", () => {
       const time = estimateFlightTime({ distanceInMiles: distance });
 
       // Real-world flight time is roughly 1 hour
-      expect(time).toBeGreaterThan(2700); // >45 min
-      expect(time).toBeLessThan(4500); // <75 min
+      expect(time).toBeGreaterThan(2100);
+      expect(time).toBeLessThan(3600);
     });
 
     it("should estimate NYC to LA correctly", () => {
@@ -423,7 +416,7 @@ describe("radiusService", () => {
       const maxDistance = calculateMaxDistance({ timeInSeconds: 18000 }); // 5 hours
 
       // Should be able to reach about 2000 miles
-      expect(maxDistance).toBeGreaterThan(1800);
+      expect(maxDistance).toBeGreaterThan(2100);
       expect(maxDistance).toBeLessThan(2200);
     });
   });

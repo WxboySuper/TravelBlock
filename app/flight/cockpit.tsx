@@ -14,21 +14,21 @@
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing, Typography } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useFlight } from '@/context/FlightContext';
 
 // Cockpit components
+import { CockpitHeader } from '@/components/cockpit/CockpitHeader';
 import { CockpitTab, CockpitTabs } from '@/components/cockpit/CockpitTabs';
 import { DivertModal } from '@/components/cockpit/DivertModal';
 import { FlightMapView } from '@/components/cockpit/FlightMapView';
 import { InfoPanel } from '@/components/cockpit/InfoPanel';
 import { MetricsGrid } from '@/components/cockpit/MetricsGrid';
-import { TimerDisplay } from '@/components/cockpit/TimerDisplay';
 
 // Services
 import { calculateDivertRoute, findNearestAirports, getDivertReason } from '@/services/divertService';
@@ -46,28 +46,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  divertButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 999,
-  },
-  divertButtonText: {
-    color: '#FFFFFF',
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold as any,
+  metricsScrollContent: {
+    paddingBottom: 32,
   },
 });
 
@@ -143,7 +123,14 @@ function renderSelectedTabContent(
         />
       );
     case 'metrics':
-      return <MetricsGrid progress={progress} />;
+      return (
+        <ScrollView
+          contentContainerStyle={styles.metricsScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <MetricsGrid progress={progress} />
+        </ScrollView>
+      );
     case 'info':
       return <InfoPanel booking={activeBooking} />;
     default:
@@ -414,37 +401,26 @@ export default function CockpitScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView darkColor={Colors.dark.cockpitBackground} lightColor={Colors.light.cockpitBackground} style={styles.container}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Timer Display */}
-        <TimerDisplay
-          remainingSeconds={progress.remainingSeconds}
+        <CockpitHeader
+          booking={activeBooking}
+          isDiverted={isDiverted}
+          onDivertPress={() => {
+            void handleDivertPress();
+          }}
           phase={progress.currentPhase}
           progressPercent={progress.progressPercent}
+          remainingSeconds={progress.remainingSeconds}
         />
 
-        {/* Tab Selector */}
         <CockpitTabs
           selectedTab={selectedTab}
           onTabChange={setSelectedTab}
         />
 
-        {/* Content based on selected tab */}
         <View style={styles.content}>{renderSelectedTabContent(selectedTab, activeBooking, progress, isDiverted)}</View>
 
-        {/* Divert Button (overlays map on map tab) */}
-        {selectedTab === 'map' && (
-          <TouchableOpacity
-            style={styles.divertButton}
-            onPress={handleDivertPress}
-            accessibilityLabel="Divert flight"
-            accessibilityRole="button"
-          >
-            <ThemedText style={styles.divertButtonText}>⚠️ Divert</ThemedText>
-          </TouchableOpacity>
-        )}
-
-        {/* Divert Modal */}
         <DivertModal
           visible={showDivertModal}
           divertOptions={divertOptions}

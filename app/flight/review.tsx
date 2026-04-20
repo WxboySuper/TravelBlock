@@ -24,6 +24,7 @@ import { generateFlightBooking } from '@/utils/flightGenerator';
 import { estimateFlightTime } from '@/services/radiusService';
 import { calculateDistance } from '@/utils/distance';
 import { formatTimeValue } from '@/utils/timeSlider';
+import type { Airport } from '@/types/airport';
 
 const styles = StyleSheet.create({
   container: {
@@ -123,23 +124,133 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function FlightReviewScreen() {
-  const router = useRouter();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const { origin, destination, flightDuration, setBooking } = useFlight();
+type ReviewDetailRowProps = {
+  colors: typeof Colors.light;
+  isLast?: boolean;
+  label: string;
+  value: string;
+  valueStyle?: object;
+};
 
+function ReviewDetailRow({
+  colors,
+  isLast = false,
+  label,
+  value,
+  valueStyle,
+}: ReviewDetailRowProps) {
+  return (
+    <>
+      <View style={styles.detailRow}>
+        <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
+          {label}
+        </ThemedText>
+        <ThemedText style={[styles.detailValue, valueStyle]}>
+          {value}
+        </ThemedText>
+      </View>
+      {!isLast ? <View style={[styles.divider, { backgroundColor: colors.border }]} /> : null}
+    </>
+  );
+}
+
+function RoutePreview({
+  colors,
+  destination,
+  origin,
+}: {
+  colors: typeof Colors.light;
+  destination: Airport;
+  origin: Airport;
+}) {
+  return (
+    <View style={[styles.routeCard, { backgroundColor: colors.cardBackground }]}>
+      <View style={styles.routeHeader}>
+        <View style={styles.airportInfo}>
+          <ThemedText style={[styles.airportCode, { color: colors.primary }]}>
+            {origin.iata || origin.icao}
+          </ThemedText>
+          <ThemedText style={styles.airportName}>
+            {origin.name}
+          </ThemedText>
+          <ThemedText style={[styles.airportLocation, { color: colors.textSecondary }]}>
+            {origin.city}, {origin.country}
+          </ThemedText>
+        </View>
+
+        <View style={styles.routeArrow}>
+          <IconSymbol name="arrow.right" size={28} color={colors.textSecondary} />
+        </View>
+
+        <View style={[styles.airportInfo, { alignItems: 'flex-end' }]}>
+          <ThemedText style={[styles.airportCode, { color: colors.primary }]}>
+            {destination.iata || destination.icao}
+          </ThemedText>
+          <ThemedText style={[styles.airportName, { textAlign: 'right' }]}>
+            {destination.name}
+          </ThemedText>
+          <ThemedText style={[styles.airportLocation, { color: colors.textSecondary, textAlign: 'right' }]}>
+            {destination.city}, {destination.country}
+          </ThemedText>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function useReviewBooking(
+  origin: Airport | null,
+  destination: Airport | null,
+  flightDuration: number
+) {
   const routeEstimateSeconds = useMemo(() => {
     if (!origin || !destination) return 0;
     const distanceMiles = calculateDistance(origin, destination);
     return estimateFlightTime({ distanceInMiles: distanceMiles });
   }, [origin, destination]);
 
-  // Keep the selected focus duration as the booked flight duration.
   const booking = useMemo(() => {
     if (!origin || !destination) return null;
     return generateFlightBooking(origin, destination, flightDuration);
   }, [flightDuration, origin, destination]);
+
+  return {
+    booking,
+    routeEstimateSeconds,
+  };
+}
+
+function renderEmptyState(colors: typeof Colors.light, handleBack: () => void) {
+  return (
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.backButton}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <IconSymbol name="chevron.left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <ThemedText type="title">Flight Review</ThemedText>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ThemedText>No flight data available</ThemedText>
+        </View>
+      </SafeAreaView>
+    </ThemedView>
+  );
+}
+
+export default function FlightReviewScreen() {
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const { origin, destination, flightDuration, setBooking } = useFlight();
+
+  const { booking, routeEstimateSeconds } = useReviewBooking(origin, destination, flightDuration);
 
   const formattedTime = formatTimeValue(booking?.durationSeconds ?? flightDuration);
   const formattedRouteEstimate = formatTimeValue(routeEstimateSeconds);
@@ -164,27 +275,7 @@ export default function FlightReviewScreen() {
   }, [booking, setBooking, router]);
 
   if (!origin || !destination || !booking) {
-    return (
-      <ThemedView style={styles.container}>
-        <SafeAreaView style={{ flex: 1 }}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={handleBack}
-              style={styles.backButton}
-              accessibilityLabel="Go back"
-              accessibilityRole="button"
-            >
-              <IconSymbol name="chevron.left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <ThemedText type="title">Flight Review</ThemedText>
-            <View style={{ width: 40 }} />
-          </View>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ThemedText>No flight data available</ThemedText>
-          </View>
-        </SafeAreaView>
-      </ThemedView>
-    );
+    return renderEmptyState(colors, handleBack);
   }
 
   return (
@@ -212,40 +303,7 @@ export default function FlightReviewScreen() {
               >
                 Your Route
               </ThemedText>
-              <View style={[styles.routeCard, { backgroundColor: colors.cardBackground }]}>
-                <View style={styles.routeHeader}>
-                  {/* Departure */}
-                  <View style={styles.airportInfo}>
-                    <ThemedText style={[styles.airportCode, { color: colors.primary }]}>
-                      {origin.iata || origin.icao}
-                    </ThemedText>
-                    <ThemedText style={styles.airportName}>
-                      {origin.name}
-                    </ThemedText>
-                    <ThemedText style={[styles.airportLocation, { color: colors.textSecondary }]}>
-                      {origin.city}, {origin.country}
-                    </ThemedText>
-                  </View>
-
-                  {/* Arrow */}
-                  <View style={styles.routeArrow}>
-                    <IconSymbol name="arrow.right" size={28} color={colors.textSecondary} />
-                  </View>
-
-                  {/* Destination */}
-                  <View style={[styles.airportInfo, { alignItems: 'flex-end' }]}>
-                    <ThemedText style={[styles.airportCode, { color: colors.primary }]}>
-                      {destination.iata || destination.icao}
-                    </ThemedText>
-                    <ThemedText style={[styles.airportName, { textAlign: 'right' }]}>
-                      {destination.name}
-                    </ThemedText>
-                    <ThemedText style={[styles.airportLocation, { color: colors.textSecondary, textAlign: 'right' }]}>
-                      {destination.city}, {destination.country}
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
+              <RoutePreview colors={colors} destination={destination} origin={origin} />
             </View>
 
             {/* Flight Details Section */}
@@ -256,69 +314,38 @@ export default function FlightReviewScreen() {
                 Flight Details
               </ThemedText>
               <View style={[styles.detailsCard, { backgroundColor: colors.cardBackground }]}>
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    Flight Number
-                  </ThemedText>
-                  <ThemedText style={[styles.detailValue, { fontFamily: 'monospace' }]}>
-                    {booking.flightNumber}
-                  </ThemedText>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    Duration
-                  </ThemedText>
-                  <ThemedText style={styles.detailValue}>
-                    {formattedTime.formatted}
-                  </ThemedText>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    Route ETA
-                  </ThemedText>
-                  <ThemedText style={styles.detailValue}>
-                    {formattedRouteEstimate.formatted}
-                  </ThemedText>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    Distance
-                  </ThemedText>
-                  <ThemedText style={styles.detailValue}>
-                    {distanceMiles} mi ({Math.round(distanceKm)} km)
-                  </ThemedText>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    Aircraft
-                  </ThemedText>
-                  <ThemedText style={styles.detailValue}>
-                    {booking.aircraft.name}
-                  </ThemedText>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    Gate
-                  </ThemedText>
-                  <ThemedText style={styles.detailValue}>
-                    {booking.gate}
-                  </ThemedText>
-                </View>
+                <ReviewDetailRow
+                  colors={colors}
+                  label="Flight Number"
+                  value={booking.flightNumber}
+                  valueStyle={{ fontFamily: 'monospace' }}
+                />
+                <ReviewDetailRow
+                  colors={colors}
+                  label="Duration"
+                  value={formattedTime.formatted}
+                />
+                <ReviewDetailRow
+                  colors={colors}
+                  label="Route ETA"
+                  value={formattedRouteEstimate.formatted}
+                />
+                <ReviewDetailRow
+                  colors={colors}
+                  label="Distance"
+                  value={`${distanceMiles} mi (${Math.round(distanceKm)} km)`}
+                />
+                <ReviewDetailRow
+                  colors={colors}
+                  label="Aircraft"
+                  value={booking.aircraft.name}
+                />
+                <ReviewDetailRow
+                  colors={colors}
+                  isLast
+                  label="Gate"
+                  value={booking.gate}
+                />
               </View>
             </View>
           </View>

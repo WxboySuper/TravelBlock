@@ -138,6 +138,54 @@ function getPhaseMeta(phase: FlightPhase, colors: typeof Colors.light) {
   }
 }
 
+function RouteBlock({
+  alignRight = false,
+  city,
+  code,
+  color,
+}: {
+  alignRight?: boolean;
+  city: string;
+  code: string;
+  color: string;
+}) {
+  return (
+    <View style={alignRight ? styles.routeCodeBlockRight : styles.routeCodeBlock}>
+      <ThemedText darkColor="#F8FAFC" lightColor="#F8FAFC" style={styles.routeCode}>
+        {code}
+      </ThemedText>
+      <ThemedText style={[styles.routeCity, { color }]}>{city}</ThemedText>
+    </View>
+  );
+}
+
+function HeaderFooter({
+  aircraftName,
+  flightNumber,
+  progressLabel,
+  secondaryColor,
+}: {
+  aircraftName: string;
+  flightNumber: string;
+  progressLabel: string;
+  secondaryColor: string;
+}) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: Spacing.sm, minWidth: 0 }}>
+      <ThemedText
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        style={[styles.footerMetaLeft, { color: secondaryColor }]}
+      >
+        {flightNumber} · {aircraftName}
+      </ThemedText>
+      <ThemedText style={[styles.footerMetaRight, { color: secondaryColor }]}>
+        {progressLabel}
+      </ThemedText>
+    </View>
+  );
+}
+
 export function CockpitHeader({
   booking,
   isDiverted,
@@ -205,37 +253,21 @@ export function CockpitHeader({
           </View>
 
           <View style={styles.routeRow}>
-            <View style={styles.routeCodeBlock}>
-              <ThemedText darkColor={primaryTextColor} lightColor={primaryTextColor} style={styles.routeCode}>
-                {booking.origin.iata}
-              </ThemedText>
-              <ThemedText style={[styles.routeCity, { color: colors.cockpitTextSecondary }]}>{booking.origin.city}</ThemedText>
-            </View>
+            <RouteBlock city={booking.origin.city} code={booking.origin.iata} color={colors.cockpitTextSecondary} />
 
             <View style={[styles.routeArrowWrap, { backgroundColor: colors.cockpitAccentSoft }]}>
               <AppIcon color={colors.cockpitAccent} name="aircraft" size={18} style={{ transform: [{ rotate: "90deg" }] }} />
             </View>
 
-            <View style={styles.routeCodeBlockRight}>
-              <ThemedText darkColor={primaryTextColor} lightColor={primaryTextColor} style={styles.routeCode}>
-                {booking.destination.iata}
-              </ThemedText>
-              <ThemedText style={[styles.routeCity, { color: colors.cockpitTextSecondary }]}>{booking.destination.city}</ThemedText>
-            </View>
+            <RouteBlock alignRight city={booking.destination.city} code={booking.destination.iata} color={colors.cockpitTextSecondary} />
           </View>
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: Spacing.sm, minWidth: 0 }}>
-            <ThemedText
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={[styles.footerMetaLeft, { color: colors.cockpitTextSecondary }]}
-            >
-              {booking.flightNumber} · {booking.aircraft.name}
-            </ThemedText>
-            <ThemedText style={[styles.footerMetaRight, { color: colors.cockpitTextSecondary }]}>
-              {progressLabel}
-            </ThemedText>
-          </View>
+          <HeaderFooter
+            aircraftName={booking.aircraft.name}
+            flightNumber={booking.flightNumber}
+            progressLabel={progressLabel}
+            secondaryColor={colors.cockpitTextSecondary}
+          />
         </View>
       </View>
     </View>

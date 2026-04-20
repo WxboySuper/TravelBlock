@@ -18,7 +18,6 @@ type OverlayPoints = {
   plane?: OverlayPoint;
 };
 type MapOverlayProps = {
-  accentColor: string;
   colors: typeof Colors.light;
   destinationCode: string;
   heading: number;
@@ -27,6 +26,13 @@ type MapOverlayProps = {
   overlayPoints: OverlayPoints;
 };
 type FallbackMapProps = {
+  accentColor: string;
+  colors: typeof Colors.light;
+  currentPosition: FlightMapAdapterProps["currentPosition"];
+  destination: FlightMapAdapterProps["destination"];
+  origin: FlightMapAdapterProps["origin"];
+};
+type RouteSummaryProps = {
   accentColor: string;
   colors: typeof Colors.light;
   currentPosition: FlightMapAdapterProps["currentPosition"];
@@ -295,22 +301,13 @@ function FallbackMap({ accentColor, colors, currentPosition, destination, origin
         <ThemedText style={[styles.fallbackBody, { color: colors.cockpitTextSecondary }]}>
           The route view is ready, but this app build does not include the native map renderer.
         </ThemedText>
-        <View style={[styles.routeSummary, { backgroundColor: colors.cockpitSurfaceMuted }]}>
-          <View style={styles.routeRow}>
-            <View style={styles.routeSide}>
-              <ThemedText style={[styles.routeCode, { color: colors.text }]}>{origin.iata}</ThemedText>
-              <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{origin.city}</ThemedText>
-            </View>
-            <AppIcon color={accentColor} name="aircraft" size={22} style={{ transform: [{ rotate: "90deg" }] }} />
-            <View style={styles.routeSideRight}>
-              <ThemedText style={[styles.routeCode, { color: colors.text }]}>{destination.iata}</ThemedText>
-              <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{destination.city}</ThemedText>
-            </View>
-          </View>
-          <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>
-            {currentPosition.lat.toFixed(2)}, {currentPosition.lon.toFixed(2)}
-          </ThemedText>
-        </View>
+        <FallbackRouteSummary
+          accentColor={accentColor}
+          colors={colors}
+          currentPosition={currentPosition}
+          destination={destination}
+          origin={origin}
+        />
         <ThemedText style={[styles.fallbackHint, { color: colors.cockpitTextSecondary }]}>
           Install a build with `react-native-maps` or the upcoming MapLibre adapter to restore the live route view.
         </ThemedText>
@@ -319,8 +316,34 @@ function FallbackMap({ accentColor, colors, currentPosition, destination, origin
   );
 }
 
-function MapOverlay({
+function FallbackRouteSummary({
   accentColor,
+  colors,
+  currentPosition,
+  destination,
+  origin,
+}: RouteSummaryProps) {
+  return (
+    <View style={[styles.routeSummary, { backgroundColor: colors.cockpitSurfaceMuted }]}>
+      <View style={styles.routeRow}>
+        <View style={styles.routeSide}>
+          <ThemedText style={[styles.routeCode, { color: colors.text }]}>{origin.iata}</ThemedText>
+          <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{origin.city}</ThemedText>
+        </View>
+        <AppIcon color={accentColor} name="aircraft" size={22} style={{ transform: [{ rotate: "90deg" }] }} />
+        <View style={styles.routeSideRight}>
+          <ThemedText style={[styles.routeCode, { color: colors.text }]}>{destination.iata}</ThemedText>
+          <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{destination.city}</ThemedText>
+        </View>
+      </View>
+      <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>
+        {currentPosition.lat.toFixed(2)}, {currentPosition.lon.toFixed(2)}
+      </ThemedText>
+    </View>
+  );
+}
+
+function MapOverlay({
   colors,
   destinationCode,
   heading,
@@ -496,7 +519,6 @@ export function FlightMapGoogleAdapter({
         />
       </MapView>
       <MapOverlay
-        accentColor={accentColor}
         colors={colors}
         destinationCode={destination.iata}
         heading={heading}

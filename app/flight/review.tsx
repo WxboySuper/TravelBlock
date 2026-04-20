@@ -224,23 +224,56 @@ function renderEmptyState(colors: typeof Colors.light, handleBack: () => void) {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.backButton}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <IconSymbol name="chevron.left" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <ThemedText type="title">Flight Review</ThemedText>
-          <View style={{ width: 40 }} />
-        </View>
+        <ReviewHeader colors={colors} handleBack={handleBack} title="Flight Review" />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ThemedText>No flight data available</ThemedText>
         </View>
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+function ReviewHeader({
+  colors,
+  handleBack,
+  title,
+}: {
+  colors: typeof Colors.light;
+  handleBack: () => void;
+  title: string;
+}) {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={handleBack}
+        style={styles.backButton}
+        accessibilityLabel="Go back"
+        accessibilityRole="button"
+      >
+        <IconSymbol name="chevron.left" size={24} color={colors.text} />
+      </TouchableOpacity>
+      <ThemedText type="title">{title}</ThemedText>
+      <View style={{ width: 40 }} />
+    </View>
+  );
+}
+
+function ReviewSection({
+  children,
+  colors,
+  title,
+}: {
+  children: React.ReactNode;
+  colors: typeof Colors.light;
+  title: string;
+}) {
+  return (
+    <View style={styles.section}>
+      <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+        {title}
+      </ThemedText>
+      {children}
+    </View>
   );
 }
 
@@ -281,38 +314,15 @@ export default function FlightReviewScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.backButton}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <IconSymbol name="chevron.left" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <ThemedText type="title">Review Flight</ThemedText>
-          <View style={{ width: 40 }} />
-        </View>
+        <ReviewHeader colors={colors} handleBack={handleBack} title="Review Flight" />
 
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
-            {/* Route Section */}
-            <View style={styles.section}>
-              <ThemedText
-                style={[styles.sectionTitle, { color: colors.textSecondary }]}
-              >
-                Your Route
-              </ThemedText>
+            <ReviewSection colors={colors} title="Your Route">
               <RoutePreview colors={colors} destination={destination} origin={origin} />
-            </View>
+            </ReviewSection>
 
-            {/* Flight Details Section */}
-            <View style={styles.section}>
-              <ThemedText
-                style={[styles.sectionTitle, { color: colors.textSecondary }]}
-              >
-                Flight Details
-              </ThemedText>
+            <ReviewSection colors={colors} title="Flight Details">
               <View style={[styles.detailsCard, { backgroundColor: colors.cardBackground }]}>
                 <ReviewDetailRow
                   colors={colors}
@@ -347,7 +357,7 @@ export default function FlightReviewScreen() {
                   value={booking.gate}
                 />
               </View>
-            </View>
+            </ReviewSection>
           </View>
         </ScrollView>
 

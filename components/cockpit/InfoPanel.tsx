@@ -148,6 +148,71 @@ function InfoRow({
   );
 }
 
+function InfoSection({
+  children,
+  colors,
+  icon,
+  title,
+}: {
+  children: React.ReactNode;
+  colors: typeof Colors.light;
+  icon: React.ComponentProps<typeof AppIcon>['name'];
+  title: string;
+}) {
+  return (
+    <View style={[styles.sectionCard, { backgroundColor: colors.cockpitSurface, borderColor: colors.cockpitBorder }]}>
+      <View style={styles.sectionHeader}>
+        <AppIcon color={colors.cockpitAccent} name={icon} size={18} />
+        <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>{title}</Text>
+      </View>
+      <View style={styles.sectionBody}>{children}</View>
+    </View>
+  );
+}
+
+function RouteHero({ booking, colors }: { booking: FlightBooking; colors: typeof Colors.light }) {
+  return (
+    <View
+      style={[
+        styles.heroCard,
+        {
+          backgroundColor: colors.cockpitSurface,
+          borderColor: colors.cockpitBorder,
+        },
+      ]}
+    >
+      <Text style={[styles.eyebrow, { color: colors.cockpitTextSecondary }]}>Flight Route</Text>
+
+      <View style={styles.routeRow}>
+        <View style={styles.routeSide}>
+          <Text style={[styles.routeCode, { color: '#FFFFFF' }]}>{booking.origin.iata}</Text>
+          <Text style={[styles.routeCity, { color: '#FFFFFF' }]}>{booking.origin.city}</Text>
+          <Text style={[styles.routeAirport, { color: colors.cockpitTextSecondary }]}>{booking.origin.name}</Text>
+        </View>
+
+        <View style={[styles.routeBadge, { backgroundColor: colors.cockpitAccentSoft }]}>
+          <AppIcon color={colors.cockpitAccent} name="aircraft" size={22} style={{ transform: [{ rotate: '90deg' }] }} />
+        </View>
+
+        <View style={styles.routeSideRight}>
+          <Text style={[styles.routeCode, { color: '#FFFFFF' }]}>{booking.destination.iata}</Text>
+          <Text style={[styles.routeCity, { color: '#FFFFFF' }]}>{booking.destination.city}</Text>
+          <Text style={[styles.routeAirport, { color: colors.cockpitTextSecondary }]}>{booking.destination.name}</Text>
+        </View>
+      </View>
+
+      <View style={styles.routeMetaRow}>
+        <View style={[styles.metaPill, { backgroundColor: colors.cockpitGlass, borderColor: colors.cockpitBorder }]}>
+          <Text style={[styles.metaPillText, { color: '#FFFFFF' }]}>{booking.flightNumber}</Text>
+        </View>
+        <View style={[styles.metaPill, { backgroundColor: colors.cockpitGlass, borderColor: colors.cockpitBorder }]}>
+          <Text style={[styles.metaPillText, { color: '#FFFFFF' }]}>{booking.aircraft.name}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export function InfoPanel({ booking }: InfoPanelProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -158,81 +223,26 @@ export function InfoPanel({ booking }: InfoPanelProps) {
       showsVerticalScrollIndicator={false}
       style={styles.container}
     >
-      <View
-        style={[
-          styles.heroCard,
-          {
-            backgroundColor: colors.cockpitSurface,
-            borderColor: colors.cockpitBorder,
-          },
-        ]}
-      >
-        <Text style={[styles.eyebrow, { color: colors.cockpitTextSecondary }]}>Flight Route</Text>
+      <RouteHero booking={booking} colors={colors} />
 
-        <View style={styles.routeRow}>
-          <View style={styles.routeSide}>
-            <Text style={[styles.routeCode, { color: '#FFFFFF' }]}>{booking.origin.iata}</Text>
-            <Text style={[styles.routeCity, { color: '#FFFFFF' }]}>{booking.origin.city}</Text>
-            <Text style={[styles.routeAirport, { color: colors.cockpitTextSecondary }]}>{booking.origin.name}</Text>
-          </View>
-
-          <View style={[styles.routeBadge, { backgroundColor: colors.cockpitAccentSoft }]}>
-            <AppIcon color={colors.cockpitAccent} name="aircraft" size={22} style={{ transform: [{ rotate: '90deg' }] }} />
-          </View>
-
-          <View style={styles.routeSideRight}>
-            <Text style={[styles.routeCode, { color: '#FFFFFF' }]}>{booking.destination.iata}</Text>
-            <Text style={[styles.routeCity, { color: '#FFFFFF' }]}>{booking.destination.city}</Text>
-            <Text style={[styles.routeAirport, { color: colors.cockpitTextSecondary }]}>{booking.destination.name}</Text>
-          </View>
-        </View>
-
-        <View style={styles.routeMetaRow}>
-          <View style={[styles.metaPill, { backgroundColor: colors.cockpitGlass, borderColor: colors.cockpitBorder }]}>
-            <Text style={[styles.metaPillText, { color: '#FFFFFF' }]}>{booking.flightNumber}</Text>
-          </View>
-          <View style={[styles.metaPill, { backgroundColor: colors.cockpitGlass, borderColor: colors.cockpitBorder }]}>
-            <Text style={[styles.metaPillText, { color: '#FFFFFF' }]}>{booking.aircraft.name}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={[styles.sectionCard, { backgroundColor: colors.cockpitSurface, borderColor: colors.cockpitBorder }]}>
-        <View style={styles.sectionHeader}>
-          <AppIcon color={colors.cockpitAccent} name="info" size={18} />
-          <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Flight Details</Text>
-        </View>
-        <View style={styles.sectionBody}>
+      <InfoSection colors={colors} icon="info" title="Flight Details">
           <InfoRow label="Flight Number" mutedColor={colors.cockpitTextSecondary} value={booking.flightNumber} valueColor="#FFFFFF" />
           <InfoRow label="Aircraft" mutedColor={colors.cockpitTextSecondary} value={booking.aircraft.name} valueColor="#FFFFFF" />
           <InfoRow label="Distance" mutedColor={colors.cockpitTextSecondary} value={`${Math.round(booking.distanceKm * 0.621371)} mi`} valueColor="#FFFFFF" />
           <InfoRow label="Gate" mutedColor={colors.cockpitTextSecondary} value={booking.gate} valueColor="#FFFFFF" />
           <InfoRow isLast label="Terminal" mutedColor={colors.cockpitTextSecondary} value={booking.terminal} valueColor="#FFFFFF" />
-        </View>
-      </View>
+      </InfoSection>
 
-      <View style={[styles.sectionCard, { backgroundColor: colors.cockpitSurface, borderColor: colors.cockpitBorder }]}>
-        <View style={styles.sectionHeader}>
-          <AppIcon color={colors.cockpitAccent} name="time" size={18} />
-          <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Schedule</Text>
-        </View>
-        <View style={styles.sectionBody}>
+      <InfoSection colors={colors} icon="time" title="Schedule">
           <InfoRow label="Boarding" mutedColor={colors.cockpitTextSecondary} value={formatDateTime(booking.boardingTime)} valueColor="#FFFFFF" />
           <InfoRow label="Departure" mutedColor={colors.cockpitTextSecondary} value={formatDateTime(booking.departureTime)} valueColor="#FFFFFF" />
           <InfoRow isLast label="Arrival" mutedColor={colors.cockpitTextSecondary} value={formatDateTime(booking.arrivalTime)} valueColor="#FFFFFF" />
-        </View>
-      </View>
+      </InfoSection>
 
-      <View style={[styles.sectionCard, { backgroundColor: colors.cockpitSurface, borderColor: colors.cockpitBorder }]}>
-        <View style={styles.sectionHeader}>
-          <AppIcon color={colors.cockpitAccent} name="check" size={18} />
-          <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Booking</Text>
-        </View>
-        <View style={styles.sectionBody}>
+      <InfoSection colors={colors} icon="check" title="Booking">
           <InfoRow label="Confirmation" mutedColor={colors.cockpitTextSecondary} value={booking.bookingReference} valueColor="#FFFFFF" />
           <InfoRow isLast label="Booked" mutedColor={colors.cockpitTextSecondary} value={new Date(booking.bookedAt).toLocaleDateString('en-US')} valueColor="#FFFFFF" />
-        </View>
-      </View>
+      </InfoSection>
     </ScrollView>
   );
 }

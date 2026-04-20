@@ -132,7 +132,7 @@ function onTabPress({
   }
 
   if (Platform.OS === 'ios') {
-    void impactAsync(ImpactFeedbackStyle.Light);
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
   }
 
   navigation.navigate(route.name, route.params);

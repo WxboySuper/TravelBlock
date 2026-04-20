@@ -138,6 +138,10 @@ function renderSelectedTabContent(
   }
 }
 
+function handleAsyncAction(action: () => Promise<void>) {
+  action().catch(() => undefined);
+}
+
 function isCockpitReady(
   isLoaded: boolean,
   activeBooking: FlightBooking | null,
@@ -406,9 +410,7 @@ export default function CockpitScreen() {
         <CockpitHeader
           booking={activeBooking}
           isDiverted={isDiverted}
-          onDivertPress={() => {
-            void handleDivertPress();
-          }}
+          onDivertPress={() => handleAsyncAction(handleDivertPress)}
           phase={progress.currentPhase}
           progressPercent={progress.progressPercent}
           remainingSeconds={progress.remainingSeconds}

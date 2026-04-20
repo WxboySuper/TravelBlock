@@ -162,6 +162,41 @@ function hasNativeMapView(): boolean {
   }
 }
 
+function canFitRoute({
+  fittedCoordinates,
+  isMapReady,
+  mapRef,
+}: {
+  fittedCoordinates: { latitude: number; longitude: number }[];
+  isMapReady: boolean;
+  mapRef: React.RefObject<MapView | null>;
+}) {
+  if (!isMapReady) {
+    return false;
+  }
+
+  if (!mapRef.current) {
+    return false;
+  }
+
+  return fittedCoordinates.length > 0;
+}
+
+function scheduleFitRoute({
+  fittedCoordinates,
+  mapRef,
+}: {
+  fittedCoordinates: { latitude: number; longitude: number }[];
+  mapRef: React.RefObject<MapView | null>;
+}) {
+  setTimeout(() => {
+    mapRef.current?.fitToCoordinates(fittedCoordinates, {
+      edgePadding: { top: 180, right: 112, bottom: 180, left: 112 },
+      animated: true,
+    });
+  }, 150);
+}
+
 function AirportPin({
   code,
   color,
@@ -380,16 +415,11 @@ export function FlightMapGoogleAdapter({
   );
 
   const fitRoute = useCallback(() => {
-    if (!mapRef.current || !isMapReady || fittedCoordinates.length === 0) {
+    if (!canFitRoute({ fittedCoordinates, isMapReady, mapRef })) {
       return;
     }
 
-    setTimeout(() => {
-      mapRef.current?.fitToCoordinates(fittedCoordinates, {
-        edgePadding: { top: 180, right: 112, bottom: 180, left: 112 },
-        animated: true,
-      });
-    }, 150);
+    scheduleFitRoute({ fittedCoordinates, mapRef });
   }, [fittedCoordinates, isMapReady]);
 
   const refreshOverlayPoints = useCallback(async () => {

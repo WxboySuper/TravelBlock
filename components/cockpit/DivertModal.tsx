@@ -20,6 +20,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
+    type TextStyle,
     type ViewStyle,
 } from 'react-native';
 
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle['fontWeight'],
     marginBottom: Spacing.sm,
   },
   reason: {
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
   },
   airportCode: {
     fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle['fontWeight'],
   },
   airportName: {
     fontSize: Typography.fontSize.sm,

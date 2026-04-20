@@ -106,6 +106,36 @@ function getVariantColor(variant: MetricCardProps['variant'], isDark: boolean): 
   }
 }
 
+type MetricCardColors = {
+  backgroundColor: string;
+  borderColor: string;
+  descriptionColor: string;
+  emphasisBackground: string;
+  emphasisColor: string;
+  iconBackground: string;
+  iconColor: string;
+  textColor: string;
+};
+
+function getMetricCardColors(
+  colors: typeof Colors.light,
+  isDark: boolean,
+  variant: NonNullable<MetricCardProps['variant']>
+): MetricCardColors {
+  const isAccentVariant = variant !== 'default';
+
+  return {
+    backgroundColor: getVariantColor(variant, isDark),
+    borderColor: isAccentVariant ? 'rgba(255,255,255,0.14)' : colors.cockpitBorder,
+    descriptionColor: isAccentVariant ? 'rgba(255,255,255,0.84)' : colors.cockpitTextSecondary,
+    emphasisBackground: isAccentVariant ? 'rgba(255,255,255,0.16)' : colors.cockpitAccentSoft,
+    emphasisColor: isAccentVariant ? '#FFFFFF' : colors.cockpitAccent,
+    iconBackground: isAccentVariant ? 'rgba(255,255,255,0.14)' : colors.cockpitAccentSoft,
+    iconColor: isAccentVariant ? '#FFFFFF' : colors.cockpitAccent,
+    textColor: isAccentVariant ? '#FFFFFF' : colors.text,
+  };
+}
+
 /**
  * MetricCard component
  * 
@@ -133,45 +163,34 @@ export function MetricCard({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const isDark = colorScheme === 'dark';
-
-  const backgroundColor = getVariantColor(variant, isDark);
-  const textColor = variant !== 'default' ? '#FFFFFF' : colors.text;
-  const borderColor = variant !== 'default' ? 'rgba(255,255,255,0.14)' : colors.cockpitBorder;
-  const emphasisBackground =
-    variant !== 'default' ? 'rgba(255,255,255,0.16)' : colors.cockpitAccentSoft;
-  const emphasisColor = variant !== 'default' ? '#FFFFFF' : colors.cockpitAccent;
+  const cardColors = getMetricCardColors(colors, isDark, variant);
 
   return (
-    <View style={[styles.card, fullWidth ? styles.fullWidthCard : null, { backgroundColor, borderColor }]}>
+    <View style={[styles.card, fullWidth ? styles.fullWidthCard : null, { backgroundColor: cardColors.backgroundColor, borderColor: cardColors.borderColor }]}>
       <View style={styles.header}>
         {icon ? (
-          <View
-            style={[
-              styles.iconWrap,
-              { backgroundColor: variant !== 'default' ? 'rgba(255,255,255,0.14)' : colors.cockpitAccentSoft },
-            ]}
-          >
-            <AppIcon color={variant !== 'default' ? '#FFFFFF' : colors.cockpitAccent} name={icon} size={16} />
+          <View style={[styles.iconWrap, { backgroundColor: cardColors.iconBackground }]}>
+            <AppIcon color={cardColors.iconColor} name={icon} size={16} />
           </View>
         ) : null}
         <View style={styles.headerContent}>
-          <ThemedText style={[styles.label, { color: textColor }]}>
+          <ThemedText style={[styles.label, { color: cardColors.textColor }]}>
             {label}
           </ThemedText>
         </View>
         {emphasisLabel ? (
-          <View style={[styles.emphasisPill, { backgroundColor: emphasisBackground }]}>
-            <ThemedText style={[styles.emphasisText, { color: emphasisColor }]}>
+          <View style={[styles.emphasisPill, { backgroundColor: cardColors.emphasisBackground }]}>
+            <ThemedText style={[styles.emphasisText, { color: cardColors.emphasisColor }]}>
               {emphasisLabel}
             </ThemedText>
           </View>
         ) : null}
       </View>
-      <ThemedText style={[styles.value, { color: textColor }]}>
+      <ThemedText style={[styles.value, { color: cardColors.textColor }]}>
         {value}
       </ThemedText>
       {description ? (
-        <ThemedText style={[styles.description, { color: variant !== 'default' ? 'rgba(255,255,255,0.84)' : colors.cockpitTextSecondary }]}>
+        <ThemedText style={[styles.description, { color: cardColors.descriptionColor }]}>
           {description}
         </ThemedText>
       ) : null}

@@ -17,6 +17,11 @@ interface TabItemProps {
   colors: typeof Colors['light'];
 }
 
+type TabPresentation = {
+  iconName: AppIconName;
+  label: string;
+};
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -57,20 +62,13 @@ const styles = StyleSheet.create({
 function TabItem({ route, index, state, descriptors, navigation, colors }: TabItemProps) {
   const isFocused = state.index === index;
   const { options } = descriptors[route.key] as { options: BottomTabNavigationOptions };
+  const { iconName, label } = getTabPresentation(route.name, options.title);
+  const color = isFocused ? colors.tabIconSelected : colors.tabIconDefault;
+  const buttonStyle = isFocused ? { backgroundColor: colors.cockpitAccentSoft } : undefined;
+  const iconShellStyle = isFocused ? { backgroundColor: colors.cockpitGlass } : undefined;
 
   const handlePress = () => {
-    const event = navigation.emit({
-      type: 'tabPress',
-      target: route.key,
-      canPreventDefault: true,
-    });
-
-    if (!isFocused && !event.defaultPrevented) {
-      if (Platform.OS === 'ios') {
-        void impactAsync(ImpactFeedbackStyle.Light);
-      }
-      navigation.navigate(route.name, route.params);
-    }
+    onTabPress({ isFocused, navigation, route });
   };
 
   const handleLongPress = () => {
@@ -80,20 +78,6 @@ function TabItem({ route, index, state, descriptors, navigation, colors }: TabIt
     });
   };
 
-  // Map route names to icons
-  let iconName: AppIconName = 'home';
-  let label = options.title ?? route.name;
-  if (route.name === 'index') {
-    iconName = 'home';
-    label = 'Home';
-  }
-  if (route.name === 'explore') {
-    iconName = 'logbook';
-    label = 'Logbook';
-  }
-
-  const color = isFocused ? colors.tabIconSelected : colors.tabIconDefault;
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -102,15 +86,56 @@ function TabItem({ route, index, state, descriptors, navigation, colors }: TabIt
       testID={options.tabBarButtonTestID}
       onPress={handlePress}
       onLongPress={handleLongPress}
-      style={[styles.tabButton, isFocused ? { backgroundColor: colors.cockpitAccentSoft } : undefined]}
+      style={[styles.tabButton, buttonStyle]}
       android_ripple={{ borderless: true, color: colors.border }}
     >
-      <View style={[styles.iconShell, isFocused ? { backgroundColor: colors.cockpitGlass } : undefined]}>
+      <View style={[styles.iconShell, iconShellStyle]}>
         <AppIcon size={22} name={iconName} color={color} />
       </View>
       <ThemedText style={[styles.tabLabel, { color }]}>{label}</ThemedText>
     </Pressable>
   );
+}
+
+function getTabPresentation(routeName: string, title?: string): TabPresentation {
+  if (routeName === 'index') {
+    return { iconName: 'home', label: 'Home' };
+  }
+
+  if (routeName === 'explore') {
+    return { iconName: 'logbook', label: 'Logbook' };
+  }
+
+  return {
+    iconName: 'home',
+    label: title ?? routeName,
+  };
+}
+
+function onTabPress({
+  isFocused,
+  navigation,
+  route,
+}: {
+  isFocused: boolean;
+  navigation: BottomTabBarProps['navigation'];
+  route: BottomTabBarProps['state']['routes'][0];
+}) {
+  const event = navigation.emit({
+    type: 'tabPress',
+    target: route.key,
+    canPreventDefault: true,
+  });
+
+  if (isFocused || event.defaultPrevented) {
+    return;
+  }
+
+  if (Platform.OS === 'ios') {
+    void impactAsync(ImpactFeedbackStyle.Light);
+  }
+
+  navigation.navigate(route.name, route.params);
 }
 
 export function FloatingDock({ state, descriptors, navigation }: BottomTabBarProps) {

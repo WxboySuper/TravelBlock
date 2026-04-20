@@ -39,28 +39,39 @@ function isFiniteNumber(n: unknown): n is number {
 // Helper: fetch current position and return validated coordinates or null
 async function fetchCurrentPositionSafe(): Promise<Coordinates | null> {
   try {
-    const locationModule = getExpoLocationModule();
-    if (!locationModule?.getCurrentPositionAsync) {
+    const getCurrentPositionAsync = getCurrentPositionFetcher();
+    if (!getCurrentPositionAsync) {
       return null;
     }
 
-    const location = await locationModule.getCurrentPositionAsync({
+    const location = await getCurrentPositionAsync({
       accuracy: EXPO_LOCATION_BALANCED_ACCURACY,
     });
-    const lat = location?.coords?.latitude;
-    const lon = location?.coords?.longitude;
-    if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
-      console.warn('fetchCurrentPositionSafe: non-finite coordinates received', {
-        hasLat: isFiniteNumber(lat),
-        hasLon: isFiniteNumber(lon),
-      });
-      return null;
-    }
-    return { lat, lon };
+    return extractCoordinates(location);
   } catch (err) {
     console.error('fetchCurrentPositionSafe: error fetching position', err);
     return null;
   }
+}
+
+function getCurrentPositionFetcher(): ExpoLocationModule['getCurrentPositionAsync'] | null {
+  const locationModule = getExpoLocationModule();
+  return locationModule?.getCurrentPositionAsync ?? null;
+}
+
+function extractCoordinates(location: Awaited<ReturnType<NonNullable<ExpoLocationModule['getCurrentPositionAsync']>>>): Coordinates | null {
+  const lat = location?.coords?.latitude;
+  const lon = location?.coords?.longitude;
+
+  if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
+    console.warn('fetchCurrentPositionSafe: non-finite coordinates received', {
+      hasLat: isFiniteNumber(lat),
+      hasLon: isFiniteNumber(lon),
+    });
+    return null;
+  }
+
+  return { lat, lon };
 }
 
 // Helper: Resolve search coordinates (from argument or current location) and validate

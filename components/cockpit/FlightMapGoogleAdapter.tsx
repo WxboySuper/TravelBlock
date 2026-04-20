@@ -11,6 +11,28 @@ import type { FlightMapAdapterProps } from "./mapTypes";
 const AIRPORT_PIN_WIDTH = 54;
 const AIRPORT_PIN_HEIGHT = 28;
 const PLANE_MARKER_SIZE = 32;
+type OverlayPoint = { x: number; y: number };
+type OverlayPoints = {
+  destination?: OverlayPoint;
+  origin?: OverlayPoint;
+  plane?: OverlayPoint;
+};
+type MapOverlayProps = {
+  accentColor: string;
+  colors: typeof Colors.light;
+  destinationCode: string;
+  heading: number;
+  isDiverted: boolean;
+  originCode: string;
+  overlayPoints: OverlayPoints;
+};
+type FallbackMapProps = {
+  accentColor: string;
+  colors: typeof Colors.light;
+  currentPosition: FlightMapAdapterProps["currentPosition"];
+  destination: FlightMapAdapterProps["destination"];
+  origin: FlightMapAdapterProps["origin"];
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -169,199 +191,118 @@ function AirportPin({
   );
 }
 
-export function FlightMapGoogleAdapter({
+function buildFittedCoordinates({
   currentPosition,
   destination,
-  heading,
-  isDiverted = false,
   origin,
-  theme,
-}: FlightMapAdapterProps) {
-  const mapRef = useRef<MapView>(null);
-  const lastAutoFitRouteKeyRef = useRef<string | null>(null);
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [overlayPoints, setOverlayPoints] = useState<{
-    destination?: { x: number; y: number };
-    origin?: { x: number; y: number };
-    plane?: { x: number; y: number };
-  }>({});
-  const colors = Colors[theme];
+  routeCoordinates,
+}: {
+  currentPosition: FlightMapAdapterProps["currentPosition"];
+  destination: FlightMapAdapterProps["destination"];
+  origin: FlightMapAdapterProps["origin"];
+  routeCoordinates: { latitude: number; longitude: number }[];
+}) {
+  return [
+    ...routeCoordinates,
+    { latitude: currentPosition.lat, longitude: currentPosition.lon },
+    { latitude: origin.lat, longitude: origin.lon },
+    { latitude: destination.lat, longitude: destination.lon },
+  ];
+}
 
-  const routeWaypoints = useMemo(() => generateRouteWaypoints(origin, destination, 100), [destination, origin]);
-  const routeCoordinates = useMemo(
-    () =>
-      routeWaypoints.map((waypoint) => ({
-        latitude: waypoint.lat,
-        longitude: waypoint.lon,
-      })),
-    [routeWaypoints]
-  );
-  const routeKey = `${origin.icao}-${destination.icao}-${isDiverted ? "diverted" : "direct"}`;
-  const showOriginMarker = true;
-  const showDestinationMarker = true;
-  const fittedCoordinates = useMemo(
-    () => [
-      ...routeCoordinates,
-      { latitude: currentPosition.lat, longitude: currentPosition.lon },
-      { latitude: origin.lat, longitude: origin.lon },
-      { latitude: destination.lat, longitude: destination.lon },
-    ],
-    [
-      currentPosition.lat,
-      currentPosition.lon,
-      destination.lat,
-      destination.lon,
-      origin.lat,
-      origin.lon,
-      routeCoordinates,
-    ]
-  );
-
-  const fitRoute = useCallback(() => {
-    if (!mapRef.current || !isMapReady || fittedCoordinates.length === 0) {
-      return;
-    }
-
-    setTimeout(() => {
-      mapRef.current?.fitToCoordinates(fittedCoordinates, {
-        edgePadding: { top: 180, right: 112, bottom: 180, left: 112 },
-        animated: true,
-      });
-    }, 150);
-  }, [fittedCoordinates, isMapReady]);
-
-  const refreshOverlayPoints = useCallback(async () => {
-    if (!mapRef.current || !isMapReady) {
-      return;
-    }
-
-    try {
-      const coordinates = await Promise.all([
-        mapRef.current.pointForCoordinate({
-          latitude: origin.lat,
-          longitude: origin.lon,
-        }),
-        mapRef.current.pointForCoordinate({
-          latitude: destination.lat,
-          longitude: destination.lon,
-        }),
-        mapRef.current.pointForCoordinate({
-          latitude: currentPosition.lat,
-          longitude: currentPosition.lon,
-        }),
-      ]);
-
-      setOverlayPoints({
-        origin: coordinates[0],
-        destination: coordinates[1],
-        plane: coordinates[2],
-      });
-    } catch {
-      setOverlayPoints({});
-    }
-  }, [
-    currentPosition.lat,
-    currentPosition.lon,
-    destination.lat,
-    destination.lon,
-    isMapReady,
-    origin.lat,
-    origin.lon,
-  ]);
-
-  useEffect(() => {
-    if (!isMapReady) {
-      return;
-    }
-
-    if (lastAutoFitRouteKeyRef.current === routeKey) {
-      return;
-    }
-
-    lastAutoFitRouteKeyRef.current = routeKey;
-    fitRoute();
-  }, [fitRoute, isMapReady, routeKey]);
-
-  useEffect(() => {
-    refreshOverlayPoints();
-  }, [refreshOverlayPoints]);
-
-  const accentColor = isDiverted ? colors.cockpitWarning : colors.cockpitAccent;
-  const mapAvailable = hasNativeMapView();
-
-  if (!mapAvailable) {
-    return (
-      <View style={[styles.fallbackShell, { backgroundColor: colors.cockpitBackground }]}>
-        <View style={[styles.fallbackCard, { backgroundColor: colors.cockpitSurface, borderColor: colors.cockpitBorder }]}>
-          <View style={styles.fallbackHeader}>
-            <AppIcon color={colors.cockpitWarning} name="warning" size={20} />
-            <ThemedText style={[styles.fallbackTitle, { color: colors.text }]}>Map offline in this build</ThemedText>
-          </View>
-          <ThemedText style={[styles.fallbackBody, { color: colors.cockpitTextSecondary }]}>
-            The route view is ready, but this app build does not include the native map renderer.
-          </ThemedText>
-          <View style={[styles.routeSummary, { backgroundColor: colors.cockpitSurfaceMuted }]}>
-            <View style={styles.routeRow}>
-              <View style={styles.routeSide}>
-                <ThemedText style={[styles.routeCode, { color: colors.text }]}>{origin.iata}</ThemedText>
-                <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{origin.city}</ThemedText>
-              </View>
-              <AppIcon color={accentColor} name="aircraft" size={22} style={{ transform: [{ rotate: "90deg" }] }} />
-              <View style={styles.routeSideRight}>
-                <ThemedText style={[styles.routeCode, { color: colors.text }]}>{destination.iata}</ThemedText>
-                <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{destination.city}</ThemedText>
-              </View>
-            </View>
-            <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>
-              {currentPosition.lat.toFixed(2)}, {currentPosition.lon.toFixed(2)}
-            </ThemedText>
-          </View>
-          <ThemedText style={[styles.fallbackHint, { color: colors.cockpitTextSecondary }]}>
-            Install a build with `react-native-maps` or the upcoming MapLibre adapter to restore the live route view.
-          </ThemedText>
-        </View>
-      </View>
-    );
+async function loadOverlayPoints({
+  currentPosition,
+  destination,
+  isMapReady,
+  mapRef,
+  origin,
+}: {
+  currentPosition: FlightMapAdapterProps["currentPosition"];
+  destination: FlightMapAdapterProps["destination"];
+  isMapReady: boolean;
+  mapRef: React.RefObject<MapView | null>;
+  origin: FlightMapAdapterProps["origin"];
+}): Promise<OverlayPoints> {
+  if (!mapRef.current || !isMapReady) {
+    return {};
   }
 
-  return (
-    <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        mapType={theme === "dark" ? "hybrid" : "standard"}
-        onMapReady={() => {
-          setIsMapReady(true);
-        }}
-        onRegionChangeComplete={() => {
-          refreshOverlayPoints();
-        }}
-        pitchEnabled={false}
-        provider={PROVIDER_GOOGLE}
-        rotateEnabled
-        showsCompass={false}
-        showsMyLocationButton={false}
-        showsScale={false}
-        showsTraffic={false}
-        showsUserLocation={false}
-        style={styles.map}
-      >
-        <Polyline
-          coordinates={routeCoordinates}
-          geodesic
-          lineDashPattern={isDiverted ? [10, 6] : undefined}
-          strokeColor={accentColor}
-          strokeWidth={4}
-        />
-      </MapView>
+  const coordinates = await Promise.all([
+    mapRef.current.pointForCoordinate({
+      latitude: origin.lat,
+      longitude: origin.lon,
+    }),
+    mapRef.current.pointForCoordinate({
+      latitude: destination.lat,
+      longitude: destination.lon,
+    }),
+    mapRef.current.pointForCoordinate({
+      latitude: currentPosition.lat,
+      longitude: currentPosition.lon,
+    }),
+  ]);
 
+  return {
+    origin: coordinates[0],
+    destination: coordinates[1],
+    plane: coordinates[2],
+  };
+}
+
+function FallbackMap({ accentColor, colors, currentPosition, destination, origin }: FallbackMapProps) {
+  return (
+    <View style={[styles.fallbackShell, { backgroundColor: colors.cockpitBackground }]}>
+      <View style={[styles.fallbackCard, { backgroundColor: colors.cockpitSurface, borderColor: colors.cockpitBorder }]}>
+        <View style={styles.fallbackHeader}>
+          <AppIcon color={colors.cockpitWarning} name="warning" size={20} />
+          <ThemedText style={[styles.fallbackTitle, { color: colors.text }]}>Map offline in this build</ThemedText>
+        </View>
+        <ThemedText style={[styles.fallbackBody, { color: colors.cockpitTextSecondary }]}>
+          The route view is ready, but this app build does not include the native map renderer.
+        </ThemedText>
+        <View style={[styles.routeSummary, { backgroundColor: colors.cockpitSurfaceMuted }]}>
+          <View style={styles.routeRow}>
+            <View style={styles.routeSide}>
+              <ThemedText style={[styles.routeCode, { color: colors.text }]}>{origin.iata}</ThemedText>
+              <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{origin.city}</ThemedText>
+            </View>
+            <AppIcon color={accentColor} name="aircraft" size={22} style={{ transform: [{ rotate: "90deg" }] }} />
+            <View style={styles.routeSideRight}>
+              <ThemedText style={[styles.routeCode, { color: colors.text }]}>{destination.iata}</ThemedText>
+              <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>{destination.city}</ThemedText>
+            </View>
+          </View>
+          <ThemedText style={[styles.routeMeta, { color: colors.cockpitTextSecondary }]}>
+            {currentPosition.lat.toFixed(2)}, {currentPosition.lon.toFixed(2)}
+          </ThemedText>
+        </View>
+        <ThemedText style={[styles.fallbackHint, { color: colors.cockpitTextSecondary }]}>
+          Install a build with `react-native-maps` or the upcoming MapLibre adapter to restore the live route view.
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+function MapOverlay({
+  accentColor,
+  colors,
+  destinationCode,
+  heading,
+  isDiverted,
+  originCode,
+  overlayPoints,
+}: MapOverlayProps) {
+  return (
+    <>
       <View pointerEvents="none" style={styles.markerOverlay}>
-        {showOriginMarker && overlayPoints.origin ? (
-          <AirportPin code={origin.iata} color={colors.cockpitSuccess} point={overlayPoints.origin} />
+        {overlayPoints.origin ? (
+          <AirportPin code={originCode} color={colors.cockpitSuccess} point={overlayPoints.origin} />
         ) : null}
 
-        {showDestinationMarker && overlayPoints.destination ? (
+        {overlayPoints.destination ? (
           <AirportPin
-            code={destination.iata}
+            code={destinationCode}
             color={isDiverted ? "#52627A" : colors.cockpitDanger}
             point={overlayPoints.destination}
           />
@@ -401,10 +342,138 @@ export function FlightMapGoogleAdapter({
         <View style={[styles.routePill, { backgroundColor: colors.cockpitGlass, borderColor: colors.cockpitBorder }]}>
           <AppIcon color="#FFFFFF" name="route" size={16} />
           <ThemedText style={styles.routeText}>
-            {origin.iata} to {destination.iata}
+            {originCode} to {destinationCode}
           </ThemedText>
         </View>
       </View>
+    </>
+  );
+}
+
+export function FlightMapGoogleAdapter({
+  currentPosition,
+  destination,
+  heading,
+  isDiverted = false,
+  origin,
+  theme,
+}: FlightMapAdapterProps) {
+  const mapRef = useRef<MapView>(null);
+  const lastAutoFitRouteKeyRef = useRef<string | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [overlayPoints, setOverlayPoints] = useState<OverlayPoints>({});
+  const colors = Colors[theme];
+
+  const routeWaypoints = useMemo(() => generateRouteWaypoints(origin, destination, 100), [destination, origin]);
+  const routeCoordinates = useMemo(
+    () =>
+      routeWaypoints.map((waypoint) => ({
+        latitude: waypoint.lat,
+        longitude: waypoint.lon,
+      })),
+    [routeWaypoints]
+  );
+  const routeKey = `${origin.icao}-${destination.icao}-${isDiverted ? "diverted" : "direct"}`;
+  const fittedCoordinates = useMemo(
+    () => buildFittedCoordinates({ currentPosition, destination, origin, routeCoordinates }),
+    [currentPosition, destination, origin, routeCoordinates]
+  );
+
+  const fitRoute = useCallback(() => {
+    if (!mapRef.current || !isMapReady || fittedCoordinates.length === 0) {
+      return;
+    }
+
+    setTimeout(() => {
+      mapRef.current?.fitToCoordinates(fittedCoordinates, {
+        edgePadding: { top: 180, right: 112, bottom: 180, left: 112 },
+        animated: true,
+      });
+    }, 150);
+  }, [fittedCoordinates, isMapReady]);
+
+  const refreshOverlayPoints = useCallback(async () => {
+    try {
+      const nextOverlayPoints = await loadOverlayPoints({
+        currentPosition,
+        destination,
+        isMapReady,
+        mapRef,
+        origin,
+      });
+      setOverlayPoints(nextOverlayPoints);
+    } catch {
+      setOverlayPoints({});
+    }
+  }, [
+    currentPosition,
+    destination,
+    isMapReady,
+    origin,
+  ]);
+
+  useEffect(() => {
+    if (!isMapReady) {
+      return;
+    }
+
+    if (lastAutoFitRouteKeyRef.current === routeKey) {
+      return;
+    }
+
+    lastAutoFitRouteKeyRef.current = routeKey;
+    fitRoute();
+  }, [fitRoute, isMapReady, routeKey]);
+
+  useEffect(() => {
+    refreshOverlayPoints();
+  }, [refreshOverlayPoints]);
+
+  const accentColor = isDiverted ? colors.cockpitWarning : colors.cockpitAccent;
+  const mapAvailable = hasNativeMapView();
+
+  if (!mapAvailable) {
+    return <FallbackMap accentColor={accentColor} colors={colors} currentPosition={currentPosition} destination={destination} origin={origin} />;
+  }
+
+  return (
+    <View style={styles.container}>
+      <MapView
+        ref={mapRef}
+        mapType={theme === "dark" ? "hybrid" : "standard"}
+        onMapReady={() => {
+          setIsMapReady(true);
+        }}
+        onRegionChangeComplete={() => {
+          refreshOverlayPoints();
+        }}
+        pitchEnabled={false}
+        provider={PROVIDER_GOOGLE}
+        rotateEnabled
+        showsCompass={false}
+        showsMyLocationButton={false}
+        showsScale={false}
+        showsTraffic={false}
+        showsUserLocation={false}
+        style={styles.map}
+      >
+        <Polyline
+          coordinates={routeCoordinates}
+          geodesic
+          lineDashPattern={isDiverted ? [10, 6] : undefined}
+          strokeColor={accentColor}
+          strokeWidth={4}
+        />
+      </MapView>
+      <MapOverlay
+        accentColor={accentColor}
+        colors={colors}
+        destinationCode={destination.iata}
+        heading={heading}
+        isDiverted={isDiverted}
+        originCode={origin.iata}
+        overlayPoints={overlayPoints}
+      />
     </View>
   );
 }

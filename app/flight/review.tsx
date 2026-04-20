@@ -129,15 +129,20 @@ export default function FlightReviewScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { origin, destination, flightDuration, setBooking } = useFlight();
 
-  // Generate booking on mount (memoized) — compute route ETA from distance for realism
-  const booking = useMemo(() => {
-    if (!origin || !destination) return null;
+  const routeEstimateSeconds = useMemo(() => {
+    if (!origin || !destination) return 0;
     const distanceMiles = calculateDistance(origin, destination);
-    const routeDurationSeconds = estimateFlightTime({ distanceInMiles: distanceMiles });
-    return generateFlightBooking(origin, destination, routeDurationSeconds);
+    return estimateFlightTime({ distanceInMiles: distanceMiles });
   }, [origin, destination]);
 
+  // Keep the selected focus duration as the booked flight duration.
+  const booking = useMemo(() => {
+    if (!origin || !destination) return null;
+    return generateFlightBooking(origin, destination, flightDuration);
+  }, [flightDuration, origin, destination]);
+
   const formattedTime = formatTimeValue(booking?.durationSeconds ?? flightDuration);
+  const formattedRouteEstimate = formatTimeValue(routeEstimateSeconds);
   const distanceKm = booking?.distanceKm ?? 0;
   const distanceMiles = Math.round(distanceKm * 0.621371);
 
@@ -268,6 +273,17 @@ export default function FlightReviewScreen() {
                   </ThemedText>
                   <ThemedText style={styles.detailValue}>
                     {formattedTime.formatted}
+                  </ThemedText>
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+                <View style={styles.detailRow}>
+                  <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                    Route ETA
+                  </ThemedText>
+                  <ThemedText style={styles.detailValue}>
+                    {formattedRouteEstimate.formatted}
                   </ThemedText>
                 </View>
 

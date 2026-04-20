@@ -29,7 +29,7 @@ const TABS: { id: CockpitTab; label: string; icon: AppIconName }[] = [
   { id: 'metrics', label: 'Metrics', icon: 'metrics' },
   { id: 'info', label: 'Info', icon: 'info' },
 ];
-const TAB_GAP = Spacing.xs;
+const TAB_GAP = Spacing.sm;
 
 const styles = StyleSheet.create({
   container: {

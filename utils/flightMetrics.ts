@@ -49,6 +49,7 @@ export interface FlightPhaseConfig {
  * Determine flight phase based on progress percentage
  * 
  * @param progressPercent - Progress through flight (0-100)
+ * @param config - Optional phase configuration, including a computed top-of-descent percentage
  * @returns Current flight phase
  * 
  * @example
@@ -74,19 +75,17 @@ export function getFlightPhase(
 }
 
 /**
- * Calculate maximum cruise altitude based on flight distance
- * 
- * Shorter flights don't climb as high, longer flights cruise higher
- * for fuel efficiency.
+ * Calculate the route cruise altitude from distance, aircraft, and heading.
  * 
  * @param distanceKm - Total flight distance in kilometers
+ * @param aircraftName - Aircraft name used to infer the cruise profile
+ * @param heading - Route heading in degrees for RVSM odd/even assignment
  * @returns Maximum cruise altitude in feet MSL
  * 
  * @example
  * ```typescript
- * getMaxAltitude(150);  // ~22,000 ft (short hop)
- * getMaxAltitude(500);  // ~31,000 ft (medium)
- * getMaxAltitude(2000); // ~40,000 ft (long haul)
+ * getMaxAltitude(20, 'Embraer E-175', 180); // 3,000 ft
+ * getMaxAltitude(926, 'Boeing 787-9 Dreamliner', 90); // 43,000 ft
  * ```
  */
 export function getMaxAltitude(distanceKm: number, aircraftName: string, heading: number): number {
@@ -136,14 +135,16 @@ export function getDescentStartPercent(
  * @param progressPercent - Progress through flight (0-100)
  * @param phase - Current flight phase
  * @param maxAltitude - Maximum cruise altitude for this flight
+ * @param config - Optional phase configuration, including the active descent start percent
  * @returns Current altitude in feet MSL
  * 
  * @example
  * ```typescript
- * const maxAlt = getMaxAltitude(500); // ~31,000 ft
- * calculateAltitude(5, FlightPhase.Climbing, maxAlt);   // ~15,500 ft
- * calculateAltitude(50, FlightPhase.Cruising, maxAlt);  // ~31,000 ft
- * calculateAltitude(90, FlightPhase.Descending, maxAlt); // ~15,500 ft
+ * const maxAlt = getMaxAltitude(926, 'Boeing 787-9 Dreamliner', 90);
+ * const descentStartPercent = getDescentStartPercent(926, 'Boeing 787-9 Dreamliner', 90);
+ * calculateAltitude(5, FlightPhase.Climbing, maxAlt);
+ * calculateAltitude(50, FlightPhase.Cruising, maxAlt, { descentStartPercent });
+ * calculateAltitude(90, FlightPhase.Descending, maxAlt, { descentStartPercent });
  * ```
  */
 export function calculateAltitude(

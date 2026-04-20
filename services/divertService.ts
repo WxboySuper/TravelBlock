@@ -131,12 +131,18 @@ export function calculateDivertRoute(
     lon: currentPosition.lon,
   };
 
-  // Calculate remaining time budget (add 10% margin for safety)
-  const remainingSeconds = Math.max(
-    originalBooking.durationSeconds - elapsedSeconds,
-    0
-  );
-  const divertTimeSeconds = Math.round(remainingSeconds * 0.9);
+  // Calculate remaining time budget
+  const remainingSeconds = Math.max(originalBooking.durationSeconds - elapsedSeconds, 0);
+
+  // Estimate divert duration based on straight-line distance and cruise speed (keeps consistent speed)
+  const divertTimeSeconds = estimateDivertTime(currentPosition, divertAirport);
+
+  if (divertTimeSeconds > remainingSeconds) {
+    console.warn('[DivertService] Divert estimated time exceeds remaining budget', {
+      divertTimeSeconds,
+      remainingSeconds,
+    });
+  }
 
   // Generate new booking for divert route
   const divertBooking = generateFlightBooking(

@@ -7,6 +7,7 @@
  * @module components/cockpit/TimerDisplay
  */
 
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -25,13 +26,17 @@ export interface TimerDisplayProps {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
   },
   timerText: {
-    fontSize: 64,
+    fontSize: 56,
     fontWeight: Typography.fontWeight.bold as any,
     letterSpacing: -2,
+    lineHeight: 64,
     fontVariant: ['tabular-nums'] as any,
+    includeFontPadding: false,
   },
   phaseContainer: {
     flexDirection: 'row',
@@ -87,17 +92,17 @@ function getTimerColor(progressPercent: number, colors: any): string {
 /**
  * Get phase display info (icon and color)
  */
-function getPhaseInfo(phase: FlightPhase): { icon: string; color: string; label: string } {
+function getPhaseInfo(phase: FlightPhase): { icon: AppIconName; color: string; label: string } {
   switch (phase) {
     case 'climbing':
-      return { icon: '✈️', color: '#3B82F6', label: 'Climbing' };
+      return { icon: 'climb', color: '#3B82F6', label: 'Climbing' };
     case 'cruising':
-      return { icon: '➡️', color: '#14B8A6', label: 'Cruising' };
+      return { icon: 'cruise', color: '#14B8A6', label: 'Cruising' };
     case 'descending':
-      return { icon: '🔽', color: '#10B981', label: 'Descending' };
+      return { icon: 'descend', color: '#10B981', label: 'Descending' };
     default:
       // This should never happen
-      return { icon: '➡️', color: '#14B8A6', label: 'Cruising' };
+      return { icon: 'cruise', color: '#14B8A6', label: 'Cruising' };
   }
 }
 
@@ -126,14 +131,17 @@ export function TimerDisplay({ remainingSeconds, phase, progressPercent }: Timer
 
   return (
     <View style={styles.container}>
-      <ThemedText style={[styles.timerText, { color: timerColor }]}>
+      <ThemedText
+        style={[styles.timerText, { color: timerColor }]}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+        numberOfLines={1}
+      >
         {formattedTime}
       </ThemedText>
       
       <View style={[styles.phaseContainer, { backgroundColor: phaseInfo.color }]}>
-        <ThemedText style={[styles.phaseIcon, { color: '#FFFFFF' }]}>
-          {phaseInfo.icon}
-        </ThemedText>
+        <AppIcon color="#FFFFFF" name={phaseInfo.icon} size={16} style={styles.phaseIcon} />
         <ThemedText style={[styles.phaseText, { color: '#FFFFFF' }]}>
           {phaseInfo.label}
         </ThemedText>

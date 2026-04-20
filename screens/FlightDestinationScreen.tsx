@@ -232,13 +232,20 @@ function DestinationStepHeader({
     <View style={styles.header}>
       <TouchableOpacity
         onPress={onBack}
-        style={[styles.headerButton, { backgroundColor: colors.cardBackground }]}
+        style={[
+          styles.headerButton,
+          {
+            backgroundColor: colors.primary,
+            borderWidth: 1,
+            borderColor: colors.primary,
+          },
+        ]}
         accessibilityLabel="Back to flight setup"
         accessibilityRole="button"
         testID="back-to-flight-setup"
         hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
       >
-        <IconSymbol name="chevron.left" size={20} color={colors.text} />
+        <IconSymbol name="chevron.left" size={20} color="#FFFFFF" />
       </TouchableOpacity>
       <ThemedText style={styles.headerTitle}>Choose Destination</ThemedText>
       <View style={styles.headerButton} />

@@ -11,8 +11,7 @@ import { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { BoardingPassDimensions, Colors, Spacing, Typography } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BoardingPassDimensions, Spacing, Typography } from '@/constants/theme';
 import { BoardingPass as BoardingPassType } from '@/types/flight';
 
 const flexOne = { flex: 1 } as const;
@@ -94,33 +93,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   stubSection: {
-    paddingTop: Spacing.lg,
-  },
-  qrPlaceholder: {
-    width: 128,
-    height: 128,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    alignSelf: 'center',
-    marginBottom: Spacing.md,
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  qrText: {
-    fontSize: Typography.fontSize.xs,
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: Spacing.sm,
+    gap: Spacing.xs,
+    paddingTop: Spacing.lg,
   },
   serialNumber: {
     fontSize: Typography.fontSize.xs,
     fontFamily: 'monospace',
     textAlign: 'center',
   },
-  qrNote: {
+  stubTitle: {
     fontSize: Typography.fontSize.xs,
     textAlign: 'center',
-    marginTop: Spacing.xs,
   },
   passengerSection: {
     marginBottom: Spacing.lg,
@@ -156,17 +140,13 @@ interface ScaledStyles {
   detailValue: { fontSize: number };
   passengerSection: { marginBottom: number };
   passengerName: { fontSize: number; letterSpacing: number };
-  qrPlaceholder: { width: number; height: number };
-  qrText: { fontSize: number; lineHeight: number };
   serialNumber: { fontSize: number };
-  qrNote: { fontSize: number };
+  stubTitle: { fontSize: number };
   passPadding: { padding: number };
   headerSpacing: { paddingBottom: number; marginBottom: number };
   routeSpacing: { marginBottom: number; paddingVertical: number };
   detailRow: { marginBottom: number };
   stubSection: { left: number; right: number; paddingTop: number };
-  qrPlaceholderSpacing: { marginBottom: number };
-  qrNoteSpacing: { marginTop: number };
 }
 
 interface DetailPairProps {
@@ -333,16 +313,11 @@ function StubSection({
         { position: 'absolute', top: stubTop },
       ]}
     >
-      <View style={[styles.qrPlaceholder, scaledStyles.qrPlaceholder, scaledStyles.qrPlaceholderSpacing]}>
-        <ThemedText style={[styles.qrText, scaledStyles.qrText, { color: '#000000' }]}>
-          BOARDING CODE{'\n'}
-          {bookingReference}
-        </ThemedText>
-      </View>
-      <ThemedText
-        style={[styles.qrNote, scaledStyles.qrNote, scaledStyles.qrNoteSpacing, { color: colors.textSecondary }]}
-      >
-        QR rendering is not wired up yet in this build.
+      <ThemedText style={[styles.stubTitle, scaledStyles.stubTitle, { color: colors.textSecondary }]}>
+        Boarding Reference
+      </ThemedText>
+      <ThemedText style={[styles.detailValue, scaledStyles.detailValue, { color: colors.text }]}>
+        {bookingReference}
       </ThemedText>
       <ThemedText style={[styles.serialNumber, scaledStyles.serialNumber, { color: colors.textSecondary }]}>
         {serialNumber}
@@ -356,8 +331,6 @@ export function BoardingPass({
   interactive = false,
   onTap,
 }: BoardingPassProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const { width: screenWidth } = useWindowDimensions();
   const passColors: PassColors = {
     background: '#1E3A8A',
@@ -390,16 +363,8 @@ export function BoardingPass({
         fontSize: Typography.fontSize.lg * scale,
         letterSpacing: Math.max(1, 2 * scale),
       },
-      qrPlaceholder: {
-        width: 128 * scale,
-        height: 128 * scale,
-      },
-      qrText: {
-        fontSize: Math.max(10, Typography.fontSize.xs * scale),
-        lineHeight: Math.max(14, 18 * scale),
-      },
       serialNumber: { fontSize: Math.max(10, Typography.fontSize.xs * scale) },
-      qrNote: { fontSize: Math.max(10, Typography.fontSize.xs * scale) },
+      stubTitle: { fontSize: Math.max(10, Typography.fontSize.xs * scale) },
       passPadding: { padding: Spacing.lg * scale },
       headerSpacing: { paddingBottom: Spacing.md * scale, marginBottom: Spacing.md * scale },
       routeSpacing: { marginBottom: Spacing.lg * scale, paddingVertical: Spacing.md * scale },
@@ -409,8 +374,6 @@ export function BoardingPass({
         right: Spacing.lg * scale,
         paddingTop: Spacing.lg * scale,
       },
-      qrPlaceholderSpacing: { marginBottom: Spacing.md * scale },
-      qrNoteSpacing: { marginTop: Spacing.xs * scale },
     }),
     [scale]
   );

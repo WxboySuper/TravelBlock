@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/Button';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -41,7 +41,20 @@ export function EmptyHomeBase({ onSelectAirport }: EmptyHomeBaseProps): React.JS
   return (
     <View style={styles.container} testID="empty-home-root">
       <View style={styles.iconContainer} testID="empty-home-icon">
-        <IconSymbol name="airplane.departure" size={72} color={colors.textTertiary} />
+        <View
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.cockpitAccentSoft,
+            borderWidth: 1,
+            borderColor: colors.cockpitBorder,
+          }}
+        >
+          <AppIcon name="aircraft" size={42} color={colors.cockpitAccent} />
+        </View>
       </View>
       <View style={styles.textContainer}>
         <ThemedText

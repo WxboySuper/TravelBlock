@@ -7,6 +7,7 @@
  * @module components/cockpit/DivertModal
  */
 
+import { AppIcon } from '@/components/ui/AppIcon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
+    type TextStyle,
+    type ViewStyle,
 } from 'react-native';
 
 export interface DivertModalProps {
@@ -46,6 +49,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     maxHeight: '80%',
+    overflow: 'hidden',
   },
   header: {
     padding: Spacing.lg,
@@ -53,7 +57,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle['fontWeight'],
     marginBottom: Spacing.sm,
   },
   reason: {
@@ -77,7 +81,7 @@ const styles = StyleSheet.create({
   },
   airportCode: {
     fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle['fontWeight'],
   },
   airportName: {
     fontSize: Typography.fontSize.sm,
@@ -92,9 +96,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  detailIcon: {
-    fontSize: Typography.fontSize.sm,
   },
   detailText: {
     fontSize: Typography.fontSize.xs,
@@ -111,6 +112,14 @@ const styles = StyleSheet.create({
   },
 });
 
+type DivertModalColors = typeof Colors.light;
+type DivertOptionCardProps = {
+  colors: DivertModalColors;
+  index: number;
+  onSelect: (option: DivertOption) => void;
+  option: DivertOption;
+};
+
 /**
  * Format time for display
  */
@@ -123,6 +132,158 @@ function formatTime(seconds: number): string {
   }
   
   return `${minutes}m`;
+}
+
+function DivertHeader({ colors, reason }: { colors: DivertModalColors; reason: string }) {
+  return (
+    <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+        <View style={headerIconShell(colors)}>
+          <AppIcon color="#FFFFFF" name="warning" size={20} />
+        </View>
+        <ThemedText style={[styles.title, { color: colors.text }]}>Flight Divert</ThemedText>
+      </View>
+      <ThemedText style={[styles.reason, { color: colors.cockpitTextSecondary }]}>{reason}</ThemedText>
+    </View>
+  );
+}
+
+function DivertOptionCard({ colors, index, onSelect, option }: DivertOptionCardProps) {
+  return (
+    <TouchableOpacity
+      style={[styles.airportCard, { borderColor: colors.border }]}
+      onPress={() => onSelect(option)}
+      accessibilityLabel={`Divert to ${option.airport.name}`}
+      accessibilityRole="button"
+    >
+      <View style={styles.airportHeader}>
+        <View>
+          <ThemedText style={styles.airportCode}>
+            {option.airport.iata}
+          </ThemedText>
+          <ThemedText style={styles.airportName}>
+            {option.airport.name}
+          </ThemedText>
+        </View>
+        {index === 0 ? <NearestBadge /> : null}
+      </View>
+
+      <View style={styles.airportDetails}>
+        <DivertDetail color={colors.cockpitAccent} icon="distance" value={`${option.distanceFromCurrent.toFixed(1)} km`} />
+        <DivertDetail color={colors.cockpitAccent} icon="time" value={formatTime(option.estimatedTime)} />
+        <DivertDetail color={colors.cockpitAccent} icon="airport" value={option.airport.icao} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function DivertDetail({
+  color,
+  icon,
+  value,
+}: {
+  color: string;
+  icon: 'distance' | 'time' | 'airport';
+  value: string;
+}) {
+  return (
+    <View style={styles.detail}>
+      <AppIcon color={color} name={icon} size={14} />
+      <ThemedText style={styles.detailText}>
+        {value}
+      </ThemedText>
+    </View>
+  );
+}
+
+function NearestBadge() {
+  return (
+    <View style={nearestBadgeStyle()}>
+      <ThemedText
+        style={{ color: '#FFFFFF', fontSize: Typography.fontSize.xs }}
+      >
+        NEAREST
+      </ThemedText>
+    </View>
+  );
+}
+
+function DivertBody({
+  colors,
+  divertOptions,
+  isLoading,
+  onSelect,
+}: {
+  colors: DivertModalColors;
+  divertOptions: DivertOption[];
+  isLoading: boolean;
+  onSelect: (option: DivertOption) => void;
+}) {
+  if (isLoading) {
+    return (
+      <ScrollView style={styles.listContainer}>
+        <ThemedText style={styles.emptyText}>
+          Finding nearest airports...
+        </ThemedText>
+      </ScrollView>
+    );
+  }
+
+  if (divertOptions.length === 0) {
+    return (
+      <ScrollView style={styles.listContainer}>
+        <ThemedText style={styles.emptyText}>
+          No suitable airports found nearby
+        </ThemedText>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.listContainer}>
+      {divertOptions.map((option, index) => (
+        <DivertOptionCard
+          key={option.airport.icao}
+          colors={colors}
+          index={index}
+          onSelect={onSelect}
+          option={option}
+        />
+      ))}
+    </ScrollView>
+  );
+}
+
+function DivertFooter({ colors, onClose }: { colors: DivertModalColors; onClose: () => void }) {
+  return (
+    <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <Button
+        title="Cancel"
+        onPress={onClose}
+        variant="secondary"
+      />
+    </View>
+  );
+}
+
+function headerIconShell(colors: DivertModalColors): ViewStyle {
+  return {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.cockpitWarning,
+    alignItems: 'center',
+    justifyContent: 'center',
+  };
+}
+
+function nearestBadgeStyle(): ViewStyle {
+  return {
+    backgroundColor: '#10B981',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: 8,
+  };
 }
 
 /**
@@ -160,95 +321,15 @@ export function DivertModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <ThemedView style={styles.modalContent}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <ThemedText style={styles.title}>⚠️ Flight Divert</ThemedText>
-            <ThemedText style={styles.reason}>{reason}</ThemedText>
-          </View>
-
-          {/* Airport list */}
-          <ScrollView style={styles.listContainer}>
-            {isLoading ? (
-              <ThemedText style={styles.emptyText}>
-                Finding nearest airports...
-              </ThemedText>
-            ) : divertOptions.length === 0 ? (
-              <ThemedText style={styles.emptyText}>
-                No suitable airports found nearby
-              </ThemedText>
-            ) : (
-              divertOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={option.airport.icao}
-                  style={[
-                    styles.airportCard,
-                    { borderColor: colors.border },
-                  ]}
-                  onPress={() => onSelect(option)}
-                  accessibilityLabel={`Divert to ${option.airport.name}`}
-                  accessibilityRole="button"
-                >
-                  <View style={styles.airportHeader}>
-                    <View>
-                      <ThemedText style={styles.airportCode}>
-                        {option.airport.iata}
-                      </ThemedText>
-                      <ThemedText style={styles.airportName}>
-                        {option.airport.name}
-                      </ThemedText>
-                    </View>
-                    {index === 0 && (
-                      <View
-                        style={{
-                          backgroundColor: '#10B981',
-                          paddingHorizontal: Spacing.sm,
-                          paddingVertical: Spacing.xs,
-                          borderRadius: 8,
-                        }}
-                      >
-                        <ThemedText
-                          style={{ color: '#FFFFFF', fontSize: Typography.fontSize.xs }}
-                        >
-                          NEAREST
-                        </ThemedText>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.airportDetails}>
-                    <View style={styles.detail}>
-                      <ThemedText style={styles.detailIcon}>📍</ThemedText>
-                      <ThemedText style={styles.detailText}>
-                        {option.distanceFromCurrent.toFixed(1)} km
-                      </ThemedText>
-                    </View>
-                    <View style={styles.detail}>
-                      <ThemedText style={styles.detailIcon}>⏱️</ThemedText>
-                      <ThemedText style={styles.detailText}>
-                        {formatTime(option.estimatedTime)}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.detail}>
-                      <ThemedText style={styles.detailIcon}>🌐</ThemedText>
-                      <ThemedText style={styles.detailText}>
-                        {option.airport.icao}
-                      </ThemedText>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <Button
-              title="Cancel"
-              onPress={onClose}
-              variant="secondary"
-            />
-          </View>
+        <ThemedView style={[styles.modalContent, { backgroundColor: colors.cockpitSurface }]}>
+          <DivertHeader colors={colors} reason={reason} />
+          <DivertBody
+            colors={colors}
+            divertOptions={divertOptions}
+            isLoading={isLoading}
+            onSelect={onSelect}
+          />
+          <DivertFooter colors={colors} onClose={onClose} />
         </ThemedView>
       </View>
     </Modal>

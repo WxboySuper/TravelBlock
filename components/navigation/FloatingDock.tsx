@@ -3,8 +3,9 @@ import { StyleSheet, View, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 
-import { IconSymbol, IconSymbolName } from '@/components/ui/icon-symbol';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
+import { ThemedText } from '@/components/themed-text';
+import { Colors, Spacing, BorderRadius, Elevation, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface TabItemProps {
@@ -16,23 +17,58 @@ interface TabItemProps {
   colors: typeof Colors['light'];
 }
 
+type TabPresentation = {
+  iconName: AppIconName;
+  label: string;
+};
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    left: Spacing.lg,
+    right: Spacing.lg,
+    flexDirection: 'row',
+    borderRadius: BorderRadius.xxl,
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    ...Elevation.floating,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
+    borderRadius: BorderRadius.xl,
+    gap: 2,
+  },
+  iconShell: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabLabel: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semibold,
+    letterSpacing: 0.3,
+  },
+});
+
 function TabItem({ route, index, state, descriptors, navigation, colors }: TabItemProps) {
   const isFocused = state.index === index;
   const { options } = descriptors[route.key] as { options: BottomTabNavigationOptions };
+  const { iconName, label } = getTabPresentation(route.name, options.title);
+  const color = isFocused ? colors.tabIconSelected : colors.tabIconDefault;
+  const buttonStyle = isFocused ? { backgroundColor: colors.cockpitAccentSoft } : undefined;
+  const iconShellStyle = isFocused ? { backgroundColor: colors.cockpitGlass } : undefined;
 
   const handlePress = () => {
-    const event = navigation.emit({
-      type: 'tabPress',
-      target: route.key,
-      canPreventDefault: true,
-    });
-
-    if (!isFocused && !event.defaultPrevented) {
-      if (Platform.OS === 'ios') {
-        void impactAsync(ImpactFeedbackStyle.Light);
-      }
-      navigation.navigate(route.name, route.params);
-    }
+    onTabPress({ isFocused, navigation, route });
   };
 
   const handleLongPress = () => {
@@ -42,13 +78,6 @@ function TabItem({ route, index, state, descriptors, navigation, colors }: TabIt
     });
   };
 
-  // Map route names to icons
-  let iconName: IconSymbolName = 'house.fill'; // Default
-  if (route.name === 'index') iconName = 'house.fill';
-  if (route.name === 'explore') iconName = 'book.fill';
-
-  const color = isFocused ? colors.tabIconSelected : colors.tabIconDefault;
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -57,13 +86,56 @@ function TabItem({ route, index, state, descriptors, navigation, colors }: TabIt
       testID={options.tabBarButtonTestID}
       onPress={handlePress}
       onLongPress={handleLongPress}
-      style={styles.tabButton}
+      style={[styles.tabButton, buttonStyle]}
       android_ripple={{ borderless: true, color: colors.border }}
     >
-      {isFocused && <View style={[styles.activeIndicator, { backgroundColor: colors.tint }]} />}
-      <IconSymbol size={28} name={iconName} color={color} />
+      <View style={[styles.iconShell, iconShellStyle]}>
+        <AppIcon size={22} name={iconName} color={color} />
+      </View>
+      <ThemedText style={[styles.tabLabel, { color }]}>{label}</ThemedText>
     </Pressable>
   );
+}
+
+function getTabPresentation(routeName: string, title?: string): TabPresentation {
+  if (routeName === 'index') {
+    return { iconName: 'home', label: 'Home' };
+  }
+
+  if (routeName === 'explore') {
+    return { iconName: 'logbook', label: 'Logbook' };
+  }
+
+  return {
+    iconName: 'home',
+    label: title ?? routeName,
+  };
+}
+
+function onTabPress({
+  isFocused,
+  navigation,
+  route,
+}: {
+  isFocused: boolean;
+  navigation: BottomTabBarProps['navigation'];
+  route: BottomTabBarProps['state']['routes'][0];
+}) {
+  const event = navigation.emit({
+    type: 'tabPress',
+    target: route.key,
+    canPreventDefault: true,
+  });
+
+  if (isFocused || event.defaultPrevented) {
+    return;
+  }
+
+  if (Platform.OS === 'ios') {
+    impactAsync(ImpactFeedbackStyle.Light).catch(() => undefined);
+  }
+
+  navigation.navigate(route.name, route.params);
 }
 
 export function FloatingDock({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -75,10 +147,10 @@ export function FloatingDock({ state, descriptors, navigation }: BottomTabBarPro
     <View style={[
       styles.container, 
       { 
-        bottom: Spacing.lg + insets.bottom, 
+        bottom: Math.max(Spacing.md, insets.bottom + Spacing.sm),
         backgroundColor: colors.surfaceElevated,
-        borderColor: colors.borderLight,
-        shadowColor: colors.cardShadow,
+        borderColor: colors.cockpitBorder,
+        shadowColor: '#000000',
       }
     ]}>
       {state.routes.map((route, index) => (
@@ -96,38 +168,3 @@ export function FloatingDock({ state, descriptors, navigation }: BottomTabBarPro
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: Spacing.xl,
-    right: Spacing.xl,
-    flexDirection: 'row',
-    borderRadius: BorderRadius.full,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    // Shadow for depth
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    borderRadius: BorderRadius.full,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    opacity: 0.1,
-  }
-});

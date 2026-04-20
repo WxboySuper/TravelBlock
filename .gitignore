@@ -52,3 +52,11 @@ coverage/
 
 # Builds
 builds/
+
+# Night Watch
+/logs/
+night-watch.config.json
+*.claim
+
+# Local worktree mirrors
+/.worktrees/

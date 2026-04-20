@@ -20,7 +20,9 @@ const MAPPING = {
   "house.fill": "home",
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
+  "chevron.left": "chevron-left",
   "chevron.right": "chevron-right",
+  "arrow.right": "arrow-forward",
   "airplane.departure": "flight-takeoff",
   pencil: "edit",
   "book.fill": "menu-book",
@@ -28,6 +30,7 @@ const MAPPING = {
   xmark: "close",
   map: "map",
   "location.fill": "location-on",
+  "exclamationmark.triangle": "warning-amber",
 } as IconMapping;
 
 /**

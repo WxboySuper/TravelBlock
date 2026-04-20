@@ -12,13 +12,24 @@
  * @module services/locationService
  */
 
-// Note: `expo-location` is lazy-loaded inside functions below to avoid
-// requiring the native module at module parse time (Metro/Expo dev server
-// can attempt to resolve native modules too early and crash when a dev
-// client with the native module isn't installed).
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import type { Airport } from '../types/airport';
 import type { Coordinates } from '../types/location';
 import { getAirportsWithinDistance, loadAirports } from './airportService';
+
+type ExpoLocationModule = {
+  getCurrentPositionAsync?: (options?: { accuracy?: number }) => Promise<{
+    coords?: { latitude?: number; longitude?: number };
+  }>;
+  getForegroundPermissionsAsync?: () => Promise<{ status?: string }>;
+  requestForegroundPermissionsAsync?: () => Promise<{ status?: string }>;
+};
+
+const EXPO_LOCATION_BALANCED_ACCURACY = 3;
+
+function getExpoLocationModule(): ExpoLocationModule | null {
+  return requireOptionalNativeModule<ExpoLocationModule>('ExpoLocation');
+}
 
 // Helper: validate a numeric coordinate is finite
 function isFiniteNumber(n: unknown): n is number {
@@ -28,22 +39,39 @@ function isFiniteNumber(n: unknown): n is number {
 // Helper: fetch current position and return validated coordinates or null
 async function fetchCurrentPositionSafe(): Promise<Coordinates | null> {
   try {
-    const { getCurrentPositionAsync, Accuracy } = await import('expo-location');
-    const location = await getCurrentPositionAsync({ accuracy: Accuracy.Balanced });
-    const lat = location?.coords?.latitude;
-    const lon = location?.coords?.longitude;
-    if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
-      console.warn('fetchCurrentPositionSafe: non-finite coordinates received', {
-        hasLat: isFiniteNumber(lat),
-        hasLon: isFiniteNumber(lon),
-      });
+    const getCurrentPositionAsync = getCurrentPositionFetcher();
+    if (!getCurrentPositionAsync) {
       return null;
     }
-    return { lat, lon };
+
+    const location = await getCurrentPositionAsync({
+      accuracy: EXPO_LOCATION_BALANCED_ACCURACY,
+    });
+    return extractCoordinates(location);
   } catch (err) {
     console.error('fetchCurrentPositionSafe: error fetching position', err);
     return null;
   }
+}
+
+function getCurrentPositionFetcher(): ExpoLocationModule['getCurrentPositionAsync'] | null {
+  const locationModule = getExpoLocationModule();
+  return locationModule?.getCurrentPositionAsync ?? null;
+}
+
+function extractCoordinates(location: Awaited<ReturnType<NonNullable<ExpoLocationModule['getCurrentPositionAsync']>>>): Coordinates | null {
+  const lat = location?.coords?.latitude;
+  const lon = location?.coords?.longitude;
+
+  if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
+    console.warn('fetchCurrentPositionSafe: non-finite coordinates received', {
+      hasLat: isFiniteNumber(lat),
+      hasLon: isFiniteNumber(lon),
+    });
+    return null;
+  }
+
+  return { lat, lon };
 }
 
 // Helper: Resolve search coordinates (from argument or current location) and validate
@@ -105,8 +133,12 @@ async function findNearestAirportsForCoordinates(searchCoords: Coordinates, limi
  */
 export async function requestLocationPermission(): Promise<boolean> {
   try {
-    const { requestForegroundPermissionsAsync } = await import('expo-location');
-    const { status } = await requestForegroundPermissionsAsync();
+    const locationModule = getExpoLocationModule();
+    if (!locationModule?.requestForegroundPermissionsAsync) {
+      return false;
+    }
+
+    const { status } = await locationModule.requestForegroundPermissionsAsync();
     return status === 'granted';
   } catch (error) {
     console.error('Error requesting location permission:', error);
@@ -133,8 +165,12 @@ export async function requestLocationPermission(): Promise<boolean> {
  */
 export async function hasLocationPermission(): Promise<boolean> {
   try {
-    const { getForegroundPermissionsAsync } = await import('expo-location');
-    const { status } = await getForegroundPermissionsAsync();
+    const locationModule = getExpoLocationModule();
+    if (!locationModule?.getForegroundPermissionsAsync) {
+      return false;
+    }
+
+    const { status } = await locationModule.getForegroundPermissionsAsync();
     return status === 'granted';
   } catch (error) {
     console.error('Error checking location permission:', error);

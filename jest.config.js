@@ -5,14 +5,14 @@ module.exports = {
   roots: ['<rootDir>'],
   testMatch: ['**/__tests__/utils/**/*.test.ts', '**/__tests__/services/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json', 'node'],
-  testPathIgnorePatterns: ['/node_modules/', '/.expo/'],
+  testPathIgnorePatterns: ['/node_modules/', '/.expo/', '/.worktrees/'],
   collectCoverageFrom: [
     'utils/**/*.ts',
     'services/**/*.ts',
     '!**/*.test.ts',
     '!**/*.spec.ts',
   ],
-  coveragePathIgnorePatterns: ['/node_modules/', '/.expo/'],
+  coveragePathIgnorePatterns: ['/node_modules/', '/.expo/', '/.worktrees/'],
   coverageThreshold: {
     global: {
       branches: 90,

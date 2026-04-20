@@ -205,7 +205,7 @@ export function generateSeatMap(aircraft: AircraftConfig): Seat[] {
   };
 
   // Helper to get points cost (currently all free)
-  const getPointsCost = (seatClass: SeatClass): number => {
+  const getPointsCost = (): number => {
     // Future: return different costs based on class
     // For now, all seats are free
     return 0;
@@ -226,7 +226,7 @@ export function generateSeatMap(aircraft: AircraftConfig): Seat[] {
   // Generate seats for each row
   for (let row = minRow; row <= maxRow; row++) {
     const seatClass = getSeatClass(row);
-    const pointsCost = getPointsCost(seatClass);
+    const pointsCost = getPointsCost();
     const isExitRow = row === 12 || row === 24; // Common exit row positions
 
     for (let i = 0; i < seatsPerRow; i++) {

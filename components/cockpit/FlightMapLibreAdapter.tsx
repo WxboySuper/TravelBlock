@@ -1,6 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { BorderRadius, Colors, Spacing, Typography } from "@/constants/theme";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type TextStyle } from "react-native";
 
 import type { FlightMapAdapterProps } from "./mapTypes";
 
@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
   },
   body: {
     fontSize: Typography.fontSize.base,

@@ -3,10 +3,14 @@ import { ThemedText } from "@/components/themed-text";
 import { BorderRadius, Colors, Spacing, Typography } from "@/constants/theme";
 import { generateRouteWaypoints } from "@/utils/flightInterpolation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, StyleSheet, Text, UIManager, View } from "react-native";
+import { Platform, StyleSheet, Text, UIManager, View, type TextStyle } from "react-native";
 import MapView, { Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 
 import type { FlightMapAdapterProps } from "./mapTypes";
+
+const AIRPORT_PIN_WIDTH = 54;
+const AIRPORT_PIN_HEIGHT = 28;
+const PLANE_MARKER_SIZE = 32;
 
 const styles = StyleSheet.create({
   container: {
@@ -31,7 +35,7 @@ const styles = StyleSheet.create({
   pinText: {
     color: "#FFFFFF",
     fontSize: 11,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
     letterSpacing: 0.2,
   },
   planeMarker: {
@@ -61,7 +65,7 @@ const styles = StyleSheet.create({
   routeText: {
     color: "#FFFFFF",
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold as any,
+    fontWeight: Typography.fontWeight.semibold as TextStyle["fontWeight"],
     letterSpacing: 0.3,
   },
   fallbackShell: {
@@ -82,7 +86,7 @@ const styles = StyleSheet.create({
   },
   fallbackTitle: {
     fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
   },
   fallbackBody: {
     fontSize: Typography.fontSize.sm,
@@ -105,7 +109,7 @@ const styles = StyleSheet.create({
   },
   routeCode: {
     fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
   },
   routeMeta: {
     fontSize: Typography.fontSize.sm,
@@ -127,7 +131,7 @@ function hasNativeMapView(): boolean {
     }
 
     if (Platform.OS === "android") {
-      return !!UIManager.getViewManagerConfig?.("AIRGoogleMap");
+      return Boolean(UIManager.getViewManagerConfig?.("AIRGoogleMap"));
     }
 
     return false;
@@ -164,10 +168,6 @@ function AirportPin({
     </View>
   );
 }
-
-const AIRPORT_PIN_WIDTH = 54;
-const AIRPORT_PIN_HEIGHT = 28;
-const PLANE_MARKER_SIZE = 32;
 
 export function FlightMapGoogleAdapter({
   currentPosition,

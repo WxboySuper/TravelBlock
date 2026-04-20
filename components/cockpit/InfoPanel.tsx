@@ -2,7 +2,7 @@ import { AppIcon } from '@/components/ui/AppIcon';
 import { BorderRadius, Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { FlightBooking } from '@/types/flight';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
 
 export interface InfoPanelProps {
   booking: FlightBooking;
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold as any,
+    fontWeight: Typography.fontWeight.semibold as TextStyle['fontWeight'],
     letterSpacing: 1.1,
     marginBottom: Spacing.md,
     textTransform: 'uppercase',
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   },
   routeCode: {
     fontSize: 34,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle['fontWeight'],
     letterSpacing: -1,
   },
   routeCity: {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   metaPillText: {
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium as any,
+    fontWeight: Typography.fontWeight.medium as TextStyle['fontWeight'],
   },
   sectionCard: {
     borderRadius: BorderRadius.xl,
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold as any,
+    fontWeight: Typography.fontWeight.semibold as TextStyle['fontWeight'],
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   infoValue: {
     flexShrink: 1,
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold as any,
+    fontWeight: Typography.fontWeight.semibold as TextStyle['fontWeight'],
     marginLeft: Spacing.md,
     textAlign: 'right',
   },

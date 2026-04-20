@@ -3,7 +3,7 @@ import { ThemedText } from "@/components/themed-text";
 import { BorderRadius, Colors, Elevation, Spacing, Typography } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import type { FlightBooking, FlightPhase } from "@/types/flight";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type TextStyle } from "react-native";
 
 const styles = StyleSheet.create({
   shell: {
@@ -36,14 +36,14 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     textTransform: "uppercase",
     letterSpacing: 1.2,
-    fontWeight: Typography.fontWeight.semibold as any,
+    fontWeight: Typography.fontWeight.semibold as TextStyle["fontWeight"],
   },
   timerText: {
     fontSize: 50,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
     lineHeight: 56,
     letterSpacing: -2,
-    fontVariant: ["tabular-nums"] as any,
+    fontVariant: ["tabular-nums"] as TextStyle["fontVariant"],
     flexShrink: 1,
   },
   routeRow: {
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
   routeCode: {
     fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
   },
   routeCity: {
     fontSize: Typography.fontSize.sm,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: "#FFFFFF",
     fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
     letterSpacing: 0.4,
   },
   statusPill: {
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   statusText: {
     color: "#FFFFFF",
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle["fontWeight"],
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },

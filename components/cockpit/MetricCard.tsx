@@ -11,7 +11,7 @@ import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
 import { ThemedText } from '@/components/themed-text';
 import { BorderRadius, Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type TextStyle } from 'react-native';
 
 export interface MetricCardProps {
   /** Metric label (e.g., "Speed", "Altitude") */
@@ -62,14 +62,14 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.medium as any,
+    fontWeight: Typography.fontWeight.medium as TextStyle['fontWeight'],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     opacity: 0.7,
   },
   value: {
     fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold as any,
+    fontWeight: Typography.fontWeight.bold as TextStyle['fontWeight'],
     letterSpacing: -0.5,
   },
   emphasisPill: {
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   emphasisText: {
     fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold as any,
+    fontWeight: Typography.fontWeight.semibold as TextStyle['fontWeight'],
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },

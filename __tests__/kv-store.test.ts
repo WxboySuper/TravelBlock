@@ -9,6 +9,17 @@ jest.mock('expo-sqlite/kv-store', () => ({
   },
 }));
 
+type MockExpoKvStoreModule = {
+  AsyncStorage: {
+    getItem: jest.Mock;
+    setItem: jest.Mock;
+    removeItem: jest.Mock;
+    mergeItem: jest.Mock;
+    getItemSync: jest.Mock;
+    setItemSync: jest.Mock;
+  };
+};
+
 describe('kv-store wrapper', () => {
   beforeEach(() => {
     jest.resetModules();
@@ -16,10 +27,10 @@ describe('kv-store wrapper', () => {
   });
 
   it('delegates async set/get/remove to expo kv store', async () => {
-    const expoKvStore = require('expo-sqlite/kv-store');
+    const expoKvStore = (await import('expo-sqlite/kv-store')) as unknown as MockExpoKvStoreModule;
     expoKvStore.AsyncStorage.getItem.mockResolvedValue('value-1');
 
-    const kvStore = require('../expo-sqlite/kv-store');
+    const kvStore = await import('../expo-sqlite/kv-store');
 
     await kvStore.setItem({ key: 'key-1', value: 'value-1' });
     const value = await kvStore.getItem({ key: 'key-1' });
@@ -32,10 +43,10 @@ describe('kv-store wrapper', () => {
   });
 
   it('falls back to memory when expo kv store returns null', async () => {
-    const expoKvStore = require('expo-sqlite/kv-store');
+    const expoKvStore = (await import('expo-sqlite/kv-store')) as unknown as MockExpoKvStoreModule;
     expoKvStore.AsyncStorage.getItem.mockResolvedValue(null);
 
-    const kvStore = require('../expo-sqlite/kv-store');
+    const kvStore = await import('../expo-sqlite/kv-store');
 
     await kvStore.setItem({ key: 'key-2', value: 'value-2' });
     const value = await kvStore.getItem({ key: 'key-2' });

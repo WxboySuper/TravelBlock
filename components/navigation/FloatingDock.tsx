@@ -17,6 +17,43 @@ interface TabItemProps {
   colors: typeof Colors['light'];
 }
 
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    left: Spacing.lg,
+    right: Spacing.lg,
+    flexDirection: 'row',
+    borderRadius: BorderRadius.xxl,
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    ...Elevation.floating,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
+    borderRadius: BorderRadius.xl,
+    gap: 2,
+  },
+  iconShell: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabLabel: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semibold,
+    letterSpacing: 0.3,
+  },
+});
+
 function TabItem({ route, index, state, descriptors, navigation, colors }: TabItemProps) {
   const isFocused = state.index === index;
   const { options } = descriptors[route.key] as { options: BottomTabNavigationOptions };
@@ -106,39 +143,3 @@ export function FloatingDock({ state, descriptors, navigation }: BottomTabBarPro
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: Spacing.lg,
-    right: Spacing.lg,
-    flexDirection: 'row',
-    borderRadius: BorderRadius.xxl,
-    minHeight: 72,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    ...Elevation.floating,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-    borderRadius: BorderRadius.xl,
-    gap: 2,
-  },
-  iconShell: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabLabel: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold as any,
-    letterSpacing: 0.3,
-  },
-});

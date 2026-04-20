@@ -1,9 +1,9 @@
 /**
  * Flight Review Screen
- * 
+ *
  * Allows user to review flight details before booking.
  * Shows departure/destination, duration, distance, and flight metadata.
- * 
+ *
  * @module app/flight/review
  */
 
@@ -20,11 +20,11 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BorderRadius, Colors, Spacing, Typography } from '@/constants/theme';
 import { useFlight } from '@/context/FlightContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { generateFlightBooking } from '@/utils/flightGenerator';
 import { estimateFlightTime } from '@/services/radiusService';
-import { calculateDistance } from '@/utils/distance';
-import { formatTimeValue } from '@/utils/timeSlider';
 import type { Airport } from '@/types/airport';
+import { calculateDistance } from '@/utils/distance';
+import { generateFlightBooking } from '@/utils/flightGenerator';
+import { formatTimeValue } from '@/utils/timeSlider';
 
 const styles = StyleSheet.create({
   container: {
@@ -118,10 +118,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
     borderTopWidth: 1,
   },
-  footerContent: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
 });
 
 type ReviewDetailRowProps = {
@@ -130,6 +126,17 @@ type ReviewDetailRowProps = {
   label: string;
   value: string;
   valueStyle?: object;
+};
+
+type ReviewContentProps = {
+  booking: NonNullable<ReturnType<typeof useReviewBooking>['booking']>;
+  colors: typeof Colors.light;
+  destination: Airport;
+  distanceKm: number;
+  distanceMiles: number;
+  formattedRouteEstimate: { formatted: string };
+  formattedTime: { formatted: string };
+  origin: Airport;
 };
 
 function ReviewDetailRow({
@@ -220,19 +227,6 @@ function useReviewBooking(
   };
 }
 
-function renderEmptyState(colors: typeof Colors.light, handleBack: () => void) {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <ReviewHeader colors={colors} handleBack={handleBack} title="Flight Review" />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ThemedText>No flight data available</ThemedText>
-        </View>
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
 function ReviewHeader({
   colors,
   handleBack,
@@ -277,6 +271,98 @@ function ReviewSection({
   );
 }
 
+function ReviewContent({
+  booking,
+  colors,
+  destination,
+  distanceKm,
+  distanceMiles,
+  formattedRouteEstimate,
+  formattedTime,
+  origin,
+}: ReviewContentProps) {
+  return (
+    <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
+        <ReviewSection colors={colors} title="Your Route">
+          <RoutePreview colors={colors} destination={destination} origin={origin} />
+        </ReviewSection>
+
+        <ReviewSection colors={colors} title="Flight Details">
+          <View style={[styles.detailsCard, { backgroundColor: colors.cardBackground }]}>
+            <ReviewDetailRow
+              colors={colors}
+              label="Flight Number"
+              value={booking.flightNumber}
+              valueStyle={{ fontFamily: 'monospace' }}
+            />
+            <ReviewDetailRow
+              colors={colors}
+              label="Duration"
+              value={formattedTime.formatted}
+            />
+            <ReviewDetailRow
+              colors={colors}
+              label="Route ETA"
+              value={formattedRouteEstimate.formatted}
+            />
+            <ReviewDetailRow
+              colors={colors}
+              label="Distance"
+              value={`${distanceMiles} mi (${Math.round(distanceKm)} km)`}
+            />
+            <ReviewDetailRow
+              colors={colors}
+              label="Aircraft"
+              value={booking.aircraft.name}
+            />
+            <ReviewDetailRow
+              colors={colors}
+              isLast
+              label="Gate"
+              value={booking.gate}
+            />
+          </View>
+        </ReviewSection>
+      </View>
+    </ScrollView>
+  );
+}
+
+function ReviewScaffold({
+  children,
+  colors,
+  footer,
+  handleBack,
+  title,
+}: {
+  children: React.ReactNode;
+  colors: typeof Colors.light;
+  footer?: React.ReactNode;
+  handleBack: () => void;
+  title: string;
+}) {
+  return (
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ReviewHeader colors={colors} handleBack={handleBack} title={title} />
+        {children}
+        {footer}
+      </SafeAreaView>
+    </ThemedView>
+  );
+}
+
+function renderEmptyState(colors: typeof Colors.light, handleBack: () => void) {
+  return (
+    <ReviewScaffold colors={colors} handleBack={handleBack} title="Flight Review">
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ThemedText>No flight data available</ThemedText>
+      </View>
+    </ReviewScaffold>
+  );
+}
+
 export default function FlightReviewScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -299,11 +385,7 @@ export default function FlightReviewScreen() {
     if (!booking) return;
 
     impactAsync(ImpactFeedbackStyle.Heavy).catch(() => {});
-    
-    // Save booking to context
     await setBooking(booking);
-    
-    // Navigate to seat selection
     router.push('/flight/seat-selection');
   }, [booking, setBooking, router]);
 
@@ -312,56 +394,11 @@ export default function FlightReviewScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <ReviewHeader colors={colors} handleBack={handleBack} title="Review Flight" />
-
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.content}>
-            <ReviewSection colors={colors} title="Your Route">
-              <RoutePreview colors={colors} destination={destination} origin={origin} />
-            </ReviewSection>
-
-            <ReviewSection colors={colors} title="Flight Details">
-              <View style={[styles.detailsCard, { backgroundColor: colors.cardBackground }]}>
-                <ReviewDetailRow
-                  colors={colors}
-                  label="Flight Number"
-                  value={booking.flightNumber}
-                  valueStyle={{ fontFamily: 'monospace' }}
-                />
-                <ReviewDetailRow
-                  colors={colors}
-                  label="Duration"
-                  value={formattedTime.formatted}
-                />
-                <ReviewDetailRow
-                  colors={colors}
-                  label="Route ETA"
-                  value={formattedRouteEstimate.formatted}
-                />
-                <ReviewDetailRow
-                  colors={colors}
-                  label="Distance"
-                  value={`${distanceMiles} mi (${Math.round(distanceKm)} km)`}
-                />
-                <ReviewDetailRow
-                  colors={colors}
-                  label="Aircraft"
-                  value={booking.aircraft.name}
-                />
-                <ReviewDetailRow
-                  colors={colors}
-                  isLast
-                  label="Gate"
-                  value={booking.gate}
-                />
-              </View>
-            </ReviewSection>
-          </View>
-        </ScrollView>
-
-        {/* Footer with Book Button */}
+    <ReviewScaffold
+      colors={colors}
+      handleBack={handleBack}
+      title="Review Flight"
+      footer={(
         <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           <Button
             title="Book Flight"
@@ -369,7 +406,18 @@ export default function FlightReviewScreen() {
             size="lg"
           />
         </View>
-      </SafeAreaView>
-    </ThemedView>
+      )}
+    >
+      <ReviewContent
+        booking={booking}
+        colors={colors}
+        destination={destination}
+        distanceKm={distanceKm}
+        distanceMiles={distanceMiles}
+        formattedRouteEstimate={formattedRouteEstimate}
+        formattedTime={formattedTime}
+        origin={origin}
+      />
+    </ReviewScaffold>
   );
 }

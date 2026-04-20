@@ -186,6 +186,90 @@ function HeaderFooter({
   );
 }
 
+function HeroSurface({
+  children,
+  colors,
+}: {
+  children: React.ReactNode;
+  colors: typeof Colors.light;
+}) {
+  return (
+    <View
+      style={[
+        styles.hero,
+        Elevation.floating,
+        {
+          backgroundColor: colors.cockpitSurface,
+          borderColor: colors.cockpitBorder,
+          shadowColor: "#000000",
+        },
+      ]}
+    >
+      <View style={styles.heroContent}>{children}</View>
+    </View>
+  );
+}
+
+function HeroTopRow({
+  colors,
+  onDivertPress,
+  primaryTextColor,
+  remainingSeconds,
+}: {
+  colors: typeof Colors.light;
+  onDivertPress: () => void;
+  primaryTextColor: string;
+  remainingSeconds: number;
+}) {
+  return (
+    <View style={styles.topRow}>
+      <View style={styles.timerBlock}>
+        <ThemedText style={[styles.eyebrow, { color: colors.cockpitTextSecondary }]}>In Flight</ThemedText>
+        <ThemedText
+          adjustsFontSizeToFit
+          darkColor={primaryTextColor}
+          lightColor={primaryTextColor}
+          minimumFontScale={0.72}
+          numberOfLines={1}
+          style={styles.timerText}
+        >
+          {formatTime(remainingSeconds)}
+        </ThemedText>
+      </View>
+
+      <Pressable
+        accessibilityLabel="Divert flight"
+        accessibilityRole="button"
+        onPress={onDivertPress}
+        style={[styles.actionButton, { backgroundColor: colors.cockpitWarning }]}
+      >
+        <AppIcon color="#FFFFFF" name="warning" size={16} />
+        <ThemedText style={styles.actionText}>Divert</ThemedText>
+      </Pressable>
+    </View>
+  );
+}
+
+function RouteSummary({
+  booking,
+  colors,
+}: {
+  booking: FlightBooking;
+  colors: typeof Colors.light;
+}) {
+  return (
+    <View style={styles.routeRow}>
+      <RouteBlock city={booking.origin.city} code={booking.origin.iata} color={colors.cockpitTextSecondary} />
+
+      <View style={[styles.routeArrowWrap, { backgroundColor: colors.cockpitAccentSoft }]}>
+        <AppIcon color={colors.cockpitAccent} name="aircraft" size={18} style={{ transform: [{ rotate: "90deg" }] }} />
+      </View>
+
+      <RouteBlock alignRight city={booking.destination.city} code={booking.destination.iata} color={colors.cockpitTextSecondary} />
+    </View>
+  );
+}
+
 export function CockpitHeader({
   booking,
   isDiverted,
@@ -209,67 +293,28 @@ export function CockpitHeader({
 
   return (
     <View style={styles.shell}>
-      <View
-        style={[
-          styles.hero,
-          Elevation.floating,
-          {
-            backgroundColor: colors.cockpitSurface,
-            borderColor: colors.cockpitBorder,
-            shadowColor: "#000000",
-          },
-        ]}
-      >
-        <View style={styles.heroContent}>
-          <View style={styles.topRow}>
-            <View style={styles.timerBlock}>
-              <ThemedText style={[styles.eyebrow, { color: colors.cockpitTextSecondary }]}>In Flight</ThemedText>
-              <ThemedText
-                adjustsFontSizeToFit
-                darkColor={primaryTextColor}
-                lightColor={primaryTextColor}
-                minimumFontScale={0.72}
-                numberOfLines={1}
-                style={styles.timerText}
-              >
-                {formatTime(remainingSeconds)}
-              </ThemedText>
-            </View>
+      <HeroSurface colors={colors}>
+        <HeroTopRow
+          colors={colors}
+          onDivertPress={onDivertPress}
+          primaryTextColor={primaryTextColor}
+          remainingSeconds={remainingSeconds}
+        />
 
-            <Pressable
-              accessibilityLabel="Divert flight"
-              accessibilityRole="button"
-              onPress={onDivertPress}
-              style={[styles.actionButton, { backgroundColor: colors.cockpitWarning }]}
-            >
-              <AppIcon color="#FFFFFF" name="warning" size={16} />
-              <ThemedText style={styles.actionText}>Divert</ThemedText>
-            </Pressable>
-          </View>
-
-          <View style={[styles.statusPill, { backgroundColor: phaseMeta.color }]}>
-            <AppIcon color="#FFFFFF" name={phaseMeta.icon} size={18} />
-            <ThemedText style={styles.statusText}>{isDiverted ? "Diverted" : phaseMeta.label}</ThemedText>
-          </View>
-
-          <View style={styles.routeRow}>
-            <RouteBlock city={booking.origin.city} code={booking.origin.iata} color={colors.cockpitTextSecondary} />
-
-            <View style={[styles.routeArrowWrap, { backgroundColor: colors.cockpitAccentSoft }]}>
-              <AppIcon color={colors.cockpitAccent} name="aircraft" size={18} style={{ transform: [{ rotate: "90deg" }] }} />
-            </View>
-
-            <RouteBlock alignRight city={booking.destination.city} code={booking.destination.iata} color={colors.cockpitTextSecondary} />
-          </View>
-
-          <HeaderFooter
-            aircraftName={booking.aircraft.name}
-            flightNumber={booking.flightNumber}
-            progressLabel={progressLabel}
-            secondaryColor={colors.cockpitTextSecondary}
-          />
+        <View style={[styles.statusPill, { backgroundColor: phaseMeta.color }]}>
+          <AppIcon color="#FFFFFF" name={phaseMeta.icon} size={18} />
+          <ThemedText style={styles.statusText}>{isDiverted ? "Diverted" : phaseMeta.label}</ThemedText>
         </View>
-      </View>
+
+        <RouteSummary booking={booking} colors={colors} />
+
+        <HeaderFooter
+          aircraftName={booking.aircraft.name}
+          flightNumber={booking.flightNumber}
+          progressLabel={progressLabel}
+          secondaryColor={colors.cockpitTextSecondary}
+        />
+      </HeroSurface>
     </View>
   );
 }

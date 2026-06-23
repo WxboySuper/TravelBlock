@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TravelBlock</string>
+    <string name="notification_channel_flights">Focus flights</string>
+    <string name="notification_channel_flights_description">Alerts when a focus flight lands or needs attention.</string>
+</resources>

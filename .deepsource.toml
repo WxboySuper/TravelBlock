@@ -1,0 +1,18 @@
+version = 1
+
+test_patterns = [
+  "app/src/test/**",
+  "app/src/androidTest/**"
+]
+
+exclude_patterns = [
+  ".gradle/**",
+  ".idea/**",
+  ".kotlin/**",
+  "**/build/**",
+  "**/generated/**"
+]
+
+[[analyzers]]
+name = "kotlin"
+enabled = true

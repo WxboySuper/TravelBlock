@@ -1,0 +1,47 @@
+name: Build installable APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Builds queue up behind each other instead of cancelling.
+concurrency:
+  group: apk-publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Name the APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk TravelBlock.apk
+
+      - name: Publish to the "latest" release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHORT=$(git rev-parse --short HEAD)
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest TravelBlock.apk \
+            --title "TravelBlock latest build" \
+            --notes "Build of commit $SHORT. Open this page on your phone and tap TravelBlock.apk to install." \
+            --prerelease --target "$GITHUB_SHA"

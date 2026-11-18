@@ -1,12 +1,14 @@
 package com.travelblock.app.ui.screen.home
 
+import com.travelblock.app.data.database.FlightLogEntity
 import com.travelblock.app.domain.model.Airport
 
 data class HomeUiState(
     val currentAirport: Airport? = null,
     val points: Int = 0,
     val selectedDurationMinutes: Int = 25,
-    val availableDurationsMinutes: List<Int> = listOf(15, 25, 45, 60),
+    val availableDurationsMinutes: List<Int> = listOf(15, 25, 45, 60, 90),
+    val lastFlight: FlightLogEntity? = null,
     val routes: List<HomeRouteCardUiModel> = emptyList(),
     val displayedRouteCount: Int = HomeRouteDisplayDefaults.initialCount,
     val selectedRouteId: String? = null,

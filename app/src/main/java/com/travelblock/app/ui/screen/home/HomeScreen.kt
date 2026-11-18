@@ -23,9 +23,17 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -60,7 +68,6 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
-private val HomeBackground = Color(0xFFF4F9FD)
 private val BoardInk = DeepNavy
 private val BoardPanel = Color(0xFFFFFFFF)
 private val BoardBlue = TerminalBlue
@@ -74,12 +81,14 @@ fun HomeScreen(
     activeFlight: ActiveFlight?,
     onReturnToCockpit: () -> Unit,
     onBookSelectedRoute: (DraftFlightBooking) -> Unit,
+    onStartQuickFlight: (DraftFlightBooking) -> Unit = onBookSelectedRoute,
 ) {
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
             airportRepository = container.airportRepository,
             settingsRepository = container.settingsRepository,
             pointsRepository = container.pointsRepository,
+            flightLogRepository = container.flightLogRepository,
         ),
     )
 
@@ -91,6 +100,12 @@ fun HomeScreen(
         onReturnToCockpit = onReturnToCockpit,
         onBookSelectedRoute = {
             viewModel.createSelectedDraftBooking()?.let(onBookSelectedRoute)
+        },
+        onQuickStart = { duration ->
+            viewModel.createQuickStartDraft(duration)?.let(onStartQuickFlight)
+        },
+        onRebookLastFlight = {
+            viewModel.createRebookDraft()?.let(onStartQuickFlight)
         },
         onLoadMoreRoutes = viewModel::loadMoreRoutes,
     )
@@ -104,6 +119,8 @@ fun HomeScreenContent(
     onRouteSelected: (String) -> Unit,
     onReturnToCockpit: () -> Unit = {},
     onBookSelectedRoute: () -> Unit,
+    onQuickStart: (Int) -> Unit = {},
+    onRebookLastFlight: () -> Unit = {},
     onLoadMoreRoutes: () -> Unit = {},
 ) {
     val visibleRoutes = uiState.visibleRoutes
@@ -127,7 +144,7 @@ fun HomeScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(HomeBackground),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         LazyColumn(
             state = listState,
@@ -143,6 +160,15 @@ fun HomeScreenContent(
                     points = uiState.points,
                     selectedRoute = selectedRoute,
                 )
+            }
+            if (activeFlight == null) {
+                item {
+                    QuickStartCard(
+                        lastFlightAvailable = uiState.lastFlight != null,
+                        onQuickStart = onQuickStart,
+                        onRebookLastFlight = onRebookLastFlight,
+                    )
+                }
             }
             if (activeFlight != null) {
                 item {
@@ -391,6 +417,74 @@ private fun RouteExplorerZone(
                 maxFlightTimeMinutes = selectedDurationMinutes,
             )
         }
+    }
+}
+
+@Composable
+private fun QuickStartCard(
+    lastFlightAvailable: Boolean,
+    onQuickStart: (Int) -> Unit,
+    onRebookLastFlight: () -> Unit,
+) {
+    var showCustomDuration by remember { mutableStateOf(false) }
+    var customMinutes by remember { mutableStateOf("30") }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = BoardPanel,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, BoardLine),
+        shadowElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("QUICK START", style = MaterialTheme.typography.labelLarge, color = BoardBlue, fontWeight = FontWeight.Black)
+            Text("Choose a focus flight. We'll handle check-in, your seat, and the boarding pass.", color = MutedText, style = MaterialTheme.typography.bodySmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(15, 25, 45, 60, 90).forEach { minutes ->
+                    DurationToken(label = "${minutes}m", selected = false, onClick = { onQuickStart(minutes) })
+                }
+                DurationToken(label = "Custom", selected = false, onClick = { showCustomDuration = true })
+            }
+            if (lastFlightAvailable) {
+                TextButton(onClick = onRebookLastFlight) {
+                    Text("Rebook last flight")
+                }
+            }
+        }
+    }
+
+    if (showCustomDuration) {
+        AlertDialog(
+            onDismissRequest = { showCustomDuration = false },
+            title = { Text("Custom focus flight") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Choose a maximum flight window from 15 to 180 minutes.")
+                    OutlinedTextField(
+                        value = customMinutes,
+                        onValueChange = { value -> customMinutes = value.filter(Char::isDigit).take(3) },
+                        label = { Text("Minutes") },
+                        singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = (customMinutes.toIntOrNull() ?: 0) in 15..180,
+                    onClick = {
+                        val minutes = customMinutes.toIntOrNull() ?: return@Button
+                        showCustomDuration = false
+                        onQuickStart(minutes)
+                    },
+                ) { Text("Start flight") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomDuration = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 

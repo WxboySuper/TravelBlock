@@ -15,6 +15,7 @@ sealed class TravelBlockDestination(
 ) {
     data object Home : TravelBlockDestination("home", "Home", Icons.Outlined.Home)
     data object Book : TravelBlockDestination("book", "Book", Icons.Outlined.Home)
+    data object QuickBoarding : TravelBlockDestination("quick-boarding", "Quick Boarding", Icons.Outlined.AirplanemodeActive)
     data object Arrival : TravelBlockDestination("arrival", "Arrival", Icons.Outlined.AirplanemodeActive)
     data object Diversion : TravelBlockDestination("diversion", "Diversion", Icons.Outlined.AirplanemodeActive)
     data object Cockpit : TravelBlockDestination("cockpit", "Cockpit", Icons.Outlined.AirplanemodeActive)
@@ -28,7 +29,9 @@ sealed class TravelBlockDestination(
     data object Settings : TravelBlockDestination("settings", "Settings", Icons.Outlined.Settings)
 
     companion object {
-        val normalBottomTabs = listOf(Home, Logbook, Store, Settings)
-        val activeFlightBottomTabs = listOf(Cockpit, Logbook, Store, Settings)
+        val normalBottomTabs: List<TravelBlockDestination>
+            get() = listOf(Home, Logbook, Store, Settings)
+        val activeFlightBottomTabs: List<TravelBlockDestination>
+            get() = listOf(Cockpit, Logbook, Store, Settings)
     }
 }

@@ -64,6 +64,8 @@ fun SettingsScreen(container: TravelBlockContainer) {
         onThemeSelected = viewModel::setSelectedTheme,
         onSoundEnabledChanged = viewModel::setSoundEnabled,
         onHapticsEnabledChanged = viewModel::setHapticsEnabled,
+        onDebugShortFlightsChanged = viewModel::setDebugShortFlightsEnabled,
+        onDebugDurationSelected = viewModel::setDebugFlightDurationSeconds,
         onShowResetConfirmation = viewModel::showResetConfirmation,
         onDismissResetConfirmation = viewModel::dismissResetConfirmation,
         onResetLocalData = viewModel::resetAllLocalData,
@@ -82,6 +84,8 @@ fun SettingsScreenContent(
     onThemeSelected: (String) -> Unit,
     onSoundEnabledChanged: (Boolean) -> Unit,
     onHapticsEnabledChanged: (Boolean) -> Unit,
+    onDebugShortFlightsChanged: (Boolean) -> Unit = {},
+    onDebugDurationSelected: (Int) -> Unit = {},
     onShowResetConfirmation: () -> Unit,
     onDismissResetConfirmation: () -> Unit,
     onResetLocalData: () -> Unit,
@@ -116,9 +120,13 @@ fun SettingsScreenContent(
                 selectedTheme = uiState.settings.selectedTheme,
                 soundEnabled = uiState.settings.soundEnabled,
                 hapticsEnabled = uiState.settings.hapticsEnabled,
+                debugShortFlightsEnabled = uiState.settings.debugShortFlightsEnabled,
+                debugFlightDurationSeconds = uiState.settings.debugFlightDurationSeconds,
                 onThemeSelected = onThemeSelected,
                 onSoundEnabledChanged = onSoundEnabledChanged,
                 onHapticsEnabledChanged = onHapticsEnabledChanged,
+                onDebugShortFlightsChanged = onDebugShortFlightsChanged,
+                onDebugDurationSelected = onDebugDurationSelected,
             )
         }
         item {
@@ -257,9 +265,13 @@ private fun PreferenceCard(
     selectedTheme: String,
     soundEnabled: Boolean,
     hapticsEnabled: Boolean,
+    debugShortFlightsEnabled: Boolean,
+    debugFlightDurationSeconds: Int,
     onThemeSelected: (String) -> Unit,
     onSoundEnabledChanged: (Boolean) -> Unit,
     onHapticsEnabledChanged: (Boolean) -> Unit,
+    onDebugShortFlightsChanged: (Boolean) -> Unit,
+    onDebugDurationSelected: (Int) -> Unit,
 ) {
     SettingsCard {
         Text("Comfort", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -281,6 +293,26 @@ private fun PreferenceCard(
             checked = hapticsEnabled,
             onCheckedChange = onHapticsEnabledChanged,
         )
+        if (com.travelblock.app.BuildConfig.DEBUG) {
+            Text("Developer tools", style = MaterialTheme.typography.labelLarge, color = MutedText)
+            ToggleRow(
+                title = "Short test flights",
+                description = "Use a 10 to 30 second arrival timer to test flight outcomes.",
+                checked = debugShortFlightsEnabled,
+                onCheckedChange = onDebugShortFlightsChanged,
+            )
+            if (debugShortFlightsEnabled) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(10, 15, 30).forEach { seconds ->
+                        FilterChip(
+                            selected = debugFlightDurationSeconds == seconds,
+                            onClick = { onDebugDurationSelected(seconds) },
+                            label = { Text("${seconds}s") },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -199,6 +199,9 @@ class HomeViewModelTest {
         override suspend fun setHapticsEnabled(enabled: Boolean) {
             state.value = state.value.copy(hapticsEnabled = enabled)
         }
+        override suspend fun setOnboardingComplete(complete: Boolean) { state.value = state.value.copy(onboardingComplete = complete) }
+        override suspend fun setDebugShortFlightsEnabled(enabled: Boolean) { state.value = state.value.copy(debugShortFlightsEnabled = enabled) }
+        override suspend fun setDebugFlightDurationSeconds(seconds: Int) { state.value = state.value.copy(debugFlightDurationSeconds = seconds) }
 
         override suspend fun setEquippedBoardingPassThemeId(id: String) {
             state.value = state.value.copy(equippedBoardingPassThemeId = id)

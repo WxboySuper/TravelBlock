@@ -16,8 +16,8 @@ android {
         applicationId = "com.travelblock.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1250
-        versionName = "0.13.0-stabilization"
+        versionCode = 1260
+        versionName = "0.14.0-quick-start"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,6 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

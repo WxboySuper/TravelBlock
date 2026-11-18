@@ -16,8 +16,7 @@ import com.travelblock.app.MainActivity
 import com.travelblock.app.R
 
 /**
- * Minimal notification foundation for focus-flight landing alerts.
- * Background scheduling (WorkManager / AlarmManager) is documented in docs/NOTIFICATION_PLAN.md.
+ * Notification display for focus-flight landing alerts.
  */
 class NotificationHelper(
     private val context: Context,
@@ -42,6 +41,7 @@ class NotificationHelper(
         ensureChannel()
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_OPEN_ARRIVAL, true)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -51,7 +51,7 @@ class NotificationHelper(
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setContentTitle("Flight landed")
+            .setContentTitle("You have landed")
             .setContentText("Flight $flightNumber has landed at $destinationCode")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
@@ -59,6 +59,10 @@ class NotificationHelper(
             .build()
 
         notificationManager.notify(LANDED_NOTIFICATION_ID, notification)
+    }
+
+    fun cancelFlightLandedNotification() {
+        notificationManager.cancel(LANDED_NOTIFICATION_ID)
     }
 
     private fun ensureChannel() {
@@ -76,5 +80,6 @@ class NotificationHelper(
     companion object {
         const val CHANNEL_ID = "travelblock_flights"
         const val LANDED_NOTIFICATION_ID = 1001
+        const val EXTRA_OPEN_ARRIVAL = "com.travelblock.app.extra.OPEN_ARRIVAL"
     }
 }

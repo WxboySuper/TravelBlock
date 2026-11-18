@@ -121,7 +121,7 @@ class CockpitPersistenceTest {
         val flightLogs = FakeFlightLogRepository()
         val points = FakePointsRepository()
         val settings = FakeSettingsRepository()
-        val diversionAirport = airport("KPWA", "Wiley Post", latitude = 35.2, longitude = -97.3)
+        val diversionAirport = TestAirports.wileyPost
         val viewModel = CockpitViewModel(
             activeFlight = activeFlight,
             clock = clock,
@@ -133,7 +133,7 @@ class CockpitPersistenceTest {
                 activeFlight.origin,
                 activeFlight.destination,
                 diversionAirport,
-                airport("KTUL", "Tulsa", latitude = 36.2, longitude = -95.9),
+                TestAirports.tulsa,
             ),
         )
 
@@ -164,8 +164,8 @@ class CockpitPersistenceTest {
 
     private val start = Instant.parse("2026-05-19T20:00:00Z")
     private val activeFlight = ActiveFlight(
-        origin = airport("KOUN", "Norman"),
-        destination = airport("KOKC", "Oklahoma City", latitude = 35.4, longitude = -97.6),
+        origin = TestAirports.norman,
+        destination = TestAirports.oklahomaCity,
         durationMinutes = 30,
         distanceMiles = 60.0,
         seat = SeatOption("18A", "18A", TicketClass.Standard, 0, "Standard aisle"),
@@ -263,23 +263,10 @@ class CockpitPersistenceTest {
         override fun instant(): Instant = current
     }
 
-    private fun airport(
-        code: String,
-        city: String,
-        latitude: Double = 35.0,
-        longitude: Double = -97.0,
-    ): Airport {
-        return Airport(
-            code = code,
-            icao = code,
-            iata = code.takeLast(3),
-            name = "$city Airport",
-            city = city,
-            stateOrRegion = "Oklahoma",
-            country = "US",
-            latitude = latitude,
-            longitude = longitude,
-            elevationFeet = 1_000,
-        )
+    private object TestAirports {
+        val norman = Airport("KOUN", "KOUN", "OUN", "Norman Airport", "Norman", "Oklahoma", "US", 35.0, -97.0, 1_000)
+        val oklahomaCity = Airport("KOKC", "KOKC", "OKC", "Oklahoma City Airport", "Oklahoma City", "Oklahoma", "US", 35.4, -97.6, 1_000)
+        val wileyPost = Airport("KPWA", "KPWA", "PWA", "Wiley Post Airport", "Wiley Post", "Oklahoma", "US", 35.2, -97.3, 1_000)
+        val tulsa = Airport("KTUL", "KTUL", "TUL", "Tulsa Airport", "Tulsa", "Oklahoma", "US", 36.2, -95.9, 1_000)
     }
 }

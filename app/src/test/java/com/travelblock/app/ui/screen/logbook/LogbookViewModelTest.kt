@@ -42,7 +42,7 @@ class LogbookViewModelTest {
             ),
         )
 
-        val viewModel = LogbookViewModel(repository)
+        val viewModel = LogbookViewModel(repository, dateChanges = kotlinx.coroutines.flow.flowOf(java.time.LocalDate.of(2026, 11, 18)))
         advanceUntilIdle()
 
         assertEquals("2", viewModel.uiState.summary.totalFlightsLabel)
@@ -63,7 +63,7 @@ class LogbookViewModelTest {
             ),
         )
 
-        val viewModel = LogbookViewModel(repository)
+        val viewModel = LogbookViewModel(repository, dateChanges = kotlinx.coroutines.flow.flowOf(java.time.LocalDate.of(2026, 11, 18)))
         advanceUntilIdle()
 
         assertEquals(listOf("new", "middle", "old"), viewModel.uiState.entries.map { it.id })
@@ -78,7 +78,7 @@ class LogbookViewModelTest {
             ),
         )
 
-        val viewModel = LogbookViewModel(repository)
+        val viewModel = LogbookViewModel(repository, dateChanges = kotlinx.coroutines.flow.flowOf(java.time.LocalDate.of(2026, 11, 18)))
         advanceUntilIdle()
 
         val completed = viewModel.uiState.entries.first { it.id == "completed" }

@@ -1,5 +1,38 @@
 # AGENT_NOTES
 
+## 2026-11-18 - Flight restore and background landing alerts
+
+### Changes
+
+- Connected restored Room sessions to `plannedArrivalAt`. Flights still in progress return to the cockpit and reschedule their alarm. Flights whose landing time passed while TravelBlock was away are recorded as completed, award points, update the current airport, and open Arrival directly.
+- Added an AlarmManager landing alert at the saved landing time. Exact alarms are used when allowed; Android 12+ falls back to `setAndAllowWhileIdle` when exact-alarm access is missing. The receiver rechecks the persisted flight and ignores stale alarm deliveries.
+- Added the Android 13 notification permission guard and an Arrival intent on the "You have landed" notification. Flight completion, diversion, and local-data reset cancel pending alarms.
+- Made completed flight and points record IDs stable across process death so restore can safely retry without duplicating logbook entries or rewards.
+- Kept cockpit navigation behind the Room save and alarm schedule, so the app does not present a started flight before its restore data and alert exist.
+- Kept Room at schema version 4 because no schema change was required. Existing 2-to-3 and 3-to-4 migrations remain explicit; there is no destructive migration fallback.
+- Added tests for expired, due, and still-active restore decisions, plus exact-alarm permission selection.
+- Changed the destination tab collections to getters after the full test run exposed an object initialization cycle that could put null into the cached list.
+
+### Verification
+
+- `JAVA_HOME='C:\Program Files\Android\Android Studio\jbr' .\gradlew.bat test assembleDebug lintDebug --no-daemon --max-workers=1`: BUILD SUCCESSFUL. All 83 unit tests passed; assemble and lint passed.
+
+## 2026-11-18 - Pilot progression and flight collections
+
+### Changed
+- Added a pure Kotlin pilot progression engine that derives ranks from completed focus hours, day streaks using the device's calendar zone, Monday-to-current-day weekly flight totals, visited-airport stamps, and flight-history badges.
+- Added the pilot rank to Home and Logbook, plus rank progress, streak/weekly totals, trophy case, and airport passport list to Logbook.
+- Kept persistence additive without a Room schema bump. These collections derive from the existing Room flight log, so existing users retain all progression data already present in their logbook.
+- Added unit coverage for rank thresholds, timezone day handling, weekly totals, passport entries, and badge unlocks.
+
+### Verification
+- `$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'; $env:GRADLE_USER_HOME='.gradle-user'; $env:ANDROID_USER_HOME='.android'; .\gradlew.bat test assembleDebug lintDebug`: **BUILD SUCCESSFUL**.
+- Added a lazy initialization for the normal and active-flight navigation tab lists after the existing navigation unit test exposed a null entry during class initialization.
+
+### Notes
+- Badge state is derived from the flight log, so it does not need a separate migration or risk diverging from flight history.
+- Arrival currently does not announce newly unlocked badges. The trophy case reflects the current unlock state in Logbook.
+
 ## 2026-05-19 - Phase 1: Native Android Shell
 
 ### Changed

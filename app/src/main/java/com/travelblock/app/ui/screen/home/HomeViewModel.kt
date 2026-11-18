@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.travelblock.app.data.repository.AirportRepository
 import com.travelblock.app.data.repository.FlightLogRepository
+import com.travelblock.app.domain.engine.PilotProgressionEngine
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.settings.SettingsRepository
 import com.travelblock.app.domain.engine.FlightRewardCalculator
@@ -31,6 +32,7 @@ class HomeViewModel(
         loadHome()
         observePoints()
         observeLastFlight()
+        observePilotProgress()
     }
 
     fun onDurationSelected(durationMinutes: Int) {
@@ -143,6 +145,32 @@ class HomeViewModel(
             repository.observeFlightLogs().collect { flights ->
                 uiState = uiState.copy(lastFlight = flights.firstOrNull())
             }
+        }
+    }
+
+    private fun observePilotProgress() {
+        val repository = flightLogRepository ?: return
+        viewModelScope.launch {
+            repository.observeFlightLogs().collect { logs ->
+                val pilot = PilotProgressionEngine.summarize(logs)
+                uiState = uiState.copy(
+                    pilotRankLabel = pilot.rank.rank.title,
+                    pilotProgressLabel = pilot.rank.nextRank?.let {
+                        "${formatRemaining(pilot.rank.hoursRemaining)} to ${it.title}"
+                    } ?: "Top rank",
+                )
+            }
+        }
+    }
+
+    private fun formatRemaining(hours: Double): String {
+        val totalMinutes = kotlin.math.ceil(hours * 60.0).toInt()
+        val h = totalMinutes / 60
+        val m = totalMinutes % 60
+        return when {
+            h == 0 -> "${m}m"
+            m == 0 -> "${h}h"
+            else -> "${h}h ${m}m"
         }
     }
 

@@ -21,7 +21,7 @@ class StoreViewModelTest {
 
     @Test
     fun purchaseSucceedsWithEnoughPointsAndCreatesTransaction() = runTest {
-        val pointsRepository = FakePointsRepository(initialBalance = 200)
+        val pointsRepository = FakePointsRepository().apply { balanceFlow.value = 200 }
         val storeRepository = FakeStoreRepository()
         val viewModel = StoreViewModel(
             pointsRepository = pointsRepository,
@@ -40,7 +40,7 @@ class StoreViewModelTest {
 
     @Test
     fun purchaseFailsWithInsufficientPoints() = runTest {
-        val pointsRepository = FakePointsRepository(initialBalance = 50)
+        val pointsRepository = FakePointsRepository().apply { balanceFlow.value = 50 }
         val storeRepository = FakeStoreRepository()
         val viewModel = StoreViewModel(
             pointsRepository = pointsRepository,
@@ -58,7 +58,7 @@ class StoreViewModelTest {
 
     @Test
     fun duplicatePurchaseDoesNotDoubleCharge() = runTest {
-        val pointsRepository = FakePointsRepository(initialBalance = 300)
+        val pointsRepository = FakePointsRepository().apply { balanceFlow.value = 300 }
         val storeRepository = FakeStoreRepository()
         val viewModel = StoreViewModel(
             pointsRepository = pointsRepository,
@@ -81,14 +81,14 @@ class StoreViewModelTest {
         val settingsRepository = FakeSettingsRepository()
         val storeRepository = FakeStoreRepository()
         val viewModel = StoreViewModel(
-            pointsRepository = FakePointsRepository(initialBalance = 200),
+            pointsRepository = FakePointsRepository(),
             storeRepository = storeRepository,
             settingsRepository = settingsRepository,
             clock = fixedClock,
         )
 
         val lockedResult = viewModel.equipNow("boarding_pass_skyline")
-        storeRepository.insertUnlock(unlockFor("boarding_pass_skyline", "BoardingPassTheme"))
+        storeRepository.insertUnlock(boardingPassUnlock())
         val unlockedResult = viewModel.equipNow("boarding_pass_skyline")
 
         assertEquals(StoreEquipResult.Locked, lockedResult)
@@ -96,18 +96,16 @@ class StoreViewModelTest {
         assertEquals("boarding_pass_skyline", settingsRepository.getSettings().equippedBoardingPassThemeId)
     }
 
-    private fun unlockFor(cosmeticId: String, type: String): UnlockEntity {
-        return UnlockEntity(
-            id = "unlock-$cosmeticId",
-            cosmeticType = type,
-            cosmeticId = cosmeticId,
-            unlockedAt = fixedClock.instant().toEpochMilli(),
-            pricePaid = 0,
-        )
-    }
+    private fun boardingPassUnlock() = UnlockEntity(
+        id = "unlock-boarding_pass_skyline",
+        cosmeticType = "BoardingPassTheme",
+        cosmeticId = "boarding_pass_skyline",
+        unlockedAt = fixedClock.instant().toEpochMilli(),
+        pricePaid = 0,
+    )
 
-    private class FakePointsRepository(initialBalance: Int) : PointsRepository {
-        private val balanceFlow = MutableStateFlow(initialBalance)
+    private class FakePointsRepository : PointsRepository {
+        val balanceFlow = MutableStateFlow(0)
         private val transactionsFlow = MutableStateFlow<List<PointsTransactionEntity>>(emptyList())
         val transactions: List<PointsTransactionEntity>
             get() = transactionsFlow.value

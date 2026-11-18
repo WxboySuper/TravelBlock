@@ -33,6 +33,8 @@ import com.travelblock.app.ui.components.StatusTone
 import com.travelblock.app.ui.theme.CabinAmber
 import com.travelblock.app.ui.theme.MutedText
 import com.travelblock.app.ui.theme.SoftSky
+import com.travelblock.app.domain.engine.PilotProgressionEngine
+import kotlin.math.roundToInt
 
 @Composable
 fun LogbookScreen(
@@ -78,6 +80,7 @@ fun LogbookScreenContent(
                 )
             }
         } else {
+            uiState.pilot?.let { item { PilotPassportCard(it) } }
             item { LogbookSummaryCard(uiState.summary) }
             items(uiState.entries, key = { it.id }) { entry ->
                 LogbookEntryCard(
@@ -87,6 +90,26 @@ fun LogbookScreenContent(
             }
         }
         item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
+
+@Composable
+private fun PilotPassportCard(pilot: com.travelblock.app.domain.engine.PilotSummary) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Pilot record", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(pilot.rank.rank.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            if (pilot.rank.nextRank != null) {
+                androidx.compose.material3.LinearProgressIndicator(progress = { pilot.rank.progress }, modifier = Modifier.fillMaxWidth())
+                Text("${"%.1f".format(pilot.rank.hoursRemaining)} hours to ${pilot.rank.nextRank.title}", color = MutedText)
+            } else Text("Top rank reached")
+            Text("${pilot.currentStreak}-day streak · ${pilot.weekly.flights} flights this week · ${"%.1f".format(pilot.weekly.hours)} hours · ${pilot.weekly.distanceMiles.roundToInt()} mi", color = MutedText)
+            Text("Passport: ${pilot.airportsVisited.joinToString(" · ").ifBlank { "No stamps yet" }}", style = MaterialTheme.typography.bodyMedium)
+            Text("Trophy case", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            PilotProgressionEngine.badges.forEach { badge ->
+                Text("${if (badge in pilot.unlockedBadges) "★" else "◇"}  $badge", color = if (badge in pilot.unlockedBadges) CabinAmber else MutedText)
+            }
+        }
     }
 }
 

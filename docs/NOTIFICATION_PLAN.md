@@ -1,11 +1,21 @@
 # TravelBlock Notification Plan
 
-## Current foundation (v0.13)
+## Implemented landing alerts
+
+- `LandingAlarmScheduler` schedules a wall-clock alarm at the flight's persisted `plannedArrivalAt`.
+- AlarmManager fits the fixed landing timestamp better than WorkManager's delay window. It uses `setExactAndAllowWhileIdle` when Android permits exact alarms, and `setAndAllowWhileIdle` if Android 12+ exact-alarm access is unavailable. The app does not block flight start or open system settings to request that access.
+- A private `LandingAlarmReceiver` reloads the active session from Room and matches its start timestamp before posting. Stale alarms do nothing. If an inexact alarm arrives early, it schedules again for the saved landing time.
+- Android 13+ notification permission remains optional. Without it, the alert is skipped and the flight still restores normally.
+- Tapping the alert asks `MainActivity` to restore the completed flight into Arrival. When the app starts after landing without an alert tap, the same Arrival flow records the completed flight and updates the current airport.
+- Starting a flight schedules its alert. Arrival, diversion, and local-data reset cancel it.
+- No schema change was needed. Room migrations remain explicit through version 4.
+
+## Previous foundation (v0.13)
 
 - `NotificationHelper` posts a local "Flight landed" notification when Cockpit detects arrival while the app is running.
 - Android 13+ `POST_NOTIFICATIONS` permission is declared in the manifest and requested on first launch from `MainActivity`.
 - Tapping the notification opens `MainActivity` (future: deep link to Arrival or active Cockpit).
-- No background worker or exact alarm is scheduled yet.
+- At that point no background alarm was scheduled.
 
 ## Why notifications matter
 

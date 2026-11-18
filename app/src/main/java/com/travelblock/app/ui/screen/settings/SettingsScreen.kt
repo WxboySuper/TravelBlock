@@ -139,60 +139,60 @@ fun SettingsScreenContent(
         }
     }
 
+    AirportPickerOverlay(uiState, onAirportSearchChanged, onAirportSelected, onDismissAirportPicker)
+    HomeAirportConfirmationOverlay(uiState.pendingHomeAirport, onConfirmHomeAirportChange, onDismissHomeAirportConfirmation)
+    ResetConfirmationOverlay(uiState.showResetConfirmation, onResetLocalData, onDismissResetConfirmation)
+}
+
+@Composable
+private fun AirportPickerOverlay(
+    uiState: SettingsUiState,
+    onSearchChanged: (String) -> Unit,
+    onAirportSelected: (Airport) -> Unit,
+    onDismiss: () -> Unit,
+) {
     uiState.pickerMode?.let { mode ->
         AirportPickerDialog(
             mode = mode,
             query = uiState.airportSearchQuery,
             results = uiState.airportSearchResults,
-            onQueryChanged = onAirportSearchChanged,
+            onQueryChanged = onSearchChanged,
             onAirportSelected = onAirportSelected,
-            onDismiss = onDismissAirportPicker,
+            onDismiss = onDismiss,
         )
     }
+}
 
-    uiState.pendingHomeAirport?.let { airport ->
-        AlertDialog(
-            onDismissRequest = onDismissHomeAirportConfirmation,
-            title = { Text("Set ${airport.code} as home?") },
-            text = {
-                Text(
-                    "You can keep your current journey where it is, or move your current airport to the new home airport too.",
-                )
-            },
-            confirmButton = {
-                Button(onClick = { onConfirmHomeAirportChange(true) }) {
-                    Text("Move Current Too")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onConfirmHomeAirportChange(false) }) {
-                    Text("Home Only")
-                }
-            },
-        )
-    }
+@Composable
+private fun HomeAirportConfirmationOverlay(
+    airport: Airport?,
+    onConfirm: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    airport ?: return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set ${airport.code} as home?") },
+        text = { Text("You can keep your current journey where it is, or move your current airport to the new home airport too.") },
+        confirmButton = { Button(onClick = { onConfirm(true) }) { Text("Move Current Too") } },
+        dismissButton = { TextButton(onClick = { onConfirm(false) }) { Text("Home Only") } },
+    )
+}
 
-    if (uiState.showResetConfirmation) {
-        AlertDialog(
-            onDismissRequest = onDismissResetConfirmation,
-            title = { Text("Reset local data?") },
-            text = {
-                Text(
-                    "This clears saved flights, points, unlocks, and preferences, then restores the default KOUN setup. This cannot be undone.",
-                )
-            },
-            confirmButton = {
-                Button(onClick = onResetLocalData) {
-                    Text("Reset Data")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismissResetConfirmation) {
-                    Text("Cancel")
-                }
-            },
-        )
-    }
+@Composable
+private fun ResetConfirmationOverlay(
+    visible: Boolean,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (!visible) return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reset local data?") },
+        text = { Text("This clears saved flights, points, unlocks, and preferences, then restores the default KOUN setup. This cannot be undone.") },
+        confirmButton = { Button(onClick = onReset) { Text("Reset Data") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

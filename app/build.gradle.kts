@@ -22,7 +22,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Fixed key (not a secret) so every CI-built APK is signed the same way and
+    // installs as an in-place update over the previous one on the phone.
+    signingConfigs {
+        create("sideload") {
+            storeFile = file("keystore/travelblock-sideload.jks")
+            storePassword = "travelblock"
+            keyAlias = "travelblock"
+            keyPassword = "travelblock"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("sideload")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

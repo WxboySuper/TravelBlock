@@ -78,6 +78,7 @@ import com.travelblock.app.ui.components.StickyActionListOptions
 import com.travelblock.app.ui.components.TravelDayBackdrop
 import com.travelblock.app.ui.components.TravelMap
 import com.travelblock.app.ui.scene.CheckInDeskScene
+import com.travelblock.app.ui.scene.CheckInGateInfo
 import com.travelblock.app.ui.scene.JetBridgeScene
 import com.travelblock.app.ui.theme.Cream
 import com.travelblock.app.ui.theme.DuskBlue
@@ -303,7 +304,7 @@ private fun CheckInSurface(
             )
         }
         if (!uiState.showSeatSelection) {
-            item { CheckInDeskScene(flightNumber = uiState.flightNumber, gate = uiState.gate) }
+            item { CheckInDeskScene(CheckInGateInfo(uiState.flightNumber, uiState.gate)) }
         }
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->

@@ -31,9 +31,13 @@ import androidx.compose.ui.unit.dp
 import com.travelblock.app.ui.theme.Lamp
 import com.travelblock.app.ui.theme.Terracotta
 
+data class CheckInGateInfo(val flightNumber: String, val gate: String)
+data class JetBridgeLighting(val localHour: Float = 14f)
+data class ArrivalLocation(val cityCode: String, val longitude: Double)
+
 /** The check-in desk: a sign, the luggage scale and your bag waiting on the belt. */
 @Composable
-fun CheckInDeskScene(flightNumber: String, gate: String, modifier: Modifier = Modifier) {
+fun CheckInDeskScene(info: CheckInGateInfo, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(184.dp).clip(RoundedCornerShape(26.dp))) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
@@ -61,7 +65,7 @@ fun CheckInDeskScene(flightNumber: String, gate: String, modifier: Modifier = Mo
             for (i in 0..10) drawCircle(Color(0xFF4A4955), 5f, Offset(w * 0.04f + i * w * 0.045f, h * 0.7f))
         }
         Text(
-            "CHECK-IN  /  $flightNumber  /  GATE $gate",
+            "CHECK-IN  /  ${info.flightNumber}  /  GATE ${info.gate}",
             style = MaterialTheme.typography.labelLarge,
             color = Lamp,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 30.dp),
@@ -71,11 +75,11 @@ fun CheckInDeskScene(flightNumber: String, gate: String, modifier: Modifier = Mo
 
 /** Walking down the jet bridge: lights stream toward you and the plane's door waits at the end. */
 @Composable
-fun JetBridgeScene(modifier: Modifier = Modifier, localHour: Float = 14f) {
+fun JetBridgeScene(modifier: Modifier = Modifier, lighting: JetBridgeLighting = JetBridgeLighting()) {
     val transition = rememberInfiniteTransition(label = "bridge")
     val walk by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(2200, easing = LinearEasing), RepeatMode.Restart), label = "walk")
     Box(modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(26.dp))) {
-        SkyScene(localHour, Modifier.fillMaxSize(), speed = 0.4f)
+        SkyScene(lighting.localHour, Modifier.fillMaxSize(), speed = 0.4f)
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
@@ -116,8 +120,10 @@ private fun Modifier.fillMaxSize(): Modifier = this.fillMaxWidth().height(2000.d
  * dark, and your plane drifting down toward the runway.
  */
 @Composable
-fun ArrivalScene(cityCode: String, longitude: Double, modifier: Modifier = Modifier) {
-    val hour = androidx.compose.runtime.remember(cityCode) { localSolarHour(java.time.Instant.now(), longitude) }
+fun ArrivalScene(location: ArrivalLocation, modifier: Modifier = Modifier) {
+    val hour = androidx.compose.runtime.remember(location.cityCode) {
+        localSolarHour(java.time.Instant.now(), location.longitude)
+    }
     val night = skyPaletteFor(hour).night
     val transition = rememberInfiniteTransition(label = "arrival")
     val glide by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
@@ -134,7 +140,7 @@ fun ArrivalScene(cityCode: String, longitude: Double, modifier: Modifier = Modif
             drawRect(Color(0xFFCF6F4A), Offset(px + w * 0.015f, py - h * 0.04f), Size(w * 0.02f, h * 0.045f))
             drawLine(Color(0xFFB5B2AC), Offset(px + w * 0.05f, py + h * 0.02f), Offset(px + w * 0.09f, py + h * 0.07f), strokeWidth = 6f)
             val base = h * 0.84f
-            drawArrivalSkyline(cityCode, night)
+            drawArrivalSkyline(ArrivalSkylineStyle(location.cityCode, night))
             drawRect(Color(0xFF1B1D2A), Offset(0f, base), Size(w, h - base))
             drawRect(Color(0xFFFFE08A), Offset(0f, base + 8f), Size(w, 3f))
         }
@@ -142,56 +148,62 @@ fun ArrivalScene(cityCode: String, longitude: Double, modifier: Modifier = Modif
 }
 
 private data class SkylineBuilding(val x: Float, val base: Float, val width: Float, val height: Float)
+private data class ArrivalSkylineStyle(val cityCode: String, val night: Float)
+private data class BuildingVariation(val seed: Int, val index: Int, val canvasSize: Size)
+private data class WindowPattern(val seed: Int, val index: Int, val night: Float)
+private data class SkylineWindowRow(val building: SkylineBuilding, val y: Float, val pattern: WindowPattern)
 
-private fun DrawScope.drawArrivalSkyline(cityCode: String, night: Float) {
-    val seed = cityCode.fold(7) { acc, c -> acc * 31 + c.code }
+private fun DrawScope.drawArrivalSkyline(style: ArrivalSkylineStyle) {
+    val seed = style.cityCode.fold(7) { acc, c -> acc * 31 + c.code }
     var x = -10f
     var index = 0
     while (x < size.width) {
-        val height = buildingHeight(seed, index, size.height)
-        val width = buildingWidth(seed, index, size.width)
+        val variation = BuildingVariation(seed, index, size)
+        val height = buildingHeight(variation)
+        val width = buildingWidth(variation)
         val building = SkylineBuilding(x, size.height * 0.84f, width, height)
-        drawBuilding(building, seed, index, night)
+        drawBuilding(building, WindowPattern(seed, index, style.night))
         x += width + 3f
         index++
     }
 }
 
-private fun buildingWidth(seed: Int, index: Int, canvasWidth: Float): Float {
-    val variation = ((seed + index * 7919) % 100 + 100) % 100 / 100f
-    return canvasWidth * (0.05f + 0.06f * variation)
+private fun buildingWidth(variation: BuildingVariation): Float {
+    val amount = ((variation.seed + variation.index * 7919) % 100 + 100) % 100 / 100f
+    return variation.canvasSize.width * (0.05f + 0.06f * amount)
 }
 
-private fun buildingHeight(seed: Int, index: Int, canvasHeight: Float): Float {
-    val variation = (((seed / 3 + index * 104729) % 100 + 100) % 100) / 100f
-    return canvasHeight * (0.12f + 0.30f * variation)
+private fun buildingHeight(variation: BuildingVariation): Float {
+    val amount = (((variation.seed / 3 + variation.index * 104729) % 100 + 100) % 100) / 100f
+    return variation.canvasSize.height * (0.12f + 0.30f * amount)
 }
 
-private fun DrawScope.drawBuilding(building: SkylineBuilding, seed: Int, index: Int, night: Float) {
-    val variation = ((seed + index * 7919) % 100 + 100) % 100 / 100f
+private fun DrawScope.drawBuilding(building: SkylineBuilding, pattern: WindowPattern) {
+    val variation = ((pattern.seed + pattern.index * 7919) % 100 + 100) % 100 / 100f
     val shade = Color(0xFF1F2336).copy(alpha = 0.55f + 0.4f * variation)
     drawRect(shade, Offset(building.x, building.base - building.height), Size(building.width, building.height))
-    if (shouldDrawWindows(night, index)) drawWindows(building, index)
+    if (shouldDrawWindows(pattern)) drawWindows(building, pattern)
 }
 
-private fun shouldDrawWindows(night: Float, index: Int): Boolean =
-    night > 0.35f || isAlternatingWindowBand(night, index)
+private fun shouldDrawWindows(pattern: WindowPattern): Boolean =
+    pattern.night > 0.35f || isAlternatingWindowBand(pattern)
 
-private fun isAlternatingWindowBand(night: Float, index: Int): Boolean = night > 0.2f && index % 2 == 0
+private fun isAlternatingWindowBand(pattern: WindowPattern): Boolean =
+    pattern.night > 0.2f && pattern.index % 2 == 0
 
-private fun DrawScope.drawWindows(building: SkylineBuilding, index: Int) {
+private fun DrawScope.drawWindows(building: SkylineBuilding, pattern: WindowPattern) {
     var windowY = building.base - building.height + 12f
     while (windowY < building.base - 14f) {
-        drawWindowRow(building, windowY, index)
+        drawWindowRow(SkylineWindowRow(building, windowY, pattern))
         windowY += 20f
     }
 }
 
-private fun DrawScope.drawWindowRow(building: SkylineBuilding, windowY: Float, index: Int) {
-    var windowX = building.x + 8f
-    while (windowX < building.x + building.width - 10f) {
-        if ((windowX.toInt() + windowY.toInt() + index) % 3 != 0) {
-            drawRect(Color(0xFFFFD98A), Offset(windowX, windowY), Size(6f, 8f))
+private fun DrawScope.drawWindowRow(row: SkylineWindowRow) {
+    var windowX = row.building.x + 8f
+    while (windowX < row.building.x + row.building.width - 10f) {
+        if ((windowX.toInt() + row.y.toInt() + row.pattern.index) % 3 != 0) {
+            drawRect(Color(0xFFFFD98A), Offset(windowX, row.y), Size(6f, 8f))
         }
         windowX += 16f
     }

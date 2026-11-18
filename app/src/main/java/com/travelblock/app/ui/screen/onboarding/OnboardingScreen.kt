@@ -40,6 +40,7 @@ import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.PrimaryButton
 import com.travelblock.app.ui.scene.AirplaneWindow
 import com.travelblock.app.ui.scene.ArrivalScene
+import com.travelblock.app.ui.scene.ArrivalLocation
 import com.travelblock.app.ui.scene.TerminalWindows
 import com.travelblock.app.ui.scene.localSolarHour
 import com.travelblock.app.ui.theme.Cream
@@ -104,7 +105,10 @@ private fun OnboardingScene(page: Int, homeAirport: Airport?, onSkip: () -> Unit
         val hour = remember { localSolarHour(Instant.now(), homeAirport?.longitude ?: -97.0) }
         when (page) {
             0 -> TerminalWindows(hour, Modifier.fillMaxSize())
-            1 -> ArrivalScene(homeAirport?.displayCode ?: "HOME", homeAirport?.longitude ?: -97.0, Modifier.fillMaxSize())
+            1 -> ArrivalScene(
+                ArrivalLocation(homeAirport?.displayCode ?: "HOME", homeAirport?.longitude ?: -97.0),
+                Modifier.fillMaxSize(),
+            )
             else -> AirplaneWindow(hour, Modifier.fillMaxSize().padding(start = 56.dp, end = 56.dp, top = 70.dp, bottom = 14.dp))
         }
         val onScene = if (page == LAST_PAGE) Ink else Color.White

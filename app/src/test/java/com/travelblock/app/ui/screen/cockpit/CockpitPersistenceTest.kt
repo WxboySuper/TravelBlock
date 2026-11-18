@@ -5,12 +5,11 @@ import com.travelblock.app.data.database.FlightLogStatus
 import com.travelblock.app.data.database.PointsTransactionEntity
 import com.travelblock.app.data.repository.FlightLogRepository
 import com.travelblock.app.data.repository.PointsRepository
-import com.travelblock.app.data.settings.SettingsRepository
-import com.travelblock.app.data.settings.UserSettings
 import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.testing.FakeSettingsRepository
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -48,7 +47,7 @@ class CockpitPersistenceTest {
         val flightLogs = FakeFlightLogRepository()
         val points = FakePointsRepository()
         val settings = FakeSettingsRepository()
-        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings)
+        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings.repository)
 
         viewModel.tick()
         advanceUntilIdle()
@@ -67,7 +66,7 @@ class CockpitPersistenceTest {
         val flightLogs = FakeFlightLogRepository()
         val points = FakePointsRepository()
         val settings = FakeSettingsRepository()
-        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings)
+        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings.repository)
 
         viewModel.tick()
         viewModel.tick()
@@ -84,7 +83,7 @@ class CockpitPersistenceTest {
         val flightLogs = FakeFlightLogRepository()
         val points = FakePointsRepository()
         val settings = FakeSettingsRepository()
-        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings)
+        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings.repository)
 
         viewModel.confirmDivert()
         advanceUntilIdle()
@@ -102,7 +101,7 @@ class CockpitPersistenceTest {
         val flightLogs = FakeFlightLogRepository()
         val points = FakePointsRepository()
         val settings = FakeSettingsRepository()
-        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings)
+        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings.repository)
 
         viewModel.confirmDivert()
         advanceUntilIdle()
@@ -128,7 +127,7 @@ class CockpitPersistenceTest {
             zoneId = ZoneId.of("UTC"),
             flightLogRepository = flightLogs,
             pointsRepository = points,
-            settingsRepository = settings,
+            settingsRepository = settings.repository,
             airports = listOf(
                 activeFlight.origin,
                 activeFlight.destination,
@@ -151,7 +150,7 @@ class CockpitPersistenceTest {
         val flightLogs = FakeFlightLogRepository()
         val points = FakePointsRepository()
         val settings = FakeSettingsRepository()
-        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings)
+        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings.repository)
 
         viewModel.confirmDivert()
         viewModel.confirmDivert()
@@ -205,52 +204,6 @@ class CockpitPersistenceTest {
             transactions += transaction
             transactionFlow.value = transactions
             balanceFlow.value = transactions.sumOf { it.amount }
-        }
-    }
-
-    private class FakeSettingsRepository : SettingsRepository {
-        var currentAirportCode: String = "KOUN"
-        private val state = MutableStateFlow(UserSettings())
-
-        override val settings: Flow<UserSettings> = state
-
-        override suspend fun getSettings(): UserSettings = state.value
-
-        override suspend fun setHomeAirportCode(code: String) {
-            state.value = state.value.copy(homeAirportCode = code)
-        }
-
-        override suspend fun setCurrentAirportCode(code: String) {
-            currentAirportCode = code
-            state.value = state.value.copy(currentAirportCode = code)
-        }
-
-        override suspend fun setSelectedTheme(theme: String) {
-            state.value = state.value.copy(selectedTheme = theme)
-        }
-
-        override suspend fun setSoundEnabled(enabled: Boolean) {
-            state.value = state.value.copy(soundEnabled = enabled)
-        }
-
-        override suspend fun setHapticsEnabled(enabled: Boolean) {
-            state.value = state.value.copy(hapticsEnabled = enabled)
-        }
-        override suspend fun setOnboardingComplete(complete: Boolean) { state.value = state.value.copy(onboardingComplete = complete) }
-        override suspend fun setDebugShortFlightsEnabled(enabled: Boolean) { state.value = state.value.copy(debugShortFlightsEnabled = enabled) }
-        override suspend fun setDebugFlightDurationSeconds(seconds: Int) { state.value = state.value.copy(debugFlightDurationSeconds = seconds) }
-
-        override suspend fun setEquippedBoardingPassThemeId(id: String) {
-            state.value = state.value.copy(equippedBoardingPassThemeId = id)
-        }
-
-        override suspend fun setEquippedAircraftIconId(id: String) {
-            state.value = state.value.copy(equippedAircraftIconId = id)
-        }
-
-        override suspend fun resetToDefaults() {
-            currentAirportCode = UserSettings.DefaultAirportCode
-            state.value = UserSettings()
         }
     }
 

@@ -4,8 +4,7 @@ import com.travelblock.app.data.database.PointsTransactionEntity
 import com.travelblock.app.data.database.UnlockEntity
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.repository.StoreRepository
-import com.travelblock.app.data.settings.SettingsRepository
-import com.travelblock.app.data.settings.UserSettings
+import com.travelblock.app.testing.FakeSettingsRepository
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -26,7 +25,7 @@ class StoreViewModelTest {
         val viewModel = StoreViewModel(
             pointsRepository = pointsRepository,
             storeRepository = storeRepository,
-            settingsRepository = FakeSettingsRepository(),
+            settingsRepository = FakeSettingsRepository().repository,
             clock = fixedClock,
         )
 
@@ -45,7 +44,7 @@ class StoreViewModelTest {
         val viewModel = StoreViewModel(
             pointsRepository = pointsRepository,
             storeRepository = storeRepository,
-            settingsRepository = FakeSettingsRepository(),
+            settingsRepository = FakeSettingsRepository().repository,
             clock = fixedClock,
         )
 
@@ -63,7 +62,7 @@ class StoreViewModelTest {
         val viewModel = StoreViewModel(
             pointsRepository = pointsRepository,
             storeRepository = storeRepository,
-            settingsRepository = FakeSettingsRepository(),
+            settingsRepository = FakeSettingsRepository().repository,
             clock = fixedClock,
         )
 
@@ -78,12 +77,12 @@ class StoreViewModelTest {
 
     @Test
     fun equipOnlyWorksForUnlockedItems() = runTest {
-        val settingsRepository = FakeSettingsRepository()
+        val settingsFixture = FakeSettingsRepository()
         val storeRepository = FakeStoreRepository()
         val viewModel = StoreViewModel(
             pointsRepository = FakePointsRepository(),
             storeRepository = storeRepository,
-            settingsRepository = settingsRepository,
+            settingsRepository = settingsFixture.repository,
             clock = fixedClock,
         )
 
@@ -93,7 +92,7 @@ class StoreViewModelTest {
 
         assertEquals(StoreEquipResult.Locked, lockedResult)
         assertEquals(StoreEquipResult.Equipped, unlockedResult)
-        assertEquals("boarding_pass_skyline", settingsRepository.getSettings().equippedBoardingPassThemeId)
+        assertEquals("boarding_pass_skyline", settingsFixture.getSettings().equippedBoardingPassThemeId)
     }
 
     private fun boardingPassUnlock() = UnlockEntity(
@@ -140,46 +139,4 @@ class StoreViewModelTest {
         }
     }
 
-    private class FakeSettingsRepository : SettingsRepository {
-        private val settingsFlow = MutableStateFlow(UserSettings())
-
-        override val settings: Flow<UserSettings> = settingsFlow
-
-        override suspend fun getSettings(): UserSettings = settingsFlow.value
-
-        override suspend fun setHomeAirportCode(code: String) {
-            settingsFlow.value = settingsFlow.value.copy(homeAirportCode = code)
-        }
-
-        override suspend fun setCurrentAirportCode(code: String) {
-            settingsFlow.value = settingsFlow.value.copy(currentAirportCode = code)
-        }
-
-        override suspend fun setSelectedTheme(theme: String) {
-            settingsFlow.value = settingsFlow.value.copy(selectedTheme = theme)
-        }
-
-        override suspend fun setSoundEnabled(enabled: Boolean) {
-            settingsFlow.value = settingsFlow.value.copy(soundEnabled = enabled)
-        }
-
-        override suspend fun setHapticsEnabled(enabled: Boolean) {
-            settingsFlow.value = settingsFlow.value.copy(hapticsEnabled = enabled)
-        }
-        override suspend fun setOnboardingComplete(complete: Boolean) { settingsFlow.value = settingsFlow.value.copy(onboardingComplete = complete) }
-        override suspend fun setDebugShortFlightsEnabled(enabled: Boolean) { settingsFlow.value = settingsFlow.value.copy(debugShortFlightsEnabled = enabled) }
-        override suspend fun setDebugFlightDurationSeconds(seconds: Int) { settingsFlow.value = settingsFlow.value.copy(debugFlightDurationSeconds = seconds) }
-
-        override suspend fun setEquippedBoardingPassThemeId(id: String) {
-            settingsFlow.value = settingsFlow.value.copy(equippedBoardingPassThemeId = id)
-        }
-
-        override suspend fun setEquippedAircraftIconId(id: String) {
-            settingsFlow.value = settingsFlow.value.copy(equippedAircraftIconId = id)
-        }
-
-        override suspend fun resetToDefaults() {
-            settingsFlow.value = UserSettings()
-        }
-    }
 }

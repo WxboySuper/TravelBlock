@@ -124,10 +124,49 @@ fun HomeScreenContent(
     onRebookLastFlight: () -> Unit = {},
     onLoadMoreRoutes: () -> Unit = {},
 ) {
+    HomeScreenLayout(
+        uiState,
+        activeFlight,
+        HomeScreenActions(
+            list = HomeListActions(onDurationSelected, onRouteSelected, onLoadMoreRoutes),
+            quickStart = QuickStartActions(onQuickStart, onRebookLastFlight),
+            footer = FooterActions(onReturnToCockpit, onBookSelectedRoute),
+        ),
+    )
+}
+
+private data class HomeScreenActions(
+    val list: HomeListActions,
+    val quickStart: QuickStartActions,
+    val footer: FooterActions,
+)
+
+private data class HomeListActions(
+    val onDurationSelected: (Int) -> Unit,
+    val onRouteSelected: (String) -> Unit,
+    val onLoadMoreRoutes: () -> Unit,
+)
+
+private data class QuickStartActions(
+    val onStart: (Int) -> Unit,
+    val onRebook: () -> Unit,
+)
+
+private data class FooterActions(
+    val onReturnToCockpit: () -> Unit,
+    val onBookSelectedRoute: () -> Unit,
+)
+
+@Composable
+private fun HomeScreenLayout(
+    uiState: HomeUiState,
+    activeFlight: ActiveFlight?,
+    actions: HomeScreenActions,
+) {
     val selectedRoute = uiState.selectedRoute
     val listState = rememberLazyListState()
 
-    ObserveMoreDepartures(listState, uiState.hasMoreRoutes, uiState.displayedRouteCount, onLoadMoreRoutes)
+    ObserveMoreDepartures(listState, uiState.hasMoreRoutes, uiState.displayedRouteCount, actions.list.onLoadMoreRoutes)
 
     Column(
         modifier = Modifier
@@ -149,21 +188,15 @@ fun HomeScreenContent(
                     selectedRoute = selectedRoute,
                 )
             }
-            quickStartItem(uiState, activeFlight, onQuickStart, onRebookLastFlight)
-            uiState.pilotRankLabel?.let { rank ->
-                item { PilotRankBanner(rank, uiState.pilotProgressLabel.orEmpty()) }
-            }
-            flightAndDepartureItems(
-                uiState,
-                activeFlight,
-                HomeListActions(onDurationSelected, onRouteSelected, onLoadMoreRoutes),
-            )
+            quickStartItem(uiState, activeFlight, actions.quickStart)
+            pilotRankItem(uiState)
+            flightAndDepartureItems(uiState, activeFlight, actions.list)
         }
         TerminalActionFooter(
             selectedRoute = selectedRoute,
             activeFlight = activeFlight,
-            onReturnToCockpit = onReturnToCockpit,
-            onBookSelectedRoute = onBookSelectedRoute,
+            onReturnToCockpit = actions.footer.onReturnToCockpit,
+            onBookSelectedRoute = actions.footer.onBookSelectedRoute,
         )
     }
 }
@@ -188,24 +221,23 @@ private fun ObserveMoreDepartures(
     }
 }
 
-private data class HomeListActions(
-    val onDurationSelected: (Int) -> Unit,
-    val onRouteSelected: (String) -> Unit,
-    val onLoadMore: () -> Unit,
-)
+private fun LazyListScope.pilotRankItem(uiState: HomeUiState) {
+    uiState.pilotRankLabel?.let { rank ->
+        item { PilotRankBanner(rank, uiState.pilotProgressLabel.orEmpty()) }
+    }
+}
 
 private fun LazyListScope.quickStartItem(
     uiState: HomeUiState,
     activeFlight: ActiveFlight?,
-    onQuickStart: (Int) -> Unit,
-    onRebookLastFlight: () -> Unit,
+    actions: QuickStartActions,
 ) {
     if (activeFlight != null) return
     item {
         QuickStartCard(
             lastFlightAvailable = uiState.lastFlight != null,
-            onQuickStart = onQuickStart,
-            onRebookLastFlight = onRebookLastFlight,
+            onQuickStart = actions.onStart,
+            onRebookLastFlight = actions.onRebook,
         )
     }
 }
@@ -230,7 +262,7 @@ private fun LazyListScope.flightAndDepartureItems(
         )
     }
     if (uiState.hasMoreRoutes) {
-        item { LoadMoreDeparturesRow(uiState.remainingRouteCount, actions.onLoadMore) }
+        item { LoadMoreDeparturesRow(uiState.remainingRouteCount, actions.onLoadMoreRoutes) }
     }
 }
 

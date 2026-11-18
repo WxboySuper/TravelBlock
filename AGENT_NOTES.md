@@ -1,5 +1,21 @@
 # AGENT_NOTES
 
+## 2026-11-18 - Pilot progression and flight collections
+
+### Changed
+- Added a pure Kotlin pilot progression engine that derives ranks from completed focus hours, day streaks using the device's calendar zone, Monday-to-current-day weekly flight totals, visited-airport stamps, and flight-history badges.
+- Added the pilot rank to Home and Logbook, plus rank progress, streak/weekly totals, trophy case, and airport passport list to Logbook.
+- Kept persistence additive without a Room schema bump. These collections derive from the existing Room flight log, so existing users retain all progression data already present in their logbook.
+- Added unit coverage for rank thresholds, timezone day handling, weekly totals, passport entries, and badge unlocks.
+
+### Verification
+- `$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'; $env:GRADLE_USER_HOME='.gradle-user'; $env:ANDROID_USER_HOME='.android'; .\gradlew.bat test assembleDebug lintDebug`: **BUILD SUCCESSFUL**.
+- Added a lazy initialization for the normal and active-flight navigation tab lists after the existing navigation unit test exposed a null entry during class initialization.
+
+### Notes
+- Badge state is derived from the flight log, so it does not need a separate migration or risk diverging from flight history.
+- Arrival currently does not announce newly unlocked badges. The trophy case reflects the current unlock state in Logbook.
+
 ## 2026-05-19 - Phase 1: Native Android Shell
 
 ### Changed

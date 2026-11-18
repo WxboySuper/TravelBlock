@@ -65,6 +65,7 @@ fun HomeScreen(
             airportRepository = container.airportRepository,
             settingsRepository = container.settingsRepository,
             pointsRepository = container.pointsRepository,
+            flightLogRepository = container.flightLogRepository,
         ),
     )
 
@@ -108,7 +109,7 @@ fun HomeScreenContent(
                 .statusBarsPadding()
                 .onSizeChanged { with(density) { headerHeightDp = it.height.toDp().value.toInt() } },
         ) {
-            HomeHeader(points = uiState.points, airportLabel = uiState.currentAirport?.let { "${it.city} (${it.displayCode})" })
+            HomeHeader(uiState)
         }
 
         Box(Modifier.align(Alignment.BottomCenter).onSizeChanged { with(density) { sheetHeightDp = it.height.toDp().value.toInt() } }) {
@@ -133,7 +134,8 @@ private fun HomeMap(route: HomeRouteCardUiModel?, topInset: Int, bottomInset: In
 }
 
 @Composable
-private fun HomeHeader(points: Int, airportLabel: String?) {
+private fun HomeHeader(uiState: HomeUiState) {
+    val airportLabel = uiState.currentAirport?.let { "${it.city} (${it.displayCode})" }
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -144,7 +146,11 @@ private fun HomeHeader(points: Int, airportLabel: String?) {
             Text("Where to?", style = MaterialTheme.typography.headlineLarge, color = Ink)
             airportLabel?.let { Text("Leaving from $it", style = MaterialTheme.typography.bodySmall, color = WarmGray) }
         }
-        StampPill("$points pts")
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            StampPill("${uiState.points} pts")
+            uiState.pilotRankLabel?.let { StampPill(it, color = Sage) }
+            uiState.pilotProgressLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = WarmGray) }
+        }
     }
 }
 

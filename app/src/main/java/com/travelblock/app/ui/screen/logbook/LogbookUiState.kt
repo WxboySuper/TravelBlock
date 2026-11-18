@@ -4,6 +4,7 @@ data class LogbookUiState(
     val entries: List<LogbookEntryUiModel> = emptyList(),
     val summary: LogbookSummaryUiModel = LogbookSummaryUiModel(),
     val isLoading: Boolean = true,
+    val pilot: com.travelblock.app.domain.engine.PilotSummary? = null,
 )
 
 data class LogbookSummaryUiModel(

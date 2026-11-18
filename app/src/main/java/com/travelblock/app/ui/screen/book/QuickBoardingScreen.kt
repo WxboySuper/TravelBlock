@@ -5,6 +5,34 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.PaperCard
+import com.travelblock.app.ui.components.PrimaryButton
+import com.travelblock.app.ui.components.SecondaryButton
+import com.travelblock.app.ui.scene.JetBridgeScene
+import com.travelblock.app.ui.theme.Cream
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Sage
+import com.travelblock.app.ui.theme.Sand
+import com.travelblock.app.ui.theme.WarmGray
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -66,69 +94,50 @@ fun QuickBoardingScreen(
     onBack: () -> Unit,
     onStartFlight: () -> Unit,
 ) {
+    var done by remember(boardingPass.flightNumber) { mutableIntStateOf(0) }
+    LaunchedEffect(boardingPass.flightNumber) {
+        repeat(3) {
+            delay(650)
+            done += 1
+        }
+    }
+    val cleared = done >= 3
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .background(Cream)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("QUICK BOARDING", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
-        Text("A short trip through the terminal", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("Your flight is ready. Check in, collect your pass, then clear the gate.", style = MaterialTheme.typography.bodyMedium, color = MutedText)
-
-        RitualMoment(number = "01", title = "Check-in complete", detail = "Flight ${boardingPass.flightNumber} · ${boardingPass.focusDurationMinutes} minute focus flight")
-        RitualMoment(number = "02", title = "Boarding pass issued", detail = "Seat ${boardingPass.seat.label} · ${boardingPass.boardingGroup}")
-        RitualMoment(number = "03", title = "Gate ${boardingPass.gate} cleared", detail = "${boardingPass.origin.displayCode} to ${boardingPass.destination.displayCode}")
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(18.dp),
-        ) {
-            Row(
-                modifier = Modifier.padding(18.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(boardingPass.origin.displayCode, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
-                    Text(boardingPass.origin.city, color = MutedText)
-                }
-                Text("✈", style = MaterialTheme.typography.headlineMedium, color = CabinAmber)
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(boardingPass.destination.displayCode, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
-                    Text(boardingPass.destination.city, color = MutedText)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-        Button(onClick = onStartFlight, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-            Text("Start focus flight")
-        }
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text("Back to departures")
-        }
+        Kicker("Fast track", color = Sage)
+        Text("Straight to your gate", style = MaterialTheme.typography.headlineLarge, color = Ink)
+        JetBridgeScene()
+        QuickMoment("Checked in", "Flight ${boardingPass.flightNumber} / ${boardingPass.focusDurationMinutes} minute focus flight", done >= 1)
+        QuickMoment("Boarding pass issued", "Seat ${boardingPass.seat.label} / ${boardingPass.boardingGroup}", done >= 2)
+        QuickMoment("Gate ${boardingPass.gate} cleared", "${boardingPass.origin.displayCode} to ${boardingPass.destination.displayCode}", done >= 3)
+        Spacer(modifier = Modifier.height(8.dp))
+        PrimaryButton(if (cleared) "Start focus flight" else "Walking to the gate...", onClick = onStartFlight, enabled = cleared)
+        SecondaryButton("Back to departures", onClick = onBack)
     }
 }
 
+/** One stop on the walk, ticking from an empty circle to a check once it is done. */
 @Composable
-private fun RitualMoment(number: String, title: String, detail: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(number, style = MaterialTheme.typography.titleMedium, color = CabinAmber, fontWeight = FontWeight.Black)
+private fun QuickMoment(title: String, detail: String, done: Boolean) {
+    PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(26.dp).clip(CircleShape).background(if (done) Sage else Sand),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = Cream, modifier = Modifier.size(18.dp))
+            }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = MutedText)
+                Text(title, style = MaterialTheme.typography.titleMedium, color = if (done) Ink else WarmGray)
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = WarmGray)
             }
         }
     }

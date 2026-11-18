@@ -26,7 +26,7 @@ object PilotProgressionEngine {
         val streak = currentStreak(days, today)
         val best = bestStreak(days)
         val airports = airportsVisited(completed)
-        val unlocked = unlockedBadges(flights, completed, airports.size, maxOf(streak, best), zone)
+        val unlocked = unlockedBadges(flights, completed, maxOf(streak, best), zone)
         return PilotSummary(rankProgress(hours), streak, best, weeklyStats(completed, today, zone), airports, unlocked)
     }
 
@@ -60,14 +60,14 @@ object PilotProgressionEngine {
     private fun airportsVisited(completed: List<FlightLogEntity>): List<String> =
         completed.flatMap { listOf(it.originCode, it.destinationCode) }.filter(String::isNotBlank).distinct().sorted()
 
-    private fun unlockedBadges(all: List<FlightLogEntity>, completed: List<FlightLogEntity>, airportCount: Int, streakDays: Int, zone: ZoneId): Set<String> {
+    private fun unlockedBadges(all: List<FlightLogEntity>, completed: List<FlightLogEntity>, streakDays: Int, zone: ZoneId): Set<String> {
         val clearRun = all.sortedBy { it.endedAt }.asReversed().takeWhile { it.isCompleted() }.size
         val checks = listOf(
             "First Flight" to completed.isNotEmpty(),
             "Ten Flights" to (completed.size >= 10),
             "Red-eye" to completed.any { isRedEye(it, zone) },
             "Transatlantic" to completed.any { it.distanceMiles >= 3000.0 },
-            "Airport Collector" to (airportCount >= 25),
+            "Airport Collector" to (airportsVisited(completed).size >= 25),
             "Seven-day Streak" to (streakDays >= 7),
             "Clear Skies" to (clearRun >= 5),
         )

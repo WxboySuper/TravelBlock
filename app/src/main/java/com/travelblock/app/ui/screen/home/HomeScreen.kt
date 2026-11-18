@@ -138,16 +138,8 @@ fun HomeScreenContent(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
-                AirportJourneyZone(
-                    airport = uiState.currentAirport,
-                    points = uiState.points,
-                    selectedRoute = selectedRoute,
-                )
-            }
-            uiState.pilotRankLabel?.let { rank ->
-                item { PilotRankBanner(rank, uiState.pilotProgressLabel.orEmpty()) }
-            }
+            item { AirportJourneyZone(uiState.currentAirport, uiState.points, selectedRoute) }
+            uiState.pilotRankLabel?.let { item { PilotRankBanner(it, uiState.pilotProgressLabel.orEmpty()) } }
             if (activeFlight != null) {
                 item {
                     InFlightHomePanel(activeFlight = activeFlight)

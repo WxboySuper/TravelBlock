@@ -72,6 +72,28 @@ data class BoardingPassThemeStyle(
     val ticketHeaderColor: Color,
 )
 
+data class RoutePreviewDetails(
+    val originCode: String,
+    val destinationCode: String,
+    val distanceMiles: Double,
+    val durationMinutes: Int,
+)
+
+data class EmptyStateContent(
+    val title: String,
+    val message: String,
+    val actionLabel: String? = null,
+)
+
+private data class FocusNoteContent(val tag: String, val objective: String)
+private data class AirportLabel(val code: String, val city: String)
+data class MetricContent(val label: String, val value: String)
+
+data class StickyActionListOptions(
+    val horizontalPadding: Dp = 20.dp,
+    val listState: LazyListState? = null,
+)
+
 private object BoardingPassThemes {
     // Soft, paper-friendly tints: the band behind the airport codes is a wash of colour, not a solid block.
     val Default = BoardingPassThemeStyle(ticketHeaderColor = Color(0xFFDCE8F2))
@@ -97,12 +119,13 @@ val StickyActionFooterHeight = 176.dp
 @Composable
 fun StickyActionScaffold(
     modifier: Modifier = Modifier,
-    horizontalPadding: Dp = 20.dp,
-    listState: LazyListState = rememberLazyListState(),
+    options: StickyActionListOptions = StickyActionListOptions(),
     stickyAction: @Composable () -> Unit,
     content: LazyListScope.() -> Unit,
 ) {
     val density = LocalDensity.current
+    val listState = options.listState ?: rememberLazyListState()
+    val horizontalPadding = options.horizontalPadding
     var footerHeightDp by remember { mutableIntStateOf(StickyActionFooterHeight.value.toInt()) }
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -220,10 +243,7 @@ fun StatusChip(
 /** Simple schematic of a route (curved line with the plane on it). The live map lives in [TravelMap]. */
 @Composable
 fun RoutePreviewMap(
-    originCode: String,
-    destinationCode: String,
-    distanceMiles: Double,
-    durationMinutes: Int,
+    route: RoutePreviewDetails,
     modifier: Modifier = Modifier,
     progress: Float? = null,
     dark: Boolean = false,
@@ -253,7 +273,7 @@ fun RoutePreviewMap(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Kicker("Route", color = mutedColor)
                     Text(
-                        text = "$durationMinutes min  /  ${distanceMiles.roundToInt()} mi",
+                        text = "${route.durationMinutes} min  /  ${route.distanceMiles.roundToInt()} mi",
                         style = MaterialTheme.typography.titleSmall,
                         color = textColor,
                     )
@@ -298,8 +318,8 @@ fun RoutePreviewMap(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(originCode, style = MaterialTheme.typography.headlineSmall, color = textColor)
-                Text(destinationCode, style = MaterialTheme.typography.headlineSmall, color = textColor)
+                Text(route.originCode, style = MaterialTheme.typography.headlineSmall, color = textColor)
+                Text(route.destinationCode, style = MaterialTheme.typography.headlineSmall, color = textColor)
             }
         }
     }
@@ -307,26 +327,24 @@ fun RoutePreviewMap(
 
 @Composable
 fun EmptyState(
-    title: String,
-    message: String,
+    content: EmptyStateContent,
     modifier: Modifier = Modifier,
-    actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
     PaperCard(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(20.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                text = title,
+                text = content.title,
                 style = MaterialTheme.typography.titleLarge,
                 color = Ink,
             )
             Text(
-                text = message,
+                text = content.message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = WarmGray,
             )
-            if (actionLabel != null && onAction != null) {
-                PrimaryButton(text = actionLabel, onClick = onAction)
+            if (content.actionLabel != null && onAction != null) {
+                PrimaryButton(text = content.actionLabel, onClick = onAction)
             }
         }
     }
@@ -346,102 +364,7 @@ fun BoardingPassCard(
     val theme = BoardingPassThemes.fromId(themeId)
     val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
     Box(modifier = modifier.fillMaxWidth()) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = TicketWhite,
-            shape = RoundedCornerShape(26.dp),
-            border = BorderStroke(1.dp, Sand),
-            shadowElevation = 6.dp,
-        ) {
-            Column {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(theme.ticketHeaderColor)
-                        .padding(horizontal = 22.dp)
-                        .padding(top = 18.dp, bottom = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "TravelBlock Air",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Ink,
-                        )
-                        StampPill(text = boardingPass.flightNumber, color = Ink, textColor = Ink)
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        BoardingAirport(
-                            code = boardingPass.origin.displayCode,
-                            city = boardingPass.origin.city,
-                            alignEnd = false,
-                        )
-                        Icon(
-                            imageVector = Icons.Rounded.Flight,
-                            contentDescription = null,
-                            tint = Ink.copy(alpha = 0.7f),
-                            modifier = Modifier
-                                .size(28.dp)
-                                .rotate(90f),
-                        )
-                        BoardingAirport(
-                            code = boardingPass.destination.displayCode,
-                            city = boardingPass.destination.city,
-                            alignEnd = true,
-                        )
-                    }
-                }
-                TicketPerforation()
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 22.dp)
-                        .padding(top = 6.dp, bottom = 22.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column {
-                            Kicker("Passenger")
-                            Text("Focus Traveler", style = MaterialTheme.typography.titleLarge, color = Ink)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Kicker("Flight time")
-                            Text(
-                                "${boardingPass.focusDurationMinutes} min",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = DuskBlue,
-                            )
-                        }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        TravelMetric("Seat", boardingPass.seat.label, Modifier.weight(1f))
-                        TravelMetric("Gate", boardingPass.gate, Modifier.weight(1f))
-                        TravelMetric("Group", boardingPass.boardingGroup.removePrefix("Group ").ifBlank { boardingPass.boardingGroup }, Modifier.weight(1f))
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        TravelMetric("Depart", boardingPass.departureTime.format(timeFormatter), Modifier.weight(1f))
-                        TravelMetric("Arrive", boardingPass.arrivalTime.format(timeFormatter), Modifier.weight(1f))
-                        TravelMetric("Distance", "${boardingPass.distanceMiles.roundToInt()} mi", Modifier.weight(1f))
-                    }
-                    if (boardingPass.focusTag.isNotBlank() || boardingPass.focusObjective.isNotBlank()) {
-                        FocusNote(tag = boardingPass.focusTag, objective = boardingPass.focusObjective)
-                    }
-                    BoardingPassBarcode(flightNumber = boardingPass.flightNumber)
-                }
-            }
-        }
+        BoardingPassTicket(boardingPass, theme, timeFormatter)
         if (showClearedStamp) {
             BoardingPassStatusStamp(
                 text = "Ready to board",
@@ -455,7 +378,129 @@ fun BoardingPassCard(
 }
 
 @Composable
-private fun FocusNote(tag: String, objective: String) {
+private fun BoardingPassTicket(
+    boardingPass: BoardingPass,
+    theme: BoardingPassThemeStyle,
+    timeFormatter: DateTimeFormatter,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = TicketWhite,
+        shape = RoundedCornerShape(26.dp),
+        border = BorderStroke(1.dp, Sand),
+        shadowElevation = 6.dp,
+    ) {
+        Column {
+            BoardingPassHeader(boardingPass, theme)
+            TicketPerforation()
+            BoardingPassDetails(boardingPass, timeFormatter)
+        }
+    }
+}
+
+@Composable
+private fun BoardingPassHeader(boardingPass: BoardingPass, theme: BoardingPassThemeStyle) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.ticketHeaderColor)
+            .padding(horizontal = 22.dp)
+            .padding(top = 18.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "TravelBlock Air", style = MaterialTheme.typography.titleLarge, color = Ink)
+            StampPill(text = boardingPass.flightNumber, color = Ink, textColor = Ink)
+        }
+        BoardingPassAirportRow(boardingPass)
+    }
+}
+
+@Composable
+private fun BoardingPassAirportRow(boardingPass: BoardingPass) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BoardingAirport(AirportLabel(boardingPass.origin.displayCode, boardingPass.origin.city), alignEnd = false)
+        Icon(
+            imageVector = Icons.Rounded.Flight,
+            contentDescription = null,
+            tint = Ink.copy(alpha = 0.7f),
+            modifier = Modifier.size(28.dp).rotate(90f),
+        )
+        BoardingAirport(AirportLabel(boardingPass.destination.displayCode, boardingPass.destination.city), alignEnd = true)
+    }
+}
+
+@Composable
+private fun BoardingPassDetails(boardingPass: BoardingPass, timeFormatter: DateTimeFormatter) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp)
+            .padding(top = 6.dp, bottom = 22.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        PassengerFlightTime(boardingPass)
+        BoardingPassMetricRow(
+            MetricContent("Seat", boardingPass.seat.label),
+            MetricContent("Gate", boardingPass.gate),
+            MetricContent("Group", boardingPass.boardingGroup.removePrefix("Group ").ifBlank { boardingPass.boardingGroup }),
+        )
+        BoardingPassMetricRow(
+            MetricContent("Depart", boardingPass.departureTime.format(timeFormatter)),
+            MetricContent("Arrive", boardingPass.arrivalTime.format(timeFormatter)),
+            MetricContent("Distance", "${boardingPass.distanceMiles.roundToInt()} mi"),
+        )
+        if (hasFocusDetails(boardingPass)) {
+            FocusNote(FocusNoteContent(boardingPass.focusTag, boardingPass.focusObjective))
+        }
+        BoardingPassBarcode(flightNumber = boardingPass.flightNumber)
+    }
+}
+
+@Composable
+private fun PassengerFlightTime(boardingPass: BoardingPass) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Kicker("Passenger")
+            Text("Focus Traveler", style = MaterialTheme.typography.titleLarge, color = Ink)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Kicker("Flight time")
+            Text(
+                "${boardingPass.focusDurationMinutes} min",
+                style = MaterialTheme.typography.titleLarge,
+                color = DuskBlue,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoardingPassMetricRow(first: MetricContent, second: MetricContent, third: MetricContent) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        TravelMetric(first, Modifier.weight(1f))
+        TravelMetric(second, Modifier.weight(1f))
+        TravelMetric(third, Modifier.weight(1f))
+    }
+}
+
+private fun hasFocusDetails(boardingPass: BoardingPass): Boolean =
+    boardingPass.focusTag.isNotBlank() || boardingPass.focusObjective.isNotBlank()
+
+@Composable
+private fun FocusNote(content: FocusNoteContent) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Cream,
@@ -466,9 +511,9 @@ private fun FocusNote(tag: String, objective: String) {
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Kicker(if (tag.isNotBlank()) "Studying: $tag" else "Focus cargo")
-            if (objective.isNotBlank()) {
-                Text(objective, style = MaterialTheme.typography.bodyMedium, color = Ink)
+            Kicker(if (content.tag.isNotBlank()) "Studying: ${content.tag}" else "Focus cargo")
+            if (content.objective.isNotBlank()) {
+                Text(content.objective, style = MaterialTheme.typography.bodyMedium, color = Ink)
             }
         }
     }
@@ -535,8 +580,7 @@ private fun BoardingPassBarcode(flightNumber: String) {
 
 @Composable
 fun TravelMetric(
-    label: String,
-    value: String,
+    metric: MetricContent,
     modifier: Modifier = Modifier,
     accent: Boolean = false,
 ) {
@@ -544,9 +588,9 @@ fun TravelMetric(
         modifier = modifier.widthIn(min = 64.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Kicker(label)
+        Kicker(metric.label)
         Text(
-            text = value,
+            text = metric.value,
             style = MaterialTheme.typography.titleMedium,
             color = if (accent) Marigold else Ink,
         )
@@ -554,19 +598,15 @@ fun TravelMetric(
 }
 
 @Composable
-private fun BoardingAirport(
-    code: String,
-    city: String,
-    alignEnd: Boolean,
-) {
+private fun BoardingAirport(airport: AirportLabel, alignEnd: Boolean) {
     Column(horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start) {
         Text(
-            text = code,
+            text = airport.code,
             style = MaterialTheme.typography.displaySmall,
             color = Ink,
         )
         Text(
-            text = city,
+            text = airport.city,
             style = MaterialTheme.typography.bodySmall,
             color = Ink.copy(alpha = 0.72f),
         )

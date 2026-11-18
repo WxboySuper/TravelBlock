@@ -30,6 +30,7 @@ import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.RouteStops
 import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.PrimaryButton
 import com.travelblock.app.ui.components.SecondaryButton
@@ -99,8 +100,7 @@ private fun DiversionMapCard(summary: DiversionSummary) {
     PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(10.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             TravelMap(
-                origin = summary.origin.toStop(),
-                destination = summary.diversionAirport.toStop(),
+                stops = RouteStops(summary.origin.toStop(), summary.diversionAirport.toStop()),
                 progress = 1f,
                 modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)),
             )

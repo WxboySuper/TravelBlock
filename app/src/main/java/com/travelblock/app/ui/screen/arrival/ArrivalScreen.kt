@@ -37,6 +37,7 @@ import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.RouteStops
 import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.PrimaryButton
 import com.travelblock.app.ui.components.SecondaryButton
@@ -148,8 +149,7 @@ private fun RoutePostcard(summary: ArrivalSummary) {
     PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(10.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             TravelMap(
-                origin = summary.origin.toStop(),
-                destination = summary.destination.toStop(),
+                stops = RouteStops(summary.origin.toStop(), summary.destination.toStop()),
                 progress = 1f,
                 modifier = Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(16.dp)),
             )

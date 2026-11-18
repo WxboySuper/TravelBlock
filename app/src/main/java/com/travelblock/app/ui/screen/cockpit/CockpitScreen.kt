@@ -22,6 +22,8 @@ import com.travelblock.app.ui.scene.AirplaneWindow
 import com.travelblock.app.ui.scene.cabinDimFor
 import com.travelblock.app.ui.scene.localSolarHour
 import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.components.MapOptions
+import com.travelblock.app.ui.components.RouteStops
 import com.travelblock.app.ui.theme.Terracotta
 import com.travelblock.app.ui.theme.WarmGray
 import kotlinx.coroutines.delay
@@ -317,11 +319,10 @@ private fun SeatBackScreen(flight: ActiveFlight, uiState: CockpitUiState) {
             .clip(RoundedCornerShape(15.dp)),
     ) {
         TravelMap(
-            origin = flight.origin.toStop(),
-            destination = flight.destination.toStop(),
+            stops = RouteStops(flight.origin.toStop(), flight.destination.toStop()),
             modifier = Modifier.fillMaxSize(),
             progress = uiState.progress.coerceIn(0f, 1f),
-            style = TravelMapStyle.Night,
+            options = MapOptions(style = TravelMapStyle.Night),
         )
         Text(
             "${uiState.milesRemainingLabel} to go",

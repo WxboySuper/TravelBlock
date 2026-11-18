@@ -41,6 +41,7 @@ import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.SecondaryButton
 import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.components.RouteStops
 import com.travelblock.app.ui.theme.Cream
 import com.travelblock.app.ui.theme.DisplayFamily
 import com.travelblock.app.ui.theme.DuskBlue
@@ -102,14 +103,14 @@ private fun LazyListScope.filledLogbook(uiState: LogbookUiState, lookup: Airport
         item { PilotRankCard(pilot) }
         item { StreakAndWeekRow(pilot) }
     }
-    item { SectionTitle("Where you've been", "Every route you've landed, drawn on the map.") }
+        item { SectionTitle(SectionHeading("Where you've been", "Every route you've landed, drawn on the map.")) }
     item { WhereYouveBeenCard(legsFor(uiState.entries, lookup)) }
     item { LifetimeTotalsCard(uiState.summary) }
     uiState.pilot?.let { pilot ->
         item { PassportCard(pilot.airportsVisited) }
         item { TrophyCaseCard(pilot.unlockedBadges) }
     }
-    item { SectionTitle("Past flights", "Tap a ticket stub to see the details.") }
+        item { SectionTitle(SectionHeading("Past flights", "Tap a ticket stub to see the details.")) }
     items(uiState.entries, key = { it.id }) { entry ->
         TicketStub(entry = entry, onClick = { onFlightSelected(entry.id) })
     }
@@ -211,13 +212,17 @@ private fun FlightLogDetailContent(
 
 @Composable
 private fun FlightRouteMap(flight: FlightLogDetailUiModel, lookup: AirportLookup?) {
-    val from = lookup?.invoke(flight.originCode)
-    val to = lookup?.invoke(flight.destinationCode)
-    if (from == null || to == null || !from.hasValidCoordinates || !to.hasValidCoordinates) return
+    val airportLookup = lookup ?: return
+    val from = airportLookup(flight.originCode) ?: return
+    val to = airportLookup(flight.destinationCode) ?: return
+    if (!from.hasValidCoordinates) return
+    if (!to.hasValidCoordinates) return
     Surface(shape = RoundedCornerShape(22.dp), color = Cream, modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(22.dp))) {
         TravelMap(
-            origin = MapStop(from.displayCode, GeoPoint(from.latitude, from.longitude)),
-            destination = MapStop(to.displayCode, GeoPoint(to.latitude, to.longitude)),
+            stops = RouteStops(
+                MapStop(from.displayCode, GeoPoint(from.latitude, from.longitude)),
+                MapStop(to.displayCode, GeoPoint(to.latitude, to.longitude)),
+            ),
             modifier = Modifier.fillMaxSize(),
             progress = if (flight.isCompleted) 1f else null,
         )

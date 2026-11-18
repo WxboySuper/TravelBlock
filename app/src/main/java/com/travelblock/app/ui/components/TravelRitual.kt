@@ -81,6 +81,18 @@ enum class BookingRitualSurface(val order: Int) {
     GateCall(2),
 }
 
+data class DocketRoute(val originCode: String, val destinationCode: String)
+
+data class DocketFlightDetails(
+    val durationMinutes: Int,
+    val distanceMiles: Double,
+    val flightNumber: String,
+    val gate: String,
+    val boardingGroup: String,
+)
+
+data class GateBoardingInfo(val gate: String, val boardingGroup: String)
+
 @Composable
 fun TravelDayBackdrop(
     modifier: Modifier = Modifier,
@@ -188,13 +200,8 @@ private fun ProgressStop(done: Boolean, active: Boolean, size: androidx.compose.
 
 @Composable
 fun CompactRouteDocket(
-    originCode: String,
-    destinationCode: String,
-    durationMinutes: Int,
-    distanceMiles: Double,
-    flightNumber: String,
-    gate: String,
-    boardingGroup: String,
+    route: DocketRoute,
+    flight: DocketFlightDetails,
     modifier: Modifier = Modifier,
 ) {
     PaperCard(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)) {
@@ -206,24 +213,24 @@ fun CompactRouteDocket(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Kicker("Departure docket")
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(originCode, style = MaterialTheme.typography.headlineMedium, color = Ink)
+                    Text(route.originCode, style = MaterialTheme.typography.headlineMedium, color = Ink)
                     Icon(
                         Icons.Rounded.Flight,
                         contentDescription = null,
                         tint = Terracotta,
                         modifier = Modifier.size(22.dp).rotate(90f),
                     )
-                    Text(destinationCode, style = MaterialTheme.typography.headlineMedium, color = Ink)
+                    Text(route.destinationCode, style = MaterialTheme.typography.headlineMedium, color = Ink)
                 }
                 Text(
-                    text = "$durationMinutes min  /  ${distanceMiles.roundToInt()} mi  /  $flightNumber  /  Gate $gate",
+                    text = "${flight.durationMinutes} min  /  ${flight.distanceMiles.roundToInt()} mi  /  ${flight.flightNumber}  /  Gate ${flight.gate}",
                     style = MaterialTheme.typography.bodySmall,
                     color = WarmGray,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            StampPill(text = boardingGroup)
+            StampPill(text = flight.boardingGroup)
         }
     }
 }
@@ -312,8 +319,7 @@ fun BoardingPassReveal(
  */
 @Composable
 fun GateBoardingSequence(
-    gate: String,
-    boardingGroup: String,
+    boarding: GateBoardingInfo,
     gateStep: Int,
     modifier: Modifier = Modifier,
     onGateCleared: (() -> Unit)? = null,
@@ -327,29 +333,39 @@ fun GateBoardingSequence(
 
     PaperCard(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(20.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Kicker("Now boarding")
-                    Text(text = "Gate $gate", style = MaterialTheme.typography.displaySmall, color = Ink)
-                    Text(
-                        text = "$boardingGroup  /  doors close when Focus Mode starts",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = WarmGray,
-                    )
-                }
-                StampPill(text = if (cleared) "Cleared" else "Scanning", color = if (cleared) Sage else Marigold)
-            }
+            GateBoardingHeader(boarding, cleared)
             GateScanner(cleared = cleared)
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                GateSequenceRow("Scanning your boarding pass", index = 0, gateStep = gateStep)
-                GateSequenceRow("Securing the cabin", index = 1, gateStep = gateStep)
-                GateSequenceRow("Cleared for departure", index = 2, gateStep = gateStep)
-            }
+            GateSequenceRows(gateStep)
         }
+    }
+}
+
+@Composable
+private fun GateBoardingHeader(boarding: GateBoardingInfo, cleared: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Kicker("Now boarding")
+            Text(text = "Gate ${boarding.gate}", style = MaterialTheme.typography.displaySmall, color = Ink)
+            Text(
+                text = "${boarding.boardingGroup}  /  doors close when Focus Mode starts",
+                style = MaterialTheme.typography.bodySmall,
+                color = WarmGray,
+            )
+        }
+        StampPill(text = if (cleared) "Cleared" else "Scanning", color = if (cleared) Sage else Marigold)
+    }
+}
+
+@Composable
+private fun GateSequenceRows(gateStep: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        GateSequenceRow("Scanning your boarding pass", index = 0, gateStep = gateStep)
+        GateSequenceRow("Securing the cabin", index = 1, gateStep = gateStep)
+        GateSequenceRow("Cleared for departure", index = 2, gateStep = gateStep)
     }
 }
 

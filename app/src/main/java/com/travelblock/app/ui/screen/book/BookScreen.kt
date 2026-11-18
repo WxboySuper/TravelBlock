@@ -60,8 +60,12 @@ import com.travelblock.app.ui.components.BookingProgressRail
 import com.travelblock.app.ui.components.BookingRitualSurface
 import com.travelblock.app.ui.components.BookingRitualSurfaceTransition
 import com.travelblock.app.ui.components.CompactRouteDocket
+import com.travelblock.app.ui.components.DocketFlightDetails
+import com.travelblock.app.ui.components.DocketRoute
 import com.travelblock.app.ui.components.EmptyState
+import com.travelblock.app.ui.components.EmptyStateContent
 import com.travelblock.app.ui.components.GateBoardingSequence
+import com.travelblock.app.ui.components.GateBoardingInfo
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.PaperCard
@@ -70,6 +74,7 @@ import com.travelblock.app.ui.components.SecondaryButton
 import com.travelblock.app.ui.components.SoftChip
 import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.components.StickyActionScaffold
+import com.travelblock.app.ui.components.StickyActionListOptions
 import com.travelblock.app.ui.components.TravelDayBackdrop
 import com.travelblock.app.ui.components.TravelMap
 import com.travelblock.app.ui.scene.CheckInDeskScene
@@ -255,7 +260,7 @@ private fun CheckInSurface(
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
-        horizontalPadding = 20.dp,
+        options = StickyActionListOptions(horizontalPadding = 20.dp),
         stickyAction = {
             if (!uiState.showSeatSelection) {
                 PrimaryButton(text = "Check-in complete", onClick = onContinueToSeatSelection)
@@ -287,13 +292,14 @@ private fun CheckInSurface(
         }
         item {
             CompactRouteDocket(
-                originCode = origin.displayCode,
-                destinationCode = destination.displayCode,
-                durationMinutes = uiState.durationMinutes,
-                distanceMiles = uiState.distanceMiles,
-                flightNumber = uiState.flightNumber,
-                gate = uiState.gate,
-                boardingGroup = uiState.boardingGroup,
+                route = DocketRoute(origin.displayCode, destination.displayCode),
+                flight = DocketFlightDetails(
+                    durationMinutes = uiState.durationMinutes,
+                    distanceMiles = uiState.distanceMiles,
+                    flightNumber = uiState.flightNumber,
+                    gate = uiState.gate,
+                    boardingGroup = uiState.boardingGroup,
+                ),
             )
         }
         if (!uiState.showSeatSelection) {
@@ -332,8 +338,10 @@ private fun EmptyBookingState() {
         verticalArrangement = Arrangement.Center,
     ) {
         EmptyState(
-            title = "Book a flight",
-            message = "Choose a departure from Home to start your check-in.",
+            content = EmptyStateContent(
+                title = "Book a flight",
+                message = "Choose a departure from Home to start your check-in.",
+            ),
         )
     }
 }
@@ -699,7 +707,7 @@ private fun BoardingPassPreview(
 ) {
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
-        horizontalPadding = 20.dp,
+        options = StickyActionListOptions(horizontalPadding = 20.dp),
         stickyAction = {
             PrimaryButton(text = "Board flight", onClick = onBoardFlight)
             SecondaryButton(text = "Back to seats", onClick = onBackToReview)
@@ -755,7 +763,7 @@ private fun GateCallScreen(
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
-        horizontalPadding = 20.dp,
+        options = StickyActionListOptions(horizontalPadding = 20.dp),
         stickyAction = {
             PrimaryButton(
                 text = if (cleared) "Start focus flight" else "Preparing cabin...",
@@ -778,8 +786,7 @@ private fun GateCallScreen(
         item { JetBridgeScene() }
         item {
             GateBoardingSequence(
-                gate = boardingPass.gate,
-                boardingGroup = boardingPass.boardingGroup,
+                boarding = GateBoardingInfo(boardingPass.gate, boardingPass.boardingGroup),
                 gateStep = gateStep,
             )
         }

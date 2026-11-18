@@ -78,11 +78,15 @@ internal fun formatHoursRemaining(hours: Double): String {
     }
 }
 
+internal data class SectionHeading(val title: String, val subtitle: String? = null)
+private data class StatCardContent(val label: String, val value: String, val note: String)
+private data class PassportStampInfo(val code: String, val index: Int)
+
 @Composable
-internal fun SectionTitle(title: String, subtitle: String? = null) {
+internal fun SectionTitle(heading: SectionHeading) {
     Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, color = Ink)
-        subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = WarmGray) }
+        Text(heading.title, style = MaterialTheme.typography.headlineSmall, color = Ink)
+        heading.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = WarmGray) }
     }
 }
 
@@ -127,8 +131,8 @@ private fun ProgressBar(progress: Float) {
 @Composable
 internal fun StreakAndWeekRow(pilot: PilotSummary) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StatCard("Day streak", "${pilot.currentStreak}", "Best ${pilot.bestStreak}", Modifier.weight(1f))
-        StatCard("This week", "${pilot.weekly.flights}", weekLine(pilot.weekly), Modifier.weight(1f))
+        StatCard(StatCardContent("Day streak", "${pilot.currentStreak}", "Best ${pilot.bestStreak}"), Modifier.weight(1f))
+        StatCard(StatCardContent("This week", "${pilot.weekly.flights}", weekLine(pilot.weekly)), Modifier.weight(1f))
     }
 }
 
@@ -136,12 +140,12 @@ private fun weekLine(week: WeekFlightStats): String =
     "${"%.1f".format(week.hours)} h  /  ${week.distanceMiles.roundToInt()} mi"
 
 @Composable
-private fun StatCard(label: String, value: String, note: String, modifier: Modifier = Modifier) {
+private fun StatCard(content: StatCardContent, modifier: Modifier = Modifier) {
     PaperCard(modifier, contentPadding = PaddingValues(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Kicker(label)
-            Text(value, style = MaterialTheme.typography.displaySmall, color = DuskBlue)
-            Text(note, style = MaterialTheme.typography.bodySmall, color = WarmGray)
+            Kicker(content.label)
+            Text(content.value, style = MaterialTheme.typography.displaySmall, color = DuskBlue)
+            Text(content.note, style = MaterialTheme.typography.bodySmall, color = WarmGray)
         }
     }
 }
@@ -175,16 +179,14 @@ internal fun WhereYouveBeenCard(legs: List<RouteLeg>) {
 internal fun legsFor(entries: List<LogbookEntryUiModel>, lookup: AirportLookup?): List<RouteLeg> {
     if (lookup == null) return emptyList()
     return entries.filter { it.isCompleted }.mapNotNull { entry ->
-        val from = lookup(entry.originCode)
-        val to = lookup(entry.destinationCode)
-        if (from == null || to == null || !from.hasValidCoordinates || !to.hasValidCoordinates) {
-            null
-        } else {
-            RouteLeg(
-                MapStop(from.displayCode, GeoPoint(from.latitude, from.longitude)),
-                MapStop(to.displayCode, GeoPoint(to.latitude, to.longitude)),
-            )
-        }
+        val from = lookup(entry.originCode) ?: return@mapNotNull null
+        val to = lookup(entry.destinationCode) ?: return@mapNotNull null
+        if (!from.hasValidCoordinates) return@mapNotNull null
+        if (!to.hasValidCoordinates) return@mapNotNull null
+        RouteLeg(
+            MapStop(from.displayCode, GeoPoint(from.latitude, from.longitude)),
+            MapStop(to.displayCode, GeoPoint(to.latitude, to.longitude)),
+        )
     }
 }
 
@@ -225,7 +227,7 @@ internal fun PassportCard(airports: List<String>) {
             } else {
                 Text("${airports.size} ${if (airports.size == 1) "airport" else "airports"} stamped", style = MaterialTheme.typography.titleMedium, color = Ink)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    airports.take(MaxStamps).forEachIndexed { index, code -> PassportStamp(code, index) }
+                    airports.take(MaxStamps).forEachIndexed { index, code -> PassportStamp(PassportStampInfo(code, index)) }
                 }
                 if (airports.size > MaxStamps) {
                     Text("+${airports.size - MaxStamps} more", style = MaterialTheme.typography.labelMedium, color = WarmGray)
@@ -236,7 +238,9 @@ internal fun PassportCard(airports: List<String>) {
 }
 
 @Composable
-private fun PassportStamp(code: String, index: Int) {
+private fun PassportStamp(stamp: PassportStampInfo) {
+    val code = stamp.code
+    val index = stamp.index
     val ink = StampInks[index % StampInks.size]
     val round = index % 2 == 1
     val shape = if (round) CircleShape else RoundedCornerShape(10.dp)

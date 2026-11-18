@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -132,34 +133,66 @@ fun ArrivalScene(cityCode: String, longitude: Double, modifier: Modifier = Modif
             drawRoundRect(body, Offset(px, py), Size(w * 0.13f, h * 0.045f), CornerRadius(14f))
             drawRect(Color(0xFFCF6F4A), Offset(px + w * 0.015f, py - h * 0.04f), Size(w * 0.02f, h * 0.045f))
             drawLine(Color(0xFFB5B2AC), Offset(px + w * 0.05f, py + h * 0.02f), Offset(px + w * 0.09f, py + h * 0.07f), strokeWidth = 6f)
-            // Skyline, generated from the airport code so every city looks its own.
-            val seed = cityCode.fold(7) { acc, c -> acc * 31 + c.code }
             val base = h * 0.84f
-            var x = -10f
-            var i = 0
-            while (x < w) {
-                val r = ((seed + i * 7919) % 100 + 100) % 100 / 100f
-                val bw = w * (0.05f + 0.06f * r)
-                val r2 = (((seed / 3 + i * 104729) % 100 + 100) % 100) / 100f
-                val bh = h * (0.12f + 0.30f * r2)
-                val shade = Color(0xFF1F2336).copy(alpha = 0.55f + 0.4f * r)
-                drawRect(shade, Offset(x, base - bh), Size(bw, bh))
-                if (night > 0.35f || (night > 0.2f && i % 2 == 0)) {
-                    var wy = base - bh + 12f
-                    while (wy < base - 14f) {
-                        var wx = x + 8f
-                        while (wx < x + bw - 10f) {
-                            if ((wx.toInt() + wy.toInt() + i) % 3 != 0) drawRect(Color(0xFFFFD98A), Offset(wx, wy), Size(6f, 8f))
-                            wx += 16f
-                        }
-                        wy += 20f
-                    }
-                }
-                x += bw + 3f
-                i++
-            }
+            drawArrivalSkyline(cityCode, night)
             drawRect(Color(0xFF1B1D2A), Offset(0f, base), Size(w, h - base))
             drawRect(Color(0xFFFFE08A), Offset(0f, base + 8f), Size(w, 3f))
         }
+    }
+}
+
+private data class SkylineBuilding(val x: Float, val base: Float, val width: Float, val height: Float)
+
+private fun DrawScope.drawArrivalSkyline(cityCode: String, night: Float) {
+    val seed = cityCode.fold(7) { acc, c -> acc * 31 + c.code }
+    var x = -10f
+    var index = 0
+    while (x < size.width) {
+        val height = buildingHeight(seed, index, size.height)
+        val width = buildingWidth(seed, index, size.width)
+        val building = SkylineBuilding(x, size.height * 0.84f, width, height)
+        drawBuilding(building, seed, index, night)
+        x += width + 3f
+        index++
+    }
+}
+
+private fun buildingWidth(seed: Int, index: Int, canvasWidth: Float): Float {
+    val variation = ((seed + index * 7919) % 100 + 100) % 100 / 100f
+    return canvasWidth * (0.05f + 0.06f * variation)
+}
+
+private fun buildingHeight(seed: Int, index: Int, canvasHeight: Float): Float {
+    val variation = (((seed / 3 + index * 104729) % 100 + 100) % 100) / 100f
+    return canvasHeight * (0.12f + 0.30f * variation)
+}
+
+private fun DrawScope.drawBuilding(building: SkylineBuilding, seed: Int, index: Int, night: Float) {
+    val variation = ((seed + index * 7919) % 100 + 100) % 100 / 100f
+    val shade = Color(0xFF1F2336).copy(alpha = 0.55f + 0.4f * variation)
+    drawRect(shade, Offset(building.x, building.base - building.height), Size(building.width, building.height))
+    if (shouldDrawWindows(night, index)) drawWindows(building, index)
+}
+
+private fun shouldDrawWindows(night: Float, index: Int): Boolean =
+    night > 0.35f || isAlternatingWindowBand(night, index)
+
+private fun isAlternatingWindowBand(night: Float, index: Int): Boolean = night > 0.2f && index % 2 == 0
+
+private fun DrawScope.drawWindows(building: SkylineBuilding, index: Int) {
+    var windowY = building.base - building.height + 12f
+    while (windowY < building.base - 14f) {
+        drawWindowRow(building, windowY, index)
+        windowY += 20f
+    }
+}
+
+private fun DrawScope.drawWindowRow(building: SkylineBuilding, windowY: Float, index: Int) {
+    var windowX = building.x + 8f
+    while (windowX < building.x + building.width - 10f) {
+        if ((windowX.toInt() + windowY.toInt() + index) % 3 != 0) {
+            drawRect(Color(0xFFFFD98A), Offset(windowX, windowY), Size(6f, 8f))
+        }
+        windowX += 16f
     }
 }

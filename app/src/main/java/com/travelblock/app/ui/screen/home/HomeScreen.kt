@@ -46,6 +46,7 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.RouteStops
 import com.travelblock.app.ui.components.PrimaryButton
 import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.components.TravelMap
@@ -252,8 +253,10 @@ private fun RouteDetails(route: HomeRouteCardUiModel, onBook: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TravelMap(
-                origin = MapStop(route.originCode, GeoPoint(route.originLatitude, route.originLongitude)),
-                destination = MapStop(route.destinationCode, GeoPoint(route.destinationLatitude, route.destinationLongitude)),
+                stops = RouteStops(
+                    MapStop(route.originCode, GeoPoint(route.originLatitude, route.originLongitude)),
+                    MapStop(route.destinationCode, GeoPoint(route.destinationLatitude, route.destinationLongitude)),
+                ),
                 modifier = Modifier.width(168.dp).height(136.dp),
             )
             Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {

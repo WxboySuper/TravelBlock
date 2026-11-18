@@ -42,6 +42,7 @@ import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.screen.logbook.SectionTitle
+import com.travelblock.app.ui.screen.logbook.SectionHeading
 import com.travelblock.app.ui.theme.Cream
 import com.travelblock.app.ui.theme.DuskBlue
 import com.travelblock.app.ui.theme.Ink
@@ -96,7 +97,7 @@ private fun LazyListScope.categorySections(
     StoreItemCategory.entries.forEach { category ->
         val items = uiState.items.filter { it.category == category }
         if (items.isEmpty()) return@forEach
-        item { SectionTitle(category.title(), category.tagline()) }
+            item { SectionTitle(SectionHeading(category.title(), category.tagline())) }
         items(items, key = { it.id }) { item -> SouvenirCard(item, onPurchase, onEquip) }
     }
 }

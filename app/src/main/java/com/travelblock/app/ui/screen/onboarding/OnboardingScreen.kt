@@ -56,6 +56,11 @@ private data class AirportSelectionState(
     val homeAirport: Airport?,
 )
 
+private data class OnboardingCallbacks(
+    val onQueryChanged: (String) -> Unit,
+    val onAirportSelected: (Airport) -> Unit,
+)
+
 private const val LAST_PAGE = 2
 
 @Composable
@@ -82,8 +87,10 @@ fun OnboardingScreen(
             OnboardingPageContent(
                 page,
                 AirportSelectionState(query, results, homeAirport),
-                onQueryChanged = { query = it },
-                onAirportSelected = { homeAirport = it },
+                callbacks = OnboardingCallbacks(
+                    onQueryChanged = { query = it },
+                    onAirportSelected = { homeAirport = it },
+                ),
                 modifier = Modifier.weight(1f),
             )
             OnboardingActions(page, canContinue = page != 1 || homeAirport != null, onNext = { page += 1 }, onFinish = { notify -> onFinish(homeAirport, notify) })
@@ -146,13 +153,12 @@ private fun OnboardingActions(page: Int, canContinue: Boolean, onNext: () -> Uni
 private fun OnboardingPageContent(
     page: Int,
     airportSelection: AirportSelectionState,
-    onQueryChanged: (String) -> Unit,
-    onAirportSelected: (Airport) -> Unit,
+    callbacks: OnboardingCallbacks,
     modifier: Modifier = Modifier,
 ) {
     when (page) {
         0 -> IntroPageContent(modifier)
-        1 -> AirportPageContent(airportSelection, onQueryChanged, onAirportSelected, modifier)
+        1 -> AirportPageContent(airportSelection, callbacks.onQueryChanged, callbacks.onAirportSelected, modifier)
         else -> ArrivalPageContent(modifier)
     }
 }

@@ -43,6 +43,20 @@ enum class TravelMapStyle { Daylight, Night }
 /** One end of a route as shown on the map. */
 data class MapStop(val code: String, val point: GeoPoint)
 
+data class RouteStops(val origin: MapStop, val destination: MapStop)
+
+data class MapInsets(val top: Int = 0, val bottom: Int = 0)
+
+data class MapOptions(
+    val style: TravelMapStyle = TravelMapStyle.Daylight,
+    val interactive: Boolean = false,
+    val insets: MapInsets = MapInsets(),
+)
+
+private data class MapPoint(val x: Float, val y: Float)
+
+private data class PlanePosition(val point: MapPoint, val heading: Float)
+
 /**
  * A real, tile-based map showing the true great-circle route between two airports.
  *
@@ -51,22 +65,18 @@ data class MapStop(val code: String, val point: GeoPoint)
  */
 @Composable
 fun TravelMap(
-    origin: MapStop,
-    destination: MapStop,
+    stops: RouteStops,
     modifier: Modifier = Modifier,
     progress: Float? = null,
-    style: TravelMapStyle = TravelMapStyle.Daylight,
-    interactive: Boolean = false,
-    topInset: Int = 0,
-    bottomInset: Int = 0,
+    options: MapOptions = MapOptions(),
 ) {
     val context = LocalContext.current
     remember { configureOsmdroid(context) }
-    val routeOverlay = remember(origin, destination, style) { RouteOverlay(origin, destination, style) }
+    val routeOverlay = remember(stops, options.style) { RouteOverlay(stops, options.style) }
     routeOverlay.progress = progress
 
     Box(modifier.clipToBounds()) {
-        val mapView = remember(style) { createMapView(context, style) }
+        val mapView = remember(options.style) { createMapView(context, options.style) }
         DisposableEffect(mapView) {
             mapView.onResume()
             onDispose {
@@ -74,13 +84,13 @@ fun TravelMap(
                 mapView.onDetach()
             }
         }
-        val fitKey = "${origin.code}-${destination.code}-$topInset-$bottomInset"
+        val fitKey = "${stops.origin.code}-${stops.destination.code}-${options.insets.top}-${options.insets.bottom}"
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = {
                 mapView.apply {
-                    setMultiTouchControls(interactive)
-                    setOnTouchListener(if (interactive) null else { _, _ -> true })
+                    setMultiTouchControls(options.interactive)
+                    setOnTouchListener(if (options.interactive) null else { _, _ -> true })
                     overlays.add(routeOverlay)
                 }
             },
@@ -91,7 +101,7 @@ fun TravelMap(
                 }
                 if (view.tag != fitKey) {
                     view.tag = fitKey
-                    view.fitRoute(routeOverlay.arc, topInset, bottomInset)
+                    view.fitRoute(routeOverlay.arc, options.insets)
                 }
                 view.invalidate()
             },
@@ -99,10 +109,10 @@ fun TravelMap(
         Text(
             text = "(c) OpenStreetMap contributors",
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, textAlign = TextAlign.End),
-            color = if (style == TravelMapStyle.Night) Color(0x99FFFFFF) else Color(0x99000000),
+            color = if (options.style == TravelMapStyle.Night) Color(0x99FFFFFF) else Color(0x99000000),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 8.dp, bottom = (bottomInset + 4).dp),
+                .padding(end = 8.dp, bottom = (options.insets.bottom + 4).dp),
         )
     }
 }
@@ -137,14 +147,14 @@ internal fun createMapView(context: Context, style: TravelMapStyle): MapView = M
     overlayManager.tilesOverlay.setColorFilter(ColorMatrixColorFilter(filter))
 }
 
-private fun MapView.fitRoute(arc: List<GeoPoint>, topInset: Int, bottomInset: Int) {
+private fun MapView.fitRoute(arc: List<GeoPoint>, insets: MapInsets) {
     val points = arc.map { org.osmdroid.util.GeoPoint(it.latitude, it.longitude) }
     val route = BoundingBox.fromGeoPoints(points)
     val density = resources.displayMetrics.density
     post {
         val total = height.toFloat().coerceAtLeast(1f)
-        val top = topInset * density
-        val bottom = bottomInset * density
+        val top = insets.top * density
+        val bottom = insets.bottom * density
         val visible = (total - top - bottom).coerceAtLeast(total * 0.25f)
         // Stretch the box north/south so the route lands in the band that no header or sheet covers.
         val span = route.latitudeSpan.coerceAtLeast(0.02)
@@ -157,12 +167,11 @@ private fun MapView.fitRoute(arc: List<GeoPoint>, topInset: Int, bottomInset: In
 
 /** Draws the route arc, airport markers and the aircraft directly in map coordinates. */
 private class RouteOverlay(
-    private val origin: MapStop,
-    private val destination: MapStop,
+    private val stops: RouteStops,
     private val style: TravelMapStyle,
 ) : Overlay() {
     var progress: Float? = null
-    val arc: List<GeoPoint> = FlightRouteInterpolation.buildRoute(origin.point, destination.point, 96)
+    val arc: List<GeoPoint> = FlightRouteInterpolation.buildRoute(stops.origin.point, stops.destination.point, 96)
 
     private val night = style == TravelMapStyle.Night
     private val ink = if (night) 0xFFFAF4E8.toInt() else 0xFF25304A.toInt()
@@ -219,20 +228,21 @@ private class RouteOverlay(
             canvas.drawPath(done, solid)
         }
 
-        drawStop(canvas, pts.first().x.toFloat(), pts.first().y.toFloat(), origin.code)
-        drawStop(canvas, pts.last().x.toFloat(), pts.last().y.toFloat(), destination.code)
+        drawStop(canvas, MapPoint(pts.first().x.toFloat(), pts.first().y.toFloat()), stops.origin.code)
+        drawStop(canvas, MapPoint(pts.last().x.toFloat(), pts.last().y.toFloat()), stops.destination.code)
 
         if (frac != null) {
-            val aircraft = FlightRouteInterpolation.interpolate(origin.point, destination.point, frac.toDouble())
-            val ahead = FlightRouteInterpolation.interpolate(origin.point, destination.point, (frac + 0.01f).coerceAtMost(1f).toDouble())
+            val aircraft = FlightRouteInterpolation.interpolate(stops.origin.point, stops.destination.point, frac.toDouble())
+            val ahead = FlightRouteInterpolation.interpolate(stops.origin.point, stops.destination.point, (frac + 0.01f).coerceAtMost(1f).toDouble())
             val p = projection.toPixels(org.osmdroid.util.GeoPoint(aircraft.latitude, aircraft.longitude), null)
             val q = projection.toPixels(org.osmdroid.util.GeoPoint(ahead.latitude, ahead.longitude), null)
             val heading = Math.toDegrees(atan2((q.x - p.x).toDouble(), -(q.y - p.y).toDouble())).toFloat()
-            drawPlane(canvas, p.x.toFloat(), p.y.toFloat(), heading)
+            drawPlane(canvas, PlanePosition(MapPoint(p.x.toFloat(), p.y.toFloat()), heading))
         }
     }
 
-    private fun drawStop(canvas: Canvas, x: Float, y: Float, code: String) {
+    private fun drawStop(canvas: Canvas, point: MapPoint, code: String) {
+        val (x, y) = point
         canvas.drawCircle(x, y, 17f, dotFill)
         canvas.drawCircle(x, y, 17f, dotRing)
         val w = label.measureText(code) + 40f
@@ -241,10 +251,11 @@ private class RouteOverlay(
         canvas.drawText(code, x, y - 59f, label)
     }
 
-    private fun drawPlane(canvas: Canvas, x: Float, y: Float, heading: Float) {
+    private fun drawPlane(canvas: Canvas, position: PlanePosition) {
+        val (x, y) = position.point
         canvas.save()
         canvas.translate(x, y)
-        canvas.rotate(heading)
+        canvas.rotate(position.heading)
         canvas.drawCircle(0f, 0f, 34f, planeRing)
         val body = Path().apply {
             moveTo(0f, -26f)

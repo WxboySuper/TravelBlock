@@ -80,6 +80,7 @@ fun HomeScreen(
             airportRepository = container.airportRepository,
             settingsRepository = container.settingsRepository,
             pointsRepository = container.pointsRepository,
+            flightLogRepository = container.flightLogRepository,
         ),
     )
 
@@ -143,6 +144,16 @@ fun HomeScreenContent(
                     points = uiState.points,
                     selectedRoute = selectedRoute,
                 )
+            }
+            uiState.pilotRankLabel?.let { rank ->
+                item {
+                    Surface(color = BoardPanel, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, BoardLine)) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(rank, fontWeight = FontWeight.Bold, color = BoardInk)
+                            Text(uiState.pilotProgressLabel.orEmpty(), color = MutedText)
+                        }
+                    }
+                }
             }
             if (activeFlight != null) {
                 item {

@@ -28,7 +28,7 @@ sealed class TravelBlockDestination(
     data object Settings : TravelBlockDestination("settings", "Settings", Icons.Outlined.Settings)
 
     companion object {
-        val normalBottomTabs = listOf(Home, Logbook, Store, Settings)
-        val activeFlightBottomTabs = listOf(Cockpit, Logbook, Store, Settings)
+        val normalBottomTabs by lazy { listOf(Home, Logbook, Store, Settings) }
+        val activeFlightBottomTabs by lazy { listOf(Cockpit, Logbook, Store, Settings) }
     }
 }

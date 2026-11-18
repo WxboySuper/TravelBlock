@@ -11,6 +11,7 @@ import com.travelblock.app.data.repository.FlightLogRepository
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.travelblock.app.domain.engine.PilotProgressionEngine
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -28,6 +29,7 @@ class LogbookViewModel(
                 uiState = LogbookUiState(
                     entries = sortedEntries.map { it.toUiModel() },
                     summary = sortedEntries.toSummaryUiModel(),
+                    pilot = PilotProgressionEngine.summarize(sortedEntries, zoneId),
                     isLoading = false,
                 )
             }

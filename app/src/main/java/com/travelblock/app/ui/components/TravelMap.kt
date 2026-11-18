@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,7 +65,7 @@ fun TravelMap(
     val routeOverlay = remember(origin, destination, style) { RouteOverlay(origin, destination, style) }
     routeOverlay.progress = progress
 
-    Box(modifier) {
+    Box(modifier.clipToBounds()) {
         val mapView = remember(style) { createMapView(context, style) }
         DisposableEffect(mapView) {
             mapView.onResume()

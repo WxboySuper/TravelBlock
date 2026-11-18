@@ -1,36 +1,31 @@
 package com.travelblock.app.ui.screen.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.travelblock.app.TravelBlockContainer
@@ -39,19 +34,25 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
-import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.PrimaryButton
-import com.travelblock.app.ui.components.SoftChip
 import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.scene.FlapText
+import com.travelblock.app.ui.scene.TerminalWindows
+import com.travelblock.app.ui.scene.localSolarHour
 import com.travelblock.app.ui.theme.Cream
-import com.travelblock.app.ui.theme.DuskBlue
 import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Lamp
 import com.travelblock.app.ui.theme.Paper
 import com.travelblock.app.ui.theme.Sage
+import com.travelblock.app.ui.theme.Sand
 import com.travelblock.app.ui.theme.WarmGray
-import kotlinx.coroutines.flow.distinctUntilChanged
+import java.time.Instant
 import java.time.LocalTime
+
+private val BoardBackground = Color(0xFF1C1B22)
+private val BoardLine = Color(0xFF34323C)
+private val BoardDim = Color(0xFF8E8A97)
 
 @Composable
 fun HomeScreen(
@@ -81,8 +82,8 @@ fun HomeScreen(
 }
 
 /**
- * Map-first home: a real map of the chosen route fills the screen, with a warm paper sheet
- * of departures sliding up from the bottom.
+ * The terminal concourse: the airport and its sky through big windows, and a flip-style departures
+ * board you choose your destination from.
  */
 @Composable
 fun HomeScreenContent(
@@ -94,182 +95,172 @@ fun HomeScreenContent(
     onBookSelectedRoute: () -> Unit,
     onLoadMoreRoutes: () -> Unit = {},
 ) {
-    val density = LocalDensity.current
-    var sheetHeightDp by remember { mutableIntStateOf(380) }
-    var headerHeightDp by remember { mutableIntStateOf(110) }
-    val route = uiState.selectedRoute
-
+    val hour = remember(uiState.currentAirport) { localSolarHour(Instant.now(), uiState.currentAirport?.longitude ?: -97.0) }
     Box(Modifier.fillMaxSize().background(Cream)) {
-        HomeMap(route, topInset = headerHeightDp, bottomInset = sheetHeightDp)
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Cream, Cream.copy(alpha = 0.92f), Color.Transparent)))
-                .statusBarsPadding()
-                .onSizeChanged { with(density) { headerHeightDp = it.height.toDp().value.toInt() } },
-        ) {
-            HomeHeader(uiState)
-        }
-
-        Box(Modifier.align(Alignment.BottomCenter).onSizeChanged { with(density) { sheetHeightDp = it.height.toDp().value.toInt() } }) {
-            DepartureSheet(uiState, activeFlight, onDurationSelected, onRouteSelected, onReturnToCockpit, onBookSelectedRoute, onLoadMoreRoutes)
+        TerminalWindows(hour, Modifier.fillMaxWidth().height(330.dp))
+        Box(Modifier.fillMaxWidth().height(330.dp).background(Brush.verticalGradient(listOf(Color(0x66000000), Color.Transparent))))
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding()) {
+            ConcourseHeader(uiState)
+            Spacer(Modifier.height(150.dp))
+            if (activeFlight != null) {
+                InFlightBoard(activeFlight, onReturnToCockpit)
+            } else {
+                DeparturesBoard(uiState, onDurationSelected, onRouteSelected, onLoadMoreRoutes)
+                uiState.selectedRoute?.let { RouteDetails(it, onBookSelectedRoute) }
+            }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun HomeMap(route: HomeRouteCardUiModel?, topInset: Int, bottomInset: Int) {
-    if (route == null) {
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Cream, Color(0xFFEFE4CD)))))
-        return
-    }
-    TravelMap(
-        origin = MapStop(route.originCode, GeoPoint(route.originLatitude, route.originLongitude)),
-        destination = MapStop(route.destinationCode, GeoPoint(route.destinationLatitude, route.destinationLongitude)),
-        modifier = Modifier.fillMaxSize(),
-        topInset = topInset,
-        bottomInset = bottomInset,
-    )
-}
-
-@Composable
-private fun HomeHeader(uiState: HomeUiState) {
-    val airportLabel = uiState.currentAirport?.let { "${it.city} (${it.displayCode})" }
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+private fun ConcourseHeader(uiState: HomeUiState) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Column {
-            Kicker(greeting())
-            Text("Where to?", style = MaterialTheme.typography.headlineLarge, color = Ink)
-            airportLabel?.let { Text("Leaving from $it", style = MaterialTheme.typography.bodySmall, color = WarmGray) }
+            Text(greeting().uppercase(), style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFE9C7))
+            Text("Where to?", style = MaterialTheme.typography.displaySmall, color = Color.White)
+            uiState.currentAirport?.let {
+                Text("Terminal ${it.displayCode} / ${it.city}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFE9C7))
+            }
         }
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            StampPill("${uiState.points} pts")
-            uiState.pilotRankLabel?.let { StampPill(it, color = Sage) }
-            uiState.pilotProgressLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = WarmGray) }
+            StampPill("${uiState.points} pts", color = Lamp, textColor = Color.White)
+            uiState.pilotRankLabel?.let { StampPill(it, color = Sage, textColor = Color.White) }
         }
     }
 }
 
 @Composable
-private fun DepartureSheet(
+private fun DeparturesBoard(
     uiState: HomeUiState,
-    activeFlight: ActiveFlight?,
     onDurationSelected: (Int) -> Unit,
     onRouteSelected: (String) -> Unit,
-    onReturnToCockpit: () -> Unit,
-    onBookSelectedRoute: () -> Unit,
     onLoadMoreRoutes: () -> Unit,
 ) {
     Column(
         Modifier
+            .padding(horizontal = 14.dp)
             .fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp), clip = false)
-            .background(Paper, RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-            .padding(top = 18.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .clip(RoundedCornerShape(24.dp))
+            .background(BoardBackground)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (activeFlight != null) {
-            InFlightNotice(activeFlight, onReturnToCockpit)
-            return@Column
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("DEPARTURES", style = MaterialTheme.typography.labelLarge, color = Lamp)
+            Text("how long can you focus?", style = MaterialTheme.typography.labelSmall, color = BoardDim)
         }
-        DurationPicker(uiState, onDurationSelected)
-        when {
-            uiState.isLoading -> SheetMessage("Checking the departures board...", "Finding airports within reach.")
-            uiState.errorMessage != null && uiState.routes.isEmpty() -> SheetMessage("The board is blank", uiState.errorMessage)
-            uiState.routes.isEmpty() -> SheetMessage("No flights that short", "Try a longer focus window to see more destinations.")
-            else -> {
-                uiState.selectedRoute?.let { SelectedRouteSummary(it, Modifier.padding(horizontal = 20.dp)) }
-                Postcards(uiState, onRouteSelected, onLoadMoreRoutes)
-                uiState.selectedRoute?.let {
-                    PrimaryButton("Check in for ${it.destinationCode}", onBookSelectedRoute, Modifier.padding(horizontal = 20.dp))
-                }
-            }
-        }
+        DurationTabs(uiState, onDurationSelected)
+        Box(Modifier.fillMaxWidth().height(1.dp).background(BoardLine))
+        BoardBody(uiState, onRouteSelected, onLoadMoreRoutes)
     }
 }
 
 @Composable
-private fun DurationPicker(uiState: HomeUiState, onDurationSelected: (Int) -> Unit) {
-    Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Kicker("How long can you focus?")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            uiState.availableDurationsMinutes.forEach { minutes ->
-                SoftChip("$minutes min", selected = minutes == uiState.selectedDurationMinutes, onClick = { onDurationSelected(minutes) })
-            }
-        }
+private fun BoardBody(uiState: HomeUiState, onRouteSelected: (String) -> Unit, onLoadMoreRoutes: () -> Unit) {
+    if (uiState.isLoading) return BoardMessage("CHECKING THE BOARD...")
+    if (uiState.routes.isEmpty()) return BoardMessage(if (uiState.errorMessage != null) "BOARD UNAVAILABLE" else "NO FLIGHTS THAT SHORT. TRY LONGER")
+    uiState.visibleRoutes.forEach { route ->
+        BoardRow(route, selected = route.id == uiState.selectedRouteId, onClick = { onRouteSelected(route.id) })
     }
-}
-
-@Composable
-private fun SelectedRouteSummary(route: HomeRouteCardUiModel, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-        Column(Modifier.weight(1f)) {
-            Text("${route.originCode} to ${route.destinationCode}", style = MaterialTheme.typography.headlineMedium, color = Ink)
-            Text(route.destinationCityRegion, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(route.focusTimeLabel, style = MaterialTheme.typography.titleMedium, color = DuskBlue)
-            Text("${route.distanceLabel}  /  ${route.estimatedPointsLabel}", style = MaterialTheme.typography.bodySmall, color = WarmGray)
-        }
-    }
-}
-
-@Composable
-private fun Postcards(uiState: HomeUiState, onRouteSelected: (String) -> Unit, onLoadMoreRoutes: () -> Unit) {
-    val listState = rememberLazyListState()
-    LaunchedEffect(listState, uiState.hasMoreRoutes, uiState.displayedRouteCount) {
-        if (!uiState.hasMoreRoutes) return@LaunchedEffect
-        snapshotFlow {
-            val info = listState.layoutInfo
-            val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
-            info.totalItemsCount > 0 && last >= info.totalItemsCount - 2
-        }.distinctUntilChanged().collect { nearEnd -> if (nearEnd) onLoadMoreRoutes() }
-    }
-    LazyRow(
-        state = listState,
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        itemsIndexed(uiState.visibleRoutes, key = { _, r -> r.id }) { _, route ->
-            Postcard(route, selected = route.id == uiState.selectedRouteId, onClick = { onRouteSelected(route.id) })
-        }
-    }
-}
-
-@Composable
-private fun Postcard(route: HomeRouteCardUiModel, selected: Boolean, onClick: () -> Unit) {
-    PaperCard(Modifier.width(128.dp), onClick = onClick, selected = selected, contentPadding = PaddingValues(14.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(route.destinationCode, style = MaterialTheme.typography.headlineSmall, color = Ink)
-            Text(route.destinationCityRegion.substringBefore(","), style = MaterialTheme.typography.bodySmall, color = WarmGray, maxLines = 1)
-            Text(route.focusTimeLabel.replace(" flight", ""), style = MaterialTheme.typography.labelLarge, color = if (selected) DuskBlue else Ink)
-        }
-    }
-}
-
-@Composable
-private fun SheetMessage(title: String, message: String) {
-    Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = Ink)
-        Text(message, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
-    }
-}
-
-@Composable
-private fun InFlightNotice(activeFlight: ActiveFlight, onReturnToCockpit: () -> Unit) {
-    Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        StampPill("In flight", color = Sage)
+    if (uiState.hasMoreRoutes) {
         Text(
-            "${activeFlight.origin.displayCode} to ${activeFlight.destination.displayCode}",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Ink,
+            "+ ${uiState.remainingRouteCount} more departures",
+            style = MaterialTheme.typography.labelMedium,
+            color = Lamp,
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onLoadMoreRoutes).padding(horizontal = 6.dp, vertical = 6.dp),
         )
-        Text("Flight ${activeFlight.flightNumber} is in the air. Booking reopens when you land.", style = MaterialTheme.typography.bodyMedium, color = WarmGray)
-        PrimaryButton("Back to the cockpit", onReturnToCockpit)
+    }
+}
+
+@Composable
+private fun DurationTabs(uiState: HomeUiState, onDurationSelected: (Int) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        uiState.availableDurationsMinutes.forEach { minutes ->
+            val selected = minutes == uiState.selectedDurationMinutes
+            Text(
+                "$minutes MIN",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (selected) BoardBackground else Lamp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (selected) Lamp else Color.Transparent)
+                    .clickable { onDurationSelected(minutes) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoardRow(route: HomeRouteCardUiModel, selected: Boolean, onClick: () -> Unit) {
+    val tint = if (selected) Color.White else Lamp
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) Color(0xFF2B2938) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FlapText(route.destinationCode, length = 3, width = 24.dp, height = 36.dp, fontSize = 20, color = tint)
+        Column(Modifier.weight(1f)) {
+            Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color(0xFFF4EBDD), maxLines = 1)
+            Text(route.boardStatus(), style = MaterialTheme.typography.labelSmall, color = if (selected) Lamp else BoardDim)
+        }
+        FlapText(route.durationMinutes.toString().padStart(2, ' '), length = 2, width = 22.dp, height = 34.dp, fontSize = 18, color = tint)
+        Text("MIN", style = MaterialTheme.typography.labelSmall, color = BoardDim)
+    }
+}
+
+private fun HomeRouteCardUiModel.boardStatus(): String = when {
+    durationMinutes <= 10 -> "QUICK HOP / ${distanceLabel.uppercase()}"
+    durationMinutes <= 30 -> "ON TIME / ${distanceLabel.uppercase()}"
+    else -> "LONG HAUL / ${distanceLabel.uppercase()}"
+}
+
+@Composable
+private fun BoardMessage(text: String) {
+    Text(text, style = MaterialTheme.typography.labelLarge, color = Lamp, modifier = Modifier.padding(vertical = 14.dp))
+}
+
+@Composable
+private fun RouteDetails(route: HomeRouteCardUiModel, onBook: () -> Unit) {
+    Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Paper),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TravelMap(
+                origin = MapStop(route.originCode, GeoPoint(route.originLatitude, route.originLongitude)),
+                destination = MapStop(route.destinationCode, GeoPoint(route.destinationLatitude, route.destinationLongitude)),
+                modifier = Modifier.width(168.dp).height(136.dp),
+            )
+            Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Kicker("Your route")
+                Text("${route.originCode} to ${route.destinationCode}", style = MaterialTheme.typography.titleLarge, color = Ink)
+                Text(route.destinationName, style = MaterialTheme.typography.bodySmall, color = WarmGray, maxLines = 2)
+                Spacer(Modifier.size(4.dp))
+                Text("${route.focusTimeLabel} / ${route.distanceLabel}", style = MaterialTheme.typography.labelMedium, color = Ink)
+                Text(route.estimatedPointsLabel, style = MaterialTheme.typography.labelMedium, color = Sage)
+            }
+        }
+        PrimaryButton("Check in for ${route.destinationCode}", onBook)
+    }
+}
+
+@Composable
+private fun InFlightBoard(activeFlight: ActiveFlight, onReturnToCockpit: () -> Unit) {
+    Column(
+        Modifier.padding(horizontal = 14.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(BoardBackground).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("NOW DEPARTED", style = MaterialTheme.typography.labelLarge, color = Lamp)
+        FlapText("${activeFlight.origin.displayCode} ${activeFlight.destination.displayCode}", length = 7, width = 30.dp, height = 44.dp, fontSize = 24)
+        Text("Flight ${activeFlight.flightNumber} is in the air. Booking reopens when you land.", style = MaterialTheme.typography.bodyMedium, color = Sand)
+        PrimaryButton("Back to your seat", onReturnToCockpit)
     }
 }
 

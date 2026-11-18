@@ -1,6 +1,31 @@
 package com.travelblock.app.ui.screen.cockpit
 
 import android.app.Activity
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import com.travelblock.app.domain.engine.FlightRouteInterpolation
+import com.travelblock.app.ui.scene.AirplaneWindow
+import com.travelblock.app.ui.scene.cabinDimFor
+import com.travelblock.app.ui.scene.localSolarHour
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Terracotta
+import com.travelblock.app.ui.theme.WarmGray
+import kotlinx.coroutines.delay
+import java.time.Instant
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -113,8 +138,8 @@ fun CockpitScreen(
 }
 
 /**
- * Cozy night-flight focus screen: a live night map fills the screen, the plane moves along the real
- * great-circle route, and a calm card at the bottom holds the countdown.
+ * The view from a window seat. Outside the window the sky follows the real local time over the plane's
+ * position; the tray table holds the countdown, a seat-back map and your focus note.
  */
 @Composable
 fun CockpitScreenContent(
@@ -124,9 +149,9 @@ fun CockpitScreenContent(
     onConfirmDivert: () -> Unit,
 ) {
     TravelBlockTheme(darkTheme = true) {
-        LightStatusIconsOff()
         val flight = uiState.activeFlight
         if (flight == null) {
+            LightStatusIcons(dark = true)
             EmptyFlightDeck()
         } else {
             if (uiState.showDivertDialog) {
@@ -137,164 +162,172 @@ fun CockpitScreenContent(
     }
 }
 
-/** The map is dark, so show light status-bar icons while the cockpit is on screen. */
+/** Light status-bar icons over a dark cabin, dark icons over a bright one. Restored on leave. */
 @Composable
-private fun LightStatusIconsOff() {
+private fun LightStatusIcons(dark: Boolean) {
     val view = LocalView.current
-    DisposableEffect(view) {
+    DisposableEffect(view, dark) {
         val window = (view.context as? Activity)?.window
         val controller = window?.let { WindowCompat.getInsetsController(it, view) }
         val previous = controller?.isAppearanceLightStatusBars
-        controller?.isAppearanceLightStatusBars = false
+        controller?.isAppearanceLightStatusBars = !dark
         onDispose { if (previous != null) controller.isAppearanceLightStatusBars = previous }
     }
 }
 
 @Composable
 private fun ActiveCockpit(flight: ActiveFlight, uiState: CockpitUiState, onDivertRequested: () -> Unit) {
-    val density = LocalDensity.current
-    var cardHeightDp by remember { mutableIntStateOf(300) }
-    var headerHeightDp by remember { mutableIntStateOf(100) }
+    val progress = uiState.progress.coerceIn(0f, 1f)
+    val position = FlightRouteInterpolation.interpolate(flight.origin.toGeo(), flight.destination.toGeo(), progress.toDouble())
+    val longitude = rememberUpdatedState(position.longitude)
+    var hour by remember { mutableFloatStateOf(localSolarHour(Instant.now(), position.longitude)) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            hour = localSolarHour(Instant.now(), longitude.value)
+            delay(20_000)
+        }
+    }
+    val dim = cabinDimFor(hour)
+    val look = CabinLook(
+        wall = lerp(Color(0xFFD9CFBD), Color(0xFF17151F), dim),
+        tray = lerp(Color(0xFFF1E9DA), Color(0xFF232238), dim),
+        ink = lerp(Ink, Cream, dim),
+        quiet = lerp(WarmGray, Sand, dim),
+        accent = lerp(Terracotta, Lamp, dim),
+    )
+    LightStatusIcons(dark = dim > 0.5f)
 
-    Box(Modifier.fillMaxSize().background(NightSky)) {
+    Column(Modifier.fillMaxSize().background(look.wall)) {
+        WindowHeader(flight, uiState.status, look, Modifier.statusBarsPadding())
+        AirplaneWindow(hour, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 26.dp, vertical = 6.dp))
+        TrayTable(flight, uiState, look, onDivertRequested)
+    }
+}
+
+private class CabinLook(val wall: Color, val tray: Color, val ink: Color, val quiet: Color, val accent: Color)
+
+@Composable
+private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look: CabinLook, modifier: Modifier = Modifier) {
+    val kicker = when (status) {
+        ActiveFlightStatus.Active -> "Seat ${flight.seat.label} / ${flight.flightNumber}"
+        ActiveFlightStatus.Arrived -> "Landing"
+        ActiveFlightStatus.Diverted -> "Diverted"
+    }
+    Column(modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
+        Kicker(kicker, color = look.quiet)
+        Text(
+            "Flying to ${flight.destination.city.ifBlank { flight.destination.displayCode }}",
+            style = MaterialTheme.typography.headlineSmall,
+            color = look.ink,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun TrayTable(flight: ActiveFlight, uiState: CockpitUiState, look: CabinLook, onDivertRequested: () -> Unit) {
+    val shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)
+    val arrive = uiState.estimatedArrival?.format(DateTimeFormatter.ofPattern("h:mm a")) ?: "--"
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .shadow(18.dp, shape, clip = false)
+            .background(look.tray, shape)
+            .navigationBarsPadding()
+            .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.align(Alignment.CenterHorizontally).width(46.dp).height(5.dp).background(look.quiet.copy(alpha = 0.4f), RoundedCornerShape(50)))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Kicker("Landing in", color = look.quiet)
+                Text(uiState.timeRemainingLabel, style = MaterialTheme.typography.displayLarge, color = look.ink)
+            }
+            if (flight.focusObjective.isNotBlank() || flight.focusTag.isNotBlank()) StickyNote(flight.focusTag, flight.focusObjective)
+        }
+        Text("${flight.origin.displayCode}  to  ${flight.destination.displayCode}   /   arrive $arrive", style = MaterialTheme.typography.bodyMedium, color = look.accent)
+        PlaneTrack(uiState.progress, look)
+        SeatBackScreen(flight, uiState)
+        TrayFooter(uiState.status, look, onDivertRequested, Modifier.align(Alignment.CenterHorizontally))
+    }
+}
+
+@Composable
+private fun TrayFooter(status: ActiveFlightStatus, look: CabinLook, onDivertRequested: () -> Unit, modifier: Modifier = Modifier) {
+    if (status == ActiveFlightStatus.Active) {
+        Text(
+            "End flight early",
+            style = MaterialTheme.typography.labelLarge,
+            color = look.quiet,
+            modifier = modifier.clip(RoundedCornerShape(50)).clickable(onClick = onDivertRequested).padding(horizontal = 18.dp, vertical = 8.dp),
+        )
+        return
+    }
+    val message = if (status == ActiveFlightStatus.Arrived) "Touching down..." else "Saved to your logbook"
+    Text(message, style = MaterialTheme.typography.labelLarge, color = look.accent, modifier = modifier.padding(vertical = 8.dp))
+}
+
+/** A little paper post-it holding what you are working on. */
+@Composable
+private fun StickyNote(tag: String, objective: String) {
+    Column(
+        Modifier
+            .widthIn(max = 150.dp)
+            .graphicsLayer { rotationZ = -3f }
+            .shadow(3.dp, RoundedCornerShape(4.dp))
+            .background(Color(0xFFFFE58A), RoundedCornerShape(4.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        if (tag.isNotBlank()) Text(tag.uppercase(), style = MaterialTheme.typography.labelSmall, color = Color(0xFF7A5B00))
+        if (objective.isNotBlank()) Text(objective, style = MaterialTheme.typography.bodySmall, color = Color(0xFF3A2E00), maxLines = 3)
+    }
+}
+
+/** A dotted line with a plane that slides along it as the flight progresses. */
+@Composable
+private fun PlaneTrack(progress: Float, look: CabinLook) {
+    val fraction = progress.coerceIn(0f, 1f)
+    BoxWithConstraints(Modifier.fillMaxWidth().height(26.dp)) {
+        val iconSize = 22.dp
+        Canvas(Modifier.fillMaxSize()) {
+            val y = size.height / 2
+            drawLine(look.quiet.copy(alpha = 0.45f), Offset(0f, y), Offset(size.width, y), strokeWidth = 4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 14f)), cap = StrokeCap.Round)
+            drawLine(look.accent, Offset(0f, y), Offset(size.width * fraction, y), strokeWidth = 5f, cap = StrokeCap.Round)
+        }
+        Icon(
+            Icons.Rounded.Flight,
+            contentDescription = null,
+            tint = look.accent,
+            modifier = Modifier.align(Alignment.CenterStart).offset(x = (maxWidth - iconSize) * fraction).size(iconSize).graphicsLayer { rotationZ = 90f },
+        )
+    }
+}
+
+/** The seat-back entertainment screen, showing the live flight map. */
+@Composable
+private fun SeatBackScreen(flight: ActiveFlight, uiState: CockpitUiState) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(118.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF05070E))
+            .padding(3.dp)
+            .clip(RoundedCornerShape(15.dp)),
+    ) {
         TravelMap(
             origin = flight.origin.toStop(),
             destination = flight.destination.toStop(),
             modifier = Modifier.fillMaxSize(),
             progress = uiState.progress.coerceIn(0f, 1f),
             style = TravelMapStyle.Night,
-            topInset = headerHeightDp,
-            bottomInset = cardHeightDp,
         )
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(NightSky, NightSky.copy(alpha = 0.85f), Color.Transparent)))
-                .statusBarsPadding()
-                .onSizeChanged { with(density) { headerHeightDp = it.height.toDp().value.toInt() } },
-        ) {
-            CockpitHeader(flight, uiState.status)
-        }
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .onSizeChanged { with(density) { cardHeightDp = it.height.toDp().value.toInt() } },
-        ) {
-            CockpitCard(flight, uiState, onDivertRequested)
-        }
-    }
-}
-
-@Composable
-private fun CockpitHeader(flight: ActiveFlight, status: ActiveFlightStatus) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Kicker(
-                when (status) {
-                    ActiveFlightStatus.Active -> "Focus flight"
-                    ActiveFlightStatus.Arrived -> "Landing"
-                    ActiveFlightStatus.Diverted -> "Diverted"
-                },
-                color = Lamp,
-            )
-            Text(
-                "Flying to ${flight.destination.city.ifBlank { flight.destination.displayCode }}",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Cream,
-                maxLines = 1,
-            )
-        }
-        StampPill(flight.flightNumber, color = Lamp, textColor = Cream)
-    }
-}
-
-@Composable
-private fun CockpitCard(flight: ActiveFlight, uiState: CockpitUiState, onDivertRequested: () -> Unit) {
-    val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
-    val shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .shadow(16.dp, shape, clip = false)
-            .background(NightSurface, shape)
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 22.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Kicker("Time until landing", color = Sand)
         Text(
-            uiState.timeRemainingLabel,
-            style = MaterialTheme.typography.displayLarge,
+            "${uiState.milesRemainingLabel} to go",
+            style = MaterialTheme.typography.labelMedium,
             color = Cream,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            "${flight.origin.displayCode}  to  ${flight.destination.displayCode}  /  Arrive ${uiState.estimatedArrival?.format(timeFormatter) ?: "--"}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Lamp,
-        )
-        RouteProgressBar(uiState.progress)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            CockpitStat("Flown", uiState.milesFlownLabel)
-            CockpitStat("To go", uiState.milesRemainingLabel)
-            CockpitStat("Seat", flight.seat.label)
-        }
-        if (flight.focusObjective.isNotBlank() || flight.focusTag.isNotBlank()) {
-            FocusNote(flight.focusTag, flight.focusObjective)
-        }
-        BottomAction(uiState.status, onDivertRequested)
-    }
-}
-
-@Composable
-private fun RouteProgressBar(progress: Float) {
-    val fraction = progress.coerceIn(0f, 1f)
-    Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(NightLine)) {
-        Box(Modifier.fillMaxWidth(fraction).height(6.dp).clip(RoundedCornerShape(50)).background(Lamp))
-    }
-}
-
-@Composable
-private fun CockpitStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Kicker(label, color = Sand)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = Cream)
-    }
-}
-
-@Composable
-private fun FocusNote(tag: String, objective: String) {
-    Column(
-        Modifier.fillMaxWidth().background(NightSky.copy(alpha = 0.55f), RoundedCornerShape(18.dp)).padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Kicker("Working on", color = Sand)
-        if (tag.isNotBlank()) StampPill(tag, color = Lamp, textColor = Cream)
-        if (objective.isNotBlank()) Text(objective, style = MaterialTheme.typography.bodyLarge, color = Cream)
-    }
-}
-
-/** Ending early is possible, but deliberately quiet so it is never the easiest thing to tap. */
-@Composable
-private fun BottomAction(status: ActiveFlightStatus, onDivertRequested: () -> Unit) {
-    if (status == ActiveFlightStatus.Active) {
-        Text(
-            "End flight early",
-            style = MaterialTheme.typography.labelLarge,
-            color = Sand,
-            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onDivertRequested).padding(horizontal = 18.dp, vertical = 10.dp),
-        )
-    } else {
-        Text(
-            if (status == ActiveFlightStatus.Arrived) "Touching down..." else "Saved to your logbook",
-            style = MaterialTheme.typography.labelLarge,
-            color = Lamp,
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Color(0x99000000), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
 }
@@ -353,3 +386,5 @@ private fun EmptyFlightDeck() {
 }
 
 private fun Airport.toStop() = MapStop(displayCode, GeoPoint(latitude, longitude))
+
+private fun Airport.toGeo() = GeoPoint(latitude, longitude)

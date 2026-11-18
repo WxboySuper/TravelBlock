@@ -80,6 +80,7 @@ fun HomeScreen(
             airportRepository = container.airportRepository,
             settingsRepository = container.settingsRepository,
             pointsRepository = container.pointsRepository,
+            flightLogRepository = container.flightLogRepository,
         ),
     )
 
@@ -137,13 +138,8 @@ fun HomeScreenContent(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
-                AirportJourneyZone(
-                    airport = uiState.currentAirport,
-                    points = uiState.points,
-                    selectedRoute = selectedRoute,
-                )
-            }
+            item { AirportJourneyZone(uiState.currentAirport, uiState.points, selectedRoute) }
+            uiState.pilotRankLabel?.let { item { PilotRankBanner(it, uiState.pilotProgressLabel.orEmpty()) } }
             if (activeFlight != null) {
                 item {
                     InFlightHomePanel(activeFlight = activeFlight)
@@ -1281,5 +1277,15 @@ private fun HomeRouteCardUiModel.boardStatusLabel(): String {
         miles < 500 -> "Regional"
         miles < 1_200 -> "Major"
         else -> "Long"
+    }
+}
+
+@Composable
+private fun PilotRankBanner(rank: String, progress: String) {
+    Surface(color = BoardPanel, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, BoardLine)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(rank, fontWeight = FontWeight.Bold, color = BoardInk)
+            Text(progress, color = MutedText)
+        }
     }
 }

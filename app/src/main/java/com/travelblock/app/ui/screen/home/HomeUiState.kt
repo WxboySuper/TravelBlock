@@ -12,6 +12,8 @@ data class HomeUiState(
     val selectedRouteId: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val pilotRankLabel: String? = null,
+    val pilotProgressLabel: String? = null,
 ) {
     val selectedRoute: HomeRouteCardUiModel?
         get() = routes.firstOrNull { it.id == selectedRouteId }

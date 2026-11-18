@@ -3,6 +3,7 @@ package com.travelblock.app.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +25,9 @@ class DataStoreSettingsRepository(
             selectedTheme = preferences[SelectedThemeKey] ?: "system",
             soundEnabled = preferences[SoundEnabledKey] ?: true,
             hapticsEnabled = preferences[HapticsEnabledKey] ?: true,
-            onboardingComplete = preferences[OnboardingCompleteKey] ?: true,
+            onboardingComplete = preferences[OnboardingCompleteKey] ?: false,
+            debugShortFlightsEnabled = preferences[DebugShortFlightsEnabledKey] ?: false,
+            debugFlightDurationSeconds = preferences[DebugFlightDurationSecondsKey] ?: 15,
             equippedBoardingPassThemeId = preferences[EquippedBoardingPassThemeIdKey] ?: "",
             equippedAircraftIconId = preferences[EquippedAircraftIconIdKey] ?: "",
         )
@@ -69,6 +72,18 @@ class DataStoreSettingsRepository(
         }
     }
 
+    override suspend fun setOnboardingComplete(complete: Boolean) {
+        dataStore.edit { preferences -> preferences[OnboardingCompleteKey] = complete }
+    }
+
+    override suspend fun setDebugShortFlightsEnabled(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[DebugShortFlightsEnabledKey] = enabled }
+    }
+
+    override suspend fun setDebugFlightDurationSeconds(seconds: Int) {
+        dataStore.edit { preferences -> preferences[DebugFlightDurationSecondsKey] = seconds.coerceIn(10, 30) }
+    }
+
     override suspend fun setEquippedBoardingPassThemeId(id: String) {
         dataStore.edit { preferences ->
             preferences[EquippedBoardingPassThemeIdKey] = id
@@ -94,6 +109,8 @@ class DataStoreSettingsRepository(
         val SoundEnabledKey = booleanPreferencesKey("soundEnabled")
         val HapticsEnabledKey = booleanPreferencesKey("hapticsEnabled")
         val OnboardingCompleteKey = booleanPreferencesKey("onboardingComplete")
+        val DebugShortFlightsEnabledKey = booleanPreferencesKey("debugShortFlightsEnabled")
+        val DebugFlightDurationSecondsKey = intPreferencesKey("debugFlightDurationSeconds")
         val EquippedBoardingPassThemeIdKey = stringPreferencesKey("equippedBoardingPassThemeId")
         val EquippedAircraftIconIdKey = stringPreferencesKey("equippedAircraftIconId")
     }

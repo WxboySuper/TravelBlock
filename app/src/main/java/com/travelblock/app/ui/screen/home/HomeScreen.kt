@@ -1,6 +1,18 @@
 package com.travelblock.app.ui.screen.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.travelblock.app.ui.components.PaperCard
+import com.travelblock.app.ui.components.SoftChip
+import com.travelblock.app.ui.theme.DuskBlue
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +72,7 @@ fun HomeScreen(
     activeFlight: ActiveFlight?,
     onReturnToCockpit: () -> Unit,
     onBookSelectedRoute: (DraftFlightBooking) -> Unit,
+    onStartQuickFlight: (DraftFlightBooking) -> Unit = onBookSelectedRoute,
 ) {
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
@@ -77,6 +90,8 @@ fun HomeScreen(
         onRouteSelected = viewModel::onRouteSelected,
         onReturnToCockpit = onReturnToCockpit,
         onBookSelectedRoute = { viewModel.createSelectedDraftBooking()?.let(onBookSelectedRoute) },
+        onQuickStart = { minutes -> viewModel.createQuickStartDraft(minutes)?.let(onStartQuickFlight) },
+        onRebookLastFlight = { viewModel.createRebookDraft()?.let(onStartQuickFlight) },
         onLoadMoreRoutes = viewModel::loadMoreRoutes,
     )
 }
@@ -93,6 +108,8 @@ fun HomeScreenContent(
     onRouteSelected: (String) -> Unit,
     onReturnToCockpit: () -> Unit = {},
     onBookSelectedRoute: () -> Unit,
+    onQuickStart: (Int) -> Unit = {},
+    onRebookLastFlight: () -> Unit = {},
     onLoadMoreRoutes: () -> Unit = {},
 ) {
     val hour = remember(uiState.currentAirport) { localSolarHour(Instant.now(), uiState.currentAirport?.longitude ?: -97.0) }
@@ -107,6 +124,7 @@ fun HomeScreenContent(
             } else {
                 DeparturesBoard(uiState, onDurationSelected, onRouteSelected, onLoadMoreRoutes)
                 uiState.selectedRoute?.let { RouteDetails(it, onBookSelectedRoute) }
+                FastTrack(uiState.lastFlight != null, onQuickStart, onRebookLastFlight)
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -269,4 +287,49 @@ private fun greeting(now: LocalTime = LocalTime.now()): String = when (now.hour)
     in 12..16 -> "Good afternoon"
     in 17..21 -> "Good evening"
     else -> "Late night study"
+}
+
+/** The priority lane: pick a time and we handle check-in, seat and boarding pass for you. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FastTrack(lastFlightAvailable: Boolean, onQuickStart: (Int) -> Unit, onRebookLastFlight: () -> Unit) {
+    var showCustom by remember { mutableStateOf(false) }
+    PaperCard(Modifier.padding(horizontal = 14.dp).fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Kicker("Fast track", color = Sage)
+            Text("Running late? Skip the queue.", style = MaterialTheme.typography.titleLarge, color = Ink)
+            Text("We handle check-in, your seat and the boarding pass.", style = MaterialTheme.typography.bodySmall, color = WarmGray)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(15, 25, 45, 60, 90).forEach { SoftChip("$it min", selected = false, onClick = { onQuickStart(it) }) }
+                SoftChip("Custom", selected = false, onClick = { showCustom = true })
+            }
+            if (lastFlightAvailable) {
+                Text(
+                    "Rebook last flight",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = DuskBlue,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onRebookLastFlight).padding(vertical = 6.dp, horizontal = 4.dp),
+                )
+            }
+        }
+    }
+    if (showCustom) CustomDurationDialog(onDismiss = { showCustom = false }, onConfirm = { showCustom = false; onQuickStart(it) })
+}
+
+@Composable
+private fun CustomDurationDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
+    var minutes by remember { mutableStateOf("30") }
+    val valid = (minutes.toIntOrNull() ?: 0) in 15..180
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Custom focus flight") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Choose a flight window from 15 to 180 minutes.")
+                OutlinedTextField(minutes, { minutes = it.filter(Char::isDigit).take(3) }, label = { Text("Minutes") }, singleLine = true)
+            }
+        },
+        confirmButton = { Button(enabled = valid, onClick = { onConfirm(minutes.toInt()) }) { Text("Start flight") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

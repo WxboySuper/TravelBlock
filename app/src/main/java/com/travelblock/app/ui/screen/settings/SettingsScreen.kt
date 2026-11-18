@@ -64,6 +64,8 @@ fun SettingsScreen(container: TravelBlockContainer) {
         onThemeSelected = viewModel::setSelectedTheme,
         onSoundEnabledChanged = viewModel::setSoundEnabled,
         onHapticsEnabledChanged = viewModel::setHapticsEnabled,
+        onDebugShortFlightsChanged = viewModel::setDebugShortFlightsEnabled,
+        onDebugDurationSelected = viewModel::setDebugFlightDurationSeconds,
         onShowResetConfirmation = viewModel::showResetConfirmation,
         onDismissResetConfirmation = viewModel::dismissResetConfirmation,
         onResetLocalData = viewModel::resetAllLocalData,
@@ -82,6 +84,8 @@ fun SettingsScreenContent(
     onThemeSelected: (String) -> Unit,
     onSoundEnabledChanged: (Boolean) -> Unit,
     onHapticsEnabledChanged: (Boolean) -> Unit,
+    onDebugShortFlightsChanged: (Boolean) -> Unit = {},
+    onDebugDurationSelected: (Int) -> Unit = {},
     onShowResetConfirmation: () -> Unit,
     onDismissResetConfirmation: () -> Unit,
     onResetLocalData: () -> Unit,
@@ -116,9 +120,13 @@ fun SettingsScreenContent(
                 selectedTheme = uiState.settings.selectedTheme,
                 soundEnabled = uiState.settings.soundEnabled,
                 hapticsEnabled = uiState.settings.hapticsEnabled,
+                debugShortFlightsEnabled = uiState.settings.debugShortFlightsEnabled,
+                debugFlightDurationSeconds = uiState.settings.debugFlightDurationSeconds,
                 onThemeSelected = onThemeSelected,
                 onSoundEnabledChanged = onSoundEnabledChanged,
                 onHapticsEnabledChanged = onHapticsEnabledChanged,
+                onDebugShortFlightsChanged = onDebugShortFlightsChanged,
+                onDebugDurationSelected = onDebugDurationSelected,
             )
         }
         item {
@@ -131,60 +139,60 @@ fun SettingsScreenContent(
         }
     }
 
+    AirportPickerOverlay(uiState, onAirportSearchChanged, onAirportSelected, onDismissAirportPicker)
+    HomeAirportConfirmationOverlay(uiState.pendingHomeAirport, onConfirmHomeAirportChange, onDismissHomeAirportConfirmation)
+    ResetConfirmationOverlay(uiState.showResetConfirmation, onResetLocalData, onDismissResetConfirmation)
+}
+
+@Composable
+private fun AirportPickerOverlay(
+    uiState: SettingsUiState,
+    onSearchChanged: (String) -> Unit,
+    onAirportSelected: (Airport) -> Unit,
+    onDismiss: () -> Unit,
+) {
     uiState.pickerMode?.let { mode ->
         AirportPickerDialog(
             mode = mode,
             query = uiState.airportSearchQuery,
             results = uiState.airportSearchResults,
-            onQueryChanged = onAirportSearchChanged,
+            onQueryChanged = onSearchChanged,
             onAirportSelected = onAirportSelected,
-            onDismiss = onDismissAirportPicker,
+            onDismiss = onDismiss,
         )
     }
+}
 
-    uiState.pendingHomeAirport?.let { airport ->
-        AlertDialog(
-            onDismissRequest = onDismissHomeAirportConfirmation,
-            title = { Text("Set ${airport.code} as home?") },
-            text = {
-                Text(
-                    "You can keep your current journey where it is, or move your current airport to the new home airport too.",
-                )
-            },
-            confirmButton = {
-                Button(onClick = { onConfirmHomeAirportChange(true) }) {
-                    Text("Move Current Too")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onConfirmHomeAirportChange(false) }) {
-                    Text("Home Only")
-                }
-            },
-        )
-    }
+@Composable
+private fun HomeAirportConfirmationOverlay(
+    airport: Airport?,
+    onConfirm: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    airport ?: return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set ${airport.code} as home?") },
+        text = { Text("You can keep your current journey where it is, or move your current airport to the new home airport too.") },
+        confirmButton = { Button(onClick = { onConfirm(true) }) { Text("Move Current Too") } },
+        dismissButton = { TextButton(onClick = { onConfirm(false) }) { Text("Home Only") } },
+    )
+}
 
-    if (uiState.showResetConfirmation) {
-        AlertDialog(
-            onDismissRequest = onDismissResetConfirmation,
-            title = { Text("Reset local data?") },
-            text = {
-                Text(
-                    "This clears saved flights, points, unlocks, and preferences, then restores the default KOUN setup. This cannot be undone.",
-                )
-            },
-            confirmButton = {
-                Button(onClick = onResetLocalData) {
-                    Text("Reset Data")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismissResetConfirmation) {
-                    Text("Cancel")
-                }
-            },
-        )
-    }
+@Composable
+private fun ResetConfirmationOverlay(
+    visible: Boolean,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (!visible) return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reset local data?") },
+        text = { Text("This clears saved flights, points, unlocks, and preferences, then restores the default KOUN setup. This cannot be undone.") },
+        confirmButton = { Button(onClick = onReset) { Text("Reset Data") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable
@@ -257,9 +265,13 @@ private fun PreferenceCard(
     selectedTheme: String,
     soundEnabled: Boolean,
     hapticsEnabled: Boolean,
+    debugShortFlightsEnabled: Boolean,
+    debugFlightDurationSeconds: Int,
     onThemeSelected: (String) -> Unit,
     onSoundEnabledChanged: (Boolean) -> Unit,
     onHapticsEnabledChanged: (Boolean) -> Unit,
+    onDebugShortFlightsChanged: (Boolean) -> Unit,
+    onDebugDurationSelected: (Int) -> Unit,
 ) {
     SettingsCard {
         Text("Comfort", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -281,6 +293,26 @@ private fun PreferenceCard(
             checked = hapticsEnabled,
             onCheckedChange = onHapticsEnabledChanged,
         )
+        if (com.travelblock.app.BuildConfig.DEBUG) {
+            Text("Developer tools", style = MaterialTheme.typography.labelLarge, color = MutedText)
+            ToggleRow(
+                title = "Short test flights",
+                description = "Use a 10 to 30 second arrival timer to test flight outcomes.",
+                checked = debugShortFlightsEnabled,
+                onCheckedChange = onDebugShortFlightsChanged,
+            )
+            if (debugShortFlightsEnabled) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(10, 15, 30).forEach { seconds ->
+                        FilterChip(
+                            selected = debugFlightDurationSeconds == seconds,
+                            onClick = { onDebugDurationSelected(seconds) },
+                            label = { Text("${seconds}s") },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

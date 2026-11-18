@@ -1,5 +1,6 @@
 package com.travelblock.app.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -54,9 +55,10 @@ private val SoftShapes = Shapes(
 )
 
 @Composable
-fun TravelBlockTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
+fun TravelBlockTheme(darkTheme: Boolean? = null, content: @Composable () -> Unit) {
+    val useDarkTheme = darkTheme ?: isSystemInDarkTheme()
     MaterialTheme(
-        colorScheme = if (darkTheme) NightColors else DaylightColors,
+        colorScheme = if (useDarkTheme) NightColors else DaylightColors,
         typography = TravelBlockTypography,
         shapes = SoftShapes,
         content = content,

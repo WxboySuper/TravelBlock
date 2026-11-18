@@ -6,15 +6,16 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.travelblock.app.data.repository.AirportRepository
-import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.repository.FlightLogRepository
 import com.travelblock.app.domain.engine.PilotProgressionEngine
+import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.settings.SettingsRepository
 import com.travelblock.app.domain.engine.FlightRewardCalculator
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.FlightRoute
 import com.travelblock.app.domain.model.RouteAvailabilityResult
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class HomeViewModel(
@@ -30,6 +31,7 @@ class HomeViewModel(
     init {
         loadHome()
         observePoints()
+        observeLastFlight()
         observePilotProgress()
     }
 
@@ -59,18 +61,42 @@ class HomeViewModel(
     fun createSelectedDraftBooking(): DraftFlightBooking? {
         val selectedRouteId = uiState.selectedRouteId ?: return null
         val route = reachableRoutes.firstOrNull { it.destination.code == selectedRouteId } ?: return null
-        val rewardPoints = FlightRewardCalculator.completedReward(
-            durationMinutes = route.estimatedDurationMinutes,
-            distanceMiles = route.distanceMiles,
-        )
+        return route.toDraftBooking(uiState.selectedDurationMinutes)
+    }
 
+    fun createQuickStartDraft(durationMinutes: Int = uiState.selectedDurationMinutes): DraftFlightBooking? {
+        val origin = uiState.currentAirport ?: return null
+        val route = airportRepository.getReachableAirports(origin.code, durationMinutes)
+            .minByOrNull { abs(durationMinutes - it.estimatedDurationMinutes) }
+            ?: return null
+        return route.toDraftBooking(durationMinutes)
+    }
+
+    fun createRebookDraft(): DraftFlightBooking? {
+        val previous = uiState.lastFlight ?: return null
+        val duration = previous.durationMinutes.coerceIn(15, 180)
+        val routes = airportRepository.getReachableAirports(
+            originCode = uiState.currentAirport?.code ?: return null,
+            durationMinutes = maxOf(duration, uiState.selectedDurationMinutes),
+        )
+        val route = routes.firstOrNull { it.destination.code == previous.destinationCode }
+            ?: routes.firstOrNull()
+            ?: return null
+        return route.toDraftBooking(maxOf(duration, uiState.selectedDurationMinutes))
+    }
+
+    private fun FlightRoute.toDraftBooking(maxDurationMinutes: Int): DraftFlightBooking {
+        val rewardPoints = FlightRewardCalculator.completedReward(
+            durationMinutes = estimatedDurationMinutes,
+            distanceMiles = distanceMiles,
+        )
         return DraftFlightBooking(
-            origin = route.origin,
-            destination = route.destination,
-            durationMinutes = route.estimatedDurationMinutes,
-            distanceMiles = route.distanceMiles,
+            origin = origin,
+            destination = destination,
+            durationMinutes = estimatedDurationMinutes,
+            distanceMiles = distanceMiles,
             estimatedRewardPoints = rewardPoints,
-            maxFlightTimeMinutes = uiState.selectedDurationMinutes,
+            maxFlightTimeMinutes = maxDurationMinutes,
         )
     }
 
@@ -113,6 +139,15 @@ class HomeViewModel(
         }
     }
 
+    private fun observeLastFlight() {
+        val repository = flightLogRepository ?: return
+        viewModelScope.launch {
+            repository.observeFlightLogs().collect { flights ->
+                uiState = uiState.copy(lastFlight = flights.firstOrNull())
+            }
+        }
+    }
+
     private fun observePilotProgress() {
         val repository = flightLogRepository ?: return
         viewModelScope.launch {
@@ -120,7 +155,9 @@ class HomeViewModel(
                 val pilot = PilotProgressionEngine.summarize(logs)
                 uiState = uiState.copy(
                     pilotRankLabel = pilot.rank.rank.title,
-                    pilotProgressLabel = pilot.rank.nextRank?.let { "${formatRemaining(pilot.rank.hoursRemaining)} to ${it.title}" } ?: "Top rank",
+                    pilotProgressLabel = pilot.rank.nextRank?.let {
+                        "${formatRemaining(pilot.rank.hoursRemaining)} to ${it.title}"
+                    } ?: "Top rank",
                 )
             }
         }

@@ -144,7 +144,9 @@ class CockpitViewModel(
             FlightLogStatus.COMPLETED -> flight.durationMinutes
             FlightLogStatus.DIVERTED -> focusedDuration?.toMinutes()?.toInt() ?: 0
         }
-        val flightId = UUID.randomUUID().toString()
+        val flightId = UUID.nameUUIDFromBytes(
+            "${flight.flightNumber}:${flight.startedAt.toEpochMilli()}".toByteArray(),
+        ).toString()
         val endedAt = clock.instant()
 
         viewModelScope.launch {
@@ -167,7 +169,7 @@ class CockpitViewModel(
             )
             pointsRepository.insertTransaction(
                 PointsTransactionEntity(
-                    id = UUID.randomUUID().toString(),
+                    id = flightId,
                     amount = resolvedPointsEarned,
                     reason = if (status == FlightLogStatus.COMPLETED) "Completed flight" else "Diverted flight",
                     createdAt = endedAt.toEpochMilli(),

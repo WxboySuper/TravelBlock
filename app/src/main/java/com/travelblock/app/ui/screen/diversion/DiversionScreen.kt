@@ -2,37 +2,45 @@ package com.travelblock.app.ui.screen.diversion
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.DiversionSummary
+import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.PaperCard
+import com.travelblock.app.ui.components.PrimaryButton
+import com.travelblock.app.ui.components.SecondaryButton
+import com.travelblock.app.ui.components.StampPill
+import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.theme.Cream
+import com.travelblock.app.ui.theme.DuskBlue
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Marigold
+import com.travelblock.app.ui.theme.WarmGray
 import kotlin.math.roundToInt
-
-private val DiversionBackground = Color(0xFFF7F4EF)
-private val DiversionSurface = Color.White
-private val DiversionAmber = Color(0xFF9B650F)
-private val DiversionAmberSoft = Color(0xFFFFEBC2)
-private val DiversionBlue = Color(0xFF1D5F8A)
 
 @Composable
 fun DiversionScreen(
@@ -42,198 +50,118 @@ fun DiversionScreen(
     onViewLogbook: () -> Unit,
 ) {
     if (diversionSummary == null) {
-        EmptyDiversionState(onReturnHome = onReturnHome)
+        EmptyDiversionState(onReturnHome)
         return
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DiversionBackground)
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(14.dp))
+    Box(Modifier.fillMaxSize().background(Cream)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(top = 18.dp, bottom = 250.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            LandedEarlyHeader(diversionSummary)
+            DiversionMapCard(diversionSummary)
+            KeptRow(diversionSummary)
             Text(
-                text = "TravelBlock",
-                style = MaterialTheme.typography.labelLarge,
-                color = DiversionBlue,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Flight Diverted",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "You ended this focus flight early and landed at ${diversionSummary.diversionAirport.code}. It has been saved as a diverted flight.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "${diversionSummary.percentComplete}% of the way to ${diversionSummary.intendedDestination.displayCode} is still yours. " +
+                    "The flight is saved in your logbook, and you are now at ${diversionSummary.diversionAirport.displayCode}. " +
+                    "Rest a moment, then take off again whenever you are ready.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = WarmGray,
             )
         }
-        item {
-            DiversionRouteCard(diversionSummary)
-        }
-        item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                DiversionMetric("Time focused", diversionSummary.focusedDuration.toReadableMinutes())
-                DiversionMetric("Miles flown", "${diversionSummary.milesFlown.roundToInt()} mi")
-                DiversionMetric("Skipped", "${diversionSummary.milesRemainingSkipped.roundToInt()} mi")
-                DiversionMetric("Diversion", "${diversionSummary.distanceToDiversionAirportMiles.roundToInt()} mi")
-                DiversionMetric("Points", "+${diversionSummary.pointsEarned}")
-            }
-        }
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DiversionSurface),
-                shape = RoundedCornerShape(18.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = "Diversion report",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Surface(
-                        color = DiversionAmberSoft,
-                        shape = RoundedCornerShape(999.dp),
-                    ) {
-                        Text(
-                            text = "Status: Diverted",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = DiversionAmber,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                    Text(
-                        text = "${diversionSummary.percentComplete}% of the planned route was flown. Current airport is now ${diversionSummary.diversionAirport.code}, not the intended destination.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onReturnHome,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Text("Return to Home")
-                }
-                OutlinedButton(
-                    onClick = onTryAgain,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Text("Try Again")
-                }
-                OutlinedButton(
-                    onClick = onViewLogbook,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Text("View Logbook")
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
+        DiversionActions(onReturnHome, onTryAgain, onViewLogbook, Modifier.align(Alignment.BottomCenter))
     }
 }
 
 @Composable
-private fun DiversionRouteCard(diversionSummary: DiversionSummary) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = DiversionSurface),
-        shape = RoundedCornerShape(22.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+private fun LandedEarlyHeader(summary: DiversionSummary) {
+    val place = summary.diversionAirport.city.ifBlank { summary.diversionAirport.displayCode }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Kicker("Change of plans", color = Marigold)
+        Text("Landed early in $place", style = MaterialTheme.typography.displaySmall, color = Ink)
+        Text(
+            "You were headed to ${summary.intendedDestination.city.ifBlank { summary.intendedDestination.displayCode }}. " +
+                "That is okay. You focused for ${summary.focusedDuration.toReadableMinutes()}.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = WarmGray,
+        )
+    }
+}
+
+@Composable
+private fun DiversionMapCard(summary: DiversionSummary) {
+    PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            TravelMap(
+                origin = summary.origin.toStop(),
+                destination = summary.diversionAirport.toStop(),
+                progress = 1f,
+                modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)),
+            )
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().padding(horizontal = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AirportCodeBlock("ORIGIN", diversionSummary.origin.code)
                 Text(
-                    text = "${diversionSummary.percentComplete}%",
+                    "${summary.origin.displayCode}  to  ${summary.diversionAirport.displayCode}",
                     style = MaterialTheme.typography.titleLarge,
-                    color = DiversionAmber,
-                    fontWeight = FontWeight.Bold,
+                    color = Ink,
                 )
-                AirportCodeBlock("DIVERTED", diversionSummary.diversionAirport.code)
+                StampPill("Flight ${summary.flightNumber}", color = Marigold)
             }
-            Text(
-                text = "Flight ${diversionSummary.flightNumber} planned for ${diversionSummary.intendedDestination.code}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
         }
     }
 }
 
 @Composable
-private fun AirportCodeBlock(
-    label: String,
-    code: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = code,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Bold,
-        )
+private fun KeptRow(summary: DiversionSummary) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Kicker("What you kept")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Kept("Focused", summary.focusedDuration.toReadableMinutes(), Modifier.weight(1f))
+            Kept("Flown", "${summary.milesFlown.roundToInt()} mi", Modifier.weight(1f))
+            Kept("Points", "+${summary.pointsEarned}", Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
-private fun DiversionMetric(
-    label: String,
-    value: String,
+private fun Kept(label: String, value: String, modifier: Modifier = Modifier) {
+    PaperCard(modifier, contentPadding = PaddingValues(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Kicker(label)
+            Text(value, style = MaterialTheme.typography.headlineSmall, color = DuskBlue)
+        }
+    }
+}
+
+@Composable
+private fun DiversionActions(
+    onReturnHome: () -> Unit,
+    onTryAgain: () -> Unit,
+    onViewLogbook: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Surface(
-        color = DiversionSurface,
-        shape = RoundedCornerShape(16.dp),
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Cream, Cream)))
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp)
+            .padding(top = 28.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
+        PrimaryButton("Back to the terminal", onReturnHome)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SecondaryButton("Try again", onTryAgain, Modifier.weight(1f))
+            SecondaryButton("Logbook", onViewLogbook, Modifier.weight(1f))
         }
     }
 }
@@ -241,45 +169,27 @@ private fun DiversionMetric(
 @Composable
 private fun EmptyDiversionState(onReturnHome: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DiversionBackground)
-            .padding(20.dp),
+        Modifier.fillMaxSize().background(Cream).padding(24.dp),
         verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = DiversionSurface),
-            shape = RoundedCornerShape(18.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(
-                    text = "Diversion",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Divert an active focus flight to see the diversion report.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(onClick = onReturnHome) {
-                    Text("Back to Home")
-                }
-            }
-        }
+        Text("No diversions to show", style = MaterialTheme.typography.headlineMedium, color = Ink, textAlign = TextAlign.Center)
+        Text(
+            "If you ever land early, the details will show up here.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = WarmGray,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 10.dp),
+        )
+        PrimaryButton("Back to Home", onReturnHome)
     }
 }
+
+private fun Airport.toStop() = MapStop(displayCode, GeoPoint(latitude, longitude))
 
 private fun java.time.Duration.toReadableMinutes(): String {
     val totalMinutes = toMinutes().coerceAtLeast(0L)
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
-    return if (hours > 0) {
-        "${hours}h ${minutes}m"
-    } else {
-        "${minutes}m"
-    }
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }

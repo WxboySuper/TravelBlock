@@ -140,7 +140,8 @@ fun ArrivalScene(cityCode: String, longitude: Double, modifier: Modifier = Modif
             while (x < w) {
                 val r = ((seed + i * 7919) % 100 + 100) % 100 / 100f
                 val bw = w * (0.05f + 0.06f * r)
-                val bh = h * (0.14f + 0.36f * ((seed / 3 + i * 104729) % 100 + 100) % 100 / 100f)
+                val r2 = (((seed / 3 + i * 104729) % 100 + 100) % 100) / 100f
+                val bh = h * (0.12f + 0.30f * r2)
                 val shade = Color(0xFF1F2336).copy(alpha = 0.55f + 0.4f * r)
                 drawRect(shade, Offset(x, base - bh), Size(bw, bh))
                 if (night > 0.35f || (night > 0.2f && i % 2 == 0)) {

@@ -1,22 +1,30 @@
 package com.travelblock.app.ui.screen.book
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,16 +36,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.DraftFlightBooking
+import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.ui.components.BoardingPassCard
@@ -47,24 +59,30 @@ import com.travelblock.app.ui.components.BookingFlowTransition
 import com.travelblock.app.ui.components.BookingProgressRail
 import com.travelblock.app.ui.components.BookingRitualSurface
 import com.travelblock.app.ui.components.BookingRitualSurfaceTransition
-import com.travelblock.app.ui.components.CheckInCounterHeader
 import com.travelblock.app.ui.components.CompactRouteDocket
 import com.travelblock.app.ui.components.EmptyState
-import com.travelblock.app.ui.components.FlightProgressMapView
 import com.travelblock.app.ui.components.GateBoardingSequence
+import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.PaperCard
+import com.travelblock.app.ui.components.PrimaryButton
+import com.travelblock.app.ui.components.SecondaryButton
+import com.travelblock.app.ui.components.SoftChip
+import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.components.StickyActionScaffold
 import com.travelblock.app.ui.components.TravelDayBackdrop
-import com.travelblock.app.ui.components.buildFlightMapModel
-import com.travelblock.app.ui.theme.CabinAmber
-import com.travelblock.app.ui.theme.DeepNavy
-import com.travelblock.app.ui.theme.MutedText
-import com.travelblock.app.ui.theme.RunwayLine
-import com.travelblock.app.ui.theme.SkyBlue
+import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.theme.Cream
+import com.travelblock.app.ui.theme.DuskBlue
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Marigold
+import com.travelblock.app.ui.theme.Paper
+import com.travelblock.app.ui.theme.Sage
+import com.travelblock.app.ui.theme.Sand
+import com.travelblock.app.ui.theme.SkyMist
 import com.travelblock.app.ui.theme.SoftSky
-import com.travelblock.app.ui.theme.TerminalBlue
-import com.travelblock.app.ui.theme.TicketWhite
+import com.travelblock.app.ui.theme.WarmGray
 import com.travelblock.app.ui.util.rememberTravelBlockHaptics
-import kotlin.math.roundToInt
 
 @Composable
 fun BookScreen(
@@ -235,44 +253,33 @@ private fun CheckInSurface(
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
-        horizontalPadding = 16.dp,
+        horizontalPadding = 20.dp,
         stickyAction = {
             if (!uiState.showSeatSelection) {
-                RitualPrimaryAction(
-                    label = "Check-in Complete",
-                    onClick = onContinueToSeatSelection,
-                )
-                RitualSecondaryAction(
-                    label = "Back to Departures",
-                    onClick = onCancelBooking,
-                    compact = true,
-                )
+                PrimaryButton(text = "Check-in complete", onClick = onContinueToSeatSelection)
+                SecondaryButton(text = "Back to departures", onClick = onCancelBooking)
             } else {
-                RitualPrimaryAction(
-                    label = "Generate Boarding Pass",
+                PrimaryButton(
+                    text = "Generate boarding pass",
                     onClick = onContinue,
                     enabled = uiState.selectedSeat != null,
                 )
-                RitualSecondaryAction(
-                    label = "Back to Trip Manifest",
-                    onClick = onBackToManifest,
-                    compact = true,
-                )
+                SecondaryButton(text = "Back to trip manifest", onClick = onBackToManifest)
             }
         },
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             BookingProgressRail(currentStep = flowStep)
         }
         item {
-            TerminalPhaseHeader(
-                eyebrow = if (uiState.showSeatSelection) "CABIN ASSIGNMENT" else "CHECK-IN DESK",
-                title = if (uiState.showSeatSelection) "Choose your seat" else "File your trip manifest",
+            PhaseHeader(
+                eyebrow = if (uiState.showSeatSelection) "Cabin" else "Check-in desk",
+                title = if (uiState.showSeatSelection) "Choose your seat" else "Pack your focus",
                 detail = if (uiState.showSeatSelection) {
-                    "Lock in the seat you will carry into Focus Mode."
+                    "Pick the spot you will carry into Focus Mode."
                 } else {
-                    "Declare the focus cargo for this departure before boarding."
+                    "Tell us what you are working on, so this flight has a purpose."
                 },
             )
         }
@@ -287,20 +294,8 @@ private fun CheckInSurface(
                 boardingGroup = uiState.boardingGroup,
             )
         }
-        item {
-            FlightProgressMapView(
-                flightMap = buildFlightMapModel(
-                    origin = origin,
-                    destination = destination,
-                    progress = 0.0,
-                ),
-                originCode = origin.displayCode,
-                destinationCode = destination.displayCode,
-                progressLabel = "${uiState.durationMinutes} min · ${uiState.distanceMiles.roundToInt()} mi",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-            )
+        if (!uiState.showSeatSelection) {
+            item { RouteMapCard(origin = origin, destination = destination) }
         }
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->
@@ -312,20 +307,37 @@ private fun CheckInSurface(
                         onPreflightCheckChanged = onPreflightCheckChanged,
                         onSkipToSeats = onContinueToSeatSelection,
                     )
-                    BookingFlowStep.SeatSelection -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SeatCabinHeader(selectedSeatId = uiState.selectedSeatId)
-                        CabinSeatMap(
-                            seats = uiState.seatOptions,
-                            selectedSeatId = uiState.selectedSeatId,
-                            seatSelectionMessage = uiState.seatSelectionMessage,
-                            onSeatSelected = onSeatSelected,
-                        )
-                    }
+                    BookingFlowStep.SeatSelection -> CabinSeatMap(
+                        seats = uiState.seatOptions,
+                        selectedSeatId = uiState.selectedSeatId,
+                        seatSelectionMessage = uiState.seatSelectionMessage,
+                        onSeatSelected = onSeatSelected,
+                    )
                     else -> Unit
                 }
             }
         }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
+    }
+}
+
+/** A modest real map of the route, shown on check-in only. Taps are swallowed; drags scroll the page. */
+@Composable
+private fun RouteMapCard(origin: Airport, destination: Airport) {
+    val shape = RoundedCornerShape(22.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(176.dp)
+            .clip(shape)
+            .border(1.dp, Sand, shape),
+    ) {
+        TravelMap(
+            origin = MapStop(origin.displayCode, GeoPoint(origin.latitude, origin.longitude)),
+            destination = MapStop(destination.displayCode, GeoPoint(destination.latitude, destination.longitude)),
+            modifier = Modifier.fillMaxSize(),
+        )
+        // Transparent overlay so the map never steals scroll gestures from the page.
+        Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } })
     }
 }
 
@@ -339,8 +351,8 @@ private fun EmptyBookingState() {
         verticalArrangement = Arrangement.Center,
     ) {
         EmptyState(
-            title = "Book Flight",
-            message = "Choose a departure from Home to start a draft booking.",
+            title = "Book a flight",
+            message = "Choose a departure from Home to start your check-in.",
         )
     }
 }
@@ -354,163 +366,116 @@ private fun ManifestCard(
     onPreflightCheckChanged: (String, Boolean) -> Unit,
     onSkipToSeats: () -> Unit,
 ) {
-    Surface(
-        color = Color.White,
-        shape = RoundedCornerShape(14.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-        shadowElevation = 1.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
-        ) {
+    PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(18.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top,
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Trip manifest", style = MaterialTheme.typography.titleLarge, color = Ink)
                     Text(
-                        text = "TRIP MANIFEST",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = DeepNavy,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = "Prepare for departure. Pack your focus.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MutedText,
+                        "What are you studying on this flight?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WarmGray,
                     )
                 }
-                Surface(
-                    color = SoftSky,
-                    shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-                ) {
-                    Text(
-                        text = uiState.flightNumber,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TerminalBlue,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                StampPill(text = uiState.flightNumber)
             }
             FocusCargoField(
                 value = uiState.focusObjective,
                 onValueChange = onObjectiveChanged,
             )
-            ManifestSectionLabel("Cabin tag")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                BookingViewModel.FocusTags.forEach { tag ->
-                    Surface(
-                        color = if (uiState.focusTag == tag) SoftSky else Color.White,
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (uiState.focusTag == tag) TerminalBlue else RunwayLine,
-                        ),
-                        modifier = Modifier.clickable { onFocusTagSelected(tag) },
-                    ) {
-                        Text(
-                            text = tag,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (uiState.focusTag == tag) {
-                                TerminalBlue
-                            } else {
-                                DeepNavy
-                            },
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Kicker("Cabin tag")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    BookingViewModel.FocusTags.forEach { tag ->
+                        SoftChip(
+                            label = tag,
+                            selected = uiState.focusTag == tag,
+                            onClick = { onFocusTagSelected(tag) },
                         )
                     }
                 }
             }
-            SecurityCheckGrid(
+            SecurityCheckList(
                 cabinSecured = uiState.cabinSecured,
                 materialsReady = uiState.materialsReady,
                 distractionsStowed = uiState.distractionsStowed,
                 onPreflightCheckChanged = onPreflightCheckChanged,
             )
-            RitualSecondaryAction(
-                label = "Skip manifest and choose seat",
-                onClick = onSkipToSeats,
-                compact = true,
-            )
+            SecondaryButton(text = "Skip manifest and choose seat", onClick = onSkipToSeats)
         }
     }
 }
 
 @Composable
-private fun SecurityCheckGrid(
+private fun SecurityCheckList(
     cabinSecured: Boolean,
     materialsReady: Boolean,
     distractionsStowed: Boolean,
     onPreflightCheckChanged: (String, Boolean) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        ManifestSectionLabel("Security check")
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
-        ) {
-            SecurityTile("cabin", "Cabin", "clear desk", cabinSecured, onPreflightCheckChanged)
-            SecurityTile("materials", "Materials", "within reach", materialsReady, onPreflightCheckChanged)
-            SecurityTile("distractions", "Phone", "stowed", distractionsStowed, onPreflightCheckChanged)
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Kicker("Before we push back")
+        SecurityRow("cabin", "Desk cleared", "A tidy space makes for a calmer flight", cabinSecured, onPreflightCheckChanged)
+        SecurityRow("materials", "Materials within reach", "Notes, charger, water", materialsReady, onPreflightCheckChanged)
+        SecurityRow("distractions", "Phone stowed", "Face down, out of sight", distractionsStowed, onPreflightCheckChanged)
     }
 }
 
 @Composable
-private fun SecurityTile(
+private fun SecurityRow(
     key: String,
     title: String,
     subtitle: String,
     checked: Boolean,
     onCheckedChanged: (String, Boolean) -> Unit,
 ) {
+    val shape = RoundedCornerShape(16.dp)
     Surface(
         modifier = Modifier
-            .width(100.dp)
-            .height(74.dp)
-            .clickable { onCheckedChanged(key, !checked) },
-        color = if (checked) SoftSky else Color.White,
-        shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (checked) TerminalBlue.copy(alpha = 0.36f) else RunwayLine,
-        ),
+            .fillMaxWidth()
+            .clip(shape)
+            .toggleable(
+                value = checked,
+                role = Role.Checkbox,
+                onValueChange = { onCheckedChanged(key, it) },
+            ),
+        color = if (checked) Sage.copy(alpha = 0.12f) else Cream,
+        shape = shape,
+        border = BorderStroke(1.dp, if (checked) Sage.copy(alpha = 0.55f) else Sand),
     ) {
-        Column(
-            modifier = Modifier.padding(9.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = if (checked) "CLEARED" else "PENDING",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (checked) TerminalBlue else CabinAmber,
-                fontWeight = FontWeight.Bold,
-            )
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MutedText,
-                )
+            Surface(
+                modifier = Modifier.size(26.dp),
+                shape = CircleShape,
+                color = if (checked) Sage else Paper,
+                border = BorderStroke(1.5.dp, if (checked) Sage else Sand),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (checked) {
+                        Icon(Icons.Rounded.Check, contentDescription = null, tint = Paper, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = Ink)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = WarmGray)
             }
         }
     }
 }
 
+/** A real-cabin seat map: a fuselage outline with window markers, row numbers down the aisle, and seat-back shapes. */
 @Composable
 private fun CabinSeatMap(
     seats: List<SeatOption>,
@@ -518,135 +483,145 @@ private fun CabinSeatMap(
     seatSelectionMessage: String?,
     onSeatSelected: (String) -> Unit,
 ) {
-    Surface(
-        color = Color.White,
-        shape = RoundedCornerShape(14.dp),
-        tonalElevation = 1.dp,
-        shadowElevation = 2.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+    PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "Cabin map",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = DeepNavy,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                selectedSeatId?.let { InfoPill(it) }
+                Column {
+                    Text("Cabin map", style = MaterialTheme.typography.titleLarge, color = Ink)
+                    Text("Muted seats are already taken.", style = MaterialTheme.typography.bodySmall, color = WarmGray)
+                }
+                selectedSeatId?.let { StampPill(text = "Seat $it", color = DuskBlue) }
             }
             SeatLegend()
             seatSelectionMessage?.let {
                 Surface(
                     color = SoftSky,
-                    shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Sand),
                 ) {
                     Text(
                         text = it,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TerminalBlue,
+                        color = DuskBlue,
                     )
                 }
             }
-            Surface(
-                color = Color(0xFFF7FBFF),
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    CabinRowLabels()
-                    seats.groupBy { it.label.dropLast(1).toInt() }
-                        .toSortedMap()
-                        .forEach { (_, rowSeats) ->
-                            CabinSeatRow(
-                                rowSeats = rowSeats.sortedBy { it.label.last() },
-                                selectedSeatId = selectedSeatId,
-                                onSeatSelected = onSeatSelected,
-                            )
-                        }
-                }
+            Fuselage {
+                CabinColumnLabels()
+                seats.groupBy { it.label.dropLast(1).toInt() }
+                    .toSortedMap()
+                    .forEach { (rowNumber, rowSeats) ->
+                        CabinSeatRow(
+                            rowNumber = rowNumber,
+                            rowSeats = rowSeats.sortedBy { it.label.last() },
+                            selectedSeatId = selectedSeatId,
+                            onSeatSelected = onSeatSelected,
+                        )
+                    }
             }
         }
     }
 }
 
 @Composable
-private fun CabinRowLabels() {
-    Row(
+private fun Fuselage(content: @Composable () -> Unit) {
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        color = Cream,
+        shape = RoundedCornerShape(topStart = 72.dp, topEnd = 72.dp, bottomStart = 26.dp, bottomEnd = 26.dp),
+        border = BorderStroke(1.5.dp, Sand),
     ) {
-        listOf("A", "B", "C").forEach { label ->
+        Column(
+            modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 22.dp, bottom = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Text(
-                text = label,
-                modifier = Modifier.width(40.dp),
+                text = "Front of cabin",
+                modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.labelSmall,
-                color = MutedText,
-                fontWeight = FontWeight.Bold,
+                color = WarmGray,
+                textAlign = TextAlign.Center,
             )
-        }
-        Text(
-            text = "AISLE",
-            modifier = Modifier.width(48.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = TerminalBlue,
-            fontWeight = FontWeight.Bold,
-        )
-        listOf("D", "E", "F").forEach { label ->
-            Text(
-                text = label,
-                modifier = Modifier.width(40.dp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MutedText,
-                fontWeight = FontWeight.Bold,
-            )
+            content()
         }
     }
 }
 
 @Composable
+private fun CabinColumnLabels() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.width(WindowWidth))
+        listOf("A", "B", "C").forEach { ColumnLabel(it, Modifier.weight(1f)) }
+        Spacer(Modifier.weight(0.8f))
+        listOf("D", "E", "F").forEach { ColumnLabel(it, Modifier.weight(1f)) }
+        Spacer(Modifier.width(WindowWidth))
+    }
+}
+
+@Composable
+private fun ColumnLabel(label: String, modifier: Modifier) {
+    Text(
+        text = label,
+        modifier = modifier,
+        style = MaterialTheme.typography.labelSmall,
+        color = WarmGray,
+        textAlign = TextAlign.Center,
+    )
+}
+
+private val WindowWidth = 6.dp
+
+@Composable
 private fun CabinSeatRow(
+    rowNumber: Int,
     rowSeats: List<SeatOption>,
     selectedSeatId: String?,
     onSeatSelected: (String) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        CabinWindow()
         rowSeats.forEachIndexed { index, seat ->
             if (index == 3) {
                 Text(
-                    text = seat.label.dropLast(1),
-                    modifier = Modifier.width(48.dp),
+                    text = rowNumber.toString(),
+                    modifier = Modifier.weight(0.8f),
                     style = MaterialTheme.typography.labelSmall,
-                    color = CabinAmber,
-                    fontWeight = FontWeight.SemiBold,
+                    color = Marigold,
+                    textAlign = TextAlign.Center,
                 )
             }
             SeatButton(
                 seat = seat,
                 selected = seat.id == selectedSeatId,
                 onSelected = { onSeatSelected(seat.id) },
+                modifier = Modifier.weight(1f),
             )
         }
+        CabinWindow()
     }
+}
+
+@Composable
+private fun CabinWindow() {
+    Box(
+        modifier = Modifier
+            .width(WindowWidth)
+            .height(18.dp)
+            .clip(RoundedCornerShape(50))
+            .background(SoftSky)
+            .border(1.dp, Sand, RoundedCornerShape(50)),
+    )
 }
 
 @Composable
@@ -654,86 +629,83 @@ private fun SeatButton(
     seat: SeatOption,
     selected: Boolean,
     onSelected: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val containerColor = when {
-        selected -> TerminalBlue
-        !seat.isAvailable -> Color(0xFFE4EAF2)
-        seat.ticketClass == TicketClass.Premium -> Color(0xFFFFF4D6)
-        seat.ticketClass == TicketClass.ExtraLegroom -> Color(0xFFDDF2FF)
-        else -> SoftSky
+        selected -> DuskBlue
+        !seat.isAvailable -> Sand.copy(alpha = 0.55f)
+        else -> seatTint(seat.ticketClass)
     }
-    val textColor = if (selected) {
-        Color.White
-    } else {
-        if (seat.isAvailable) DeepNavy else MutedText.copy(alpha = 0.55f)
+    val textColor = when {
+        selected -> Paper
+        seat.isAvailable -> Ink
+        else -> WarmGray.copy(alpha = 0.6f)
     }
 
     Surface(
         color = containerColor,
-        shape = RoundedCornerShape(topStart = 13.dp, topEnd = 13.dp, bottomStart = 7.dp, bottomEnd = 7.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = if (selected) TerminalBlue else RunwayLine,
-        ),
-        modifier = Modifier
-            .padding(2.dp)
-            .width(40.dp)
-            .height(36.dp)
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 8.dp, bottomEnd = 8.dp),
+        border = BorderStroke(1.dp, if (selected) DuskBlue else Sand),
+        modifier = modifier
+            .padding(horizontal = 2.dp, vertical = 1.dp)
+            .height(40.dp)
             .semantics {
                 contentDescription = if (seat.isAvailable) seat.label else "${seat.label} unavailable"
             }
-            .clickable(
+            .toggleable(
+                value = selected,
                 enabled = seat.isAvailable || selected,
                 role = Role.RadioButton,
-                onClick = onSelected,
+                onValueChange = { onSelected() },
             ),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = seat.label.takeLast(1),
-                style = MaterialTheme.typography.labelMedium,
-                color = textColor,
-                fontWeight = FontWeight.Bold,
-            )
+        Box(contentAlignment = Alignment.Center) {
+            if (selected) {
+                Icon(Icons.Rounded.Check, contentDescription = null, tint = Paper, modifier = Modifier.size(18.dp))
+            } else {
+                Text(
+                    text = seat.label.takeLast(1),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = textColor,
+                )
+            }
         }
     }
+}
+
+private fun seatTint(ticketClass: TicketClass): Color = when (ticketClass) {
+    TicketClass.Premium -> Color(0xFFF8E3B4)
+    TicketClass.ExtraLegroom -> Color(0xFFDCEBDD)
+    TicketClass.Window -> Color(0xFFD9E6F2)
+    TicketClass.Standard -> SoftSky
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SeatLegend() {
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        SeatLegendPill("Standard", SoftSky, dark = true)
-        SeatLegendPill("Extra legroom", Color(0xFFDDF2FF), dark = true)
-        SeatLegendPill("Premium", Color(0xFFFFF4D6), dark = true)
-        SeatLegendPill("Unavailable", Color(0xFFE4EAF2), dark = true)
+        LegendItem("Standard", SoftSky)
+        LegendItem("Window", seatTint(TicketClass.Window))
+        LegendItem("Extra legroom", seatTint(TicketClass.ExtraLegroom))
+        LegendItem("Premium", seatTint(TicketClass.Premium))
+        LegendItem("Taken", Sand.copy(alpha = 0.55f))
     }
 }
 
 @Composable
-private fun SeatLegendPill(
-    label: String,
-    color: Color,
-    dark: Boolean,
-) {
-    Surface(
-        color = color,
-        shape = RoundedCornerShape(7.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = DeepNavy,
-            fontWeight = FontWeight.SemiBold,
+private fun LegendItem(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier
+                .size(width = 16.dp, height = 14.dp)
+                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 3.dp, bottomEnd = 3.dp))
+                .background(color)
+                .border(1.dp, Sand, RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 3.dp, bottomEnd = 3.dp)),
         )
+        Text(label, style = MaterialTheme.typography.labelSmall, color = WarmGray)
     }
 }
 
@@ -746,28 +718,21 @@ private fun BoardingPassPreview(
 ) {
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
-        horizontalPadding = 16.dp,
+        horizontalPadding = 20.dp,
         stickyAction = {
-            RitualPrimaryAction(
-                label = "Board Flight",
-                onClick = onBoardFlight,
-            )
-            RitualSecondaryAction(
-                label = "Back to Seats",
-                onClick = onBackToReview,
-                compact = true,
-            )
+            PrimaryButton(text = "Board flight", onClick = onBoardFlight)
+            SecondaryButton(text = "Back to seats", onClick = onBackToReview)
         },
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             BookingProgressRail(currentStep = BookingFlowStep.BoardingPass)
         }
         item {
-            TerminalPhaseHeader(
-                eyebrow = "DOCUMENT ISSUED",
-                title = "Boarding pass ready",
-                detail = "Gate ${boardingPass.gate} · ${boardingPass.boardingGroup} · scan before cabin closure.",
+            PhaseHeader(
+                eyebrow = "Document issued",
+                title = "Your boarding pass",
+                detail = "Gate ${boardingPass.gate}  /  ${boardingPass.boardingGroup}. Keep it handy, they will scan it at the gate.",
             )
         }
         item {
@@ -778,7 +743,6 @@ private fun BoardingPassPreview(
                 )
             }
         }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
     }
 }
 
@@ -810,24 +774,24 @@ private fun GateCallScreen(
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
-        horizontalPadding = 16.dp,
+        horizontalPadding = 20.dp,
         stickyAction = {
-            RitualPrimaryAction(
-                label = if (cleared) "Start Focus Flight" else "Preparing cabin...",
+            PrimaryButton(
+                text = if (cleared) "Start focus flight" else "Preparing cabin...",
                 onClick = onStartFocusFlight,
                 enabled = cleared,
             )
         },
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             BookingProgressRail(currentStep = BookingFlowStep.GateCall)
         }
         item {
-            TerminalPhaseHeader(
-                eyebrow = "FINAL CALL",
-                title = "Gate ${boardingPass.gate} now boarding",
-                detail = "Hold this moment. The next tap closes the cabin and starts Focus Mode.",
+            PhaseHeader(
+                eyebrow = "Final call",
+                title = "Gate ${boardingPass.gate} is boarding",
+                detail = "Take a breath. The next tap closes the cabin doors and starts Focus Mode.",
             )
         }
         item {
@@ -840,44 +804,28 @@ private fun GateCallScreen(
         item {
             Text(
                 text = "Next stop: ${boardingPass.destination.displayCode}. Timer: ${boardingPass.focusDurationMinutes} min.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MutedText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = WarmGray,
             )
         }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
     }
 }
 
-@Composable
-private fun InfoPill(text: String) {
-    Surface(
-        color = SoftSky,
-        shape = RoundedCornerShape(999.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
+/** A lined-notepad style field for the one thing you are here to do. */
 @Composable
 private fun FocusCargoField(
     value: String,
     onValueChange: (String) -> Unit,
 ) {
+    val shape = RoundedCornerShape(18.dp)
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
+        color = Cream,
+        shape = shape,
+        border = BorderStroke(1.dp, Sand),
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
@@ -885,40 +833,31 @@ private fun FocusCargoField(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "PACK YOUR FOCUS CARGO",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TerminalBlue,
-                    fontWeight = FontWeight.Bold,
-                )
+                Kicker("Focus cargo", color = DuskBlue)
                 Text(
                     text = "${value.length}/120",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MutedText,
-                    fontWeight = FontWeight.Medium,
+                    color = WarmGray,
                 )
             }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(66.dp),
+                    .height(76.dp),
             ) {
                 if (value.isBlank()) {
                     Text(
-                        text = "Mission objective",
+                        text = "e.g. Finish chapter 4 notes",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MutedText.copy(alpha = 0.68f),
+                        color = WarmGray.copy(alpha = 0.7f),
                     )
                 }
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
                     modifier = Modifier.fillMaxSize(),
-                    textStyle = TextStyle(
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Ink),
+                    cursorBrush = SolidColor(DuskBlue),
                 )
             }
         }
@@ -926,147 +865,22 @@ private fun FocusCargoField(
 }
 
 @Composable
-private fun RitualPrimaryAction(
-    label: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(58.dp)
-            .clickable(enabled = enabled, onClick = onClick),
-        color = if (enabled) TerminalBlue else Color(0xFFB8C4CC),
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = if (enabled) 5.dp else 0.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (enabled) SkyBlue.copy(alpha = 0.55f) else Color.Transparent,
-        ),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RitualSecondaryAction(
-    label: String,
-    onClick: () -> Unit,
-    compact: Boolean = false,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(if (compact) 48.dp else 54.dp)
-            .clickable(onClick = onClick),
-        color = Color.White,
-        shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = TerminalBlue,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TerminalPhaseHeader(
+private fun PhaseHeader(
     eyebrow: String,
     title: String,
     detail: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = eyebrow,
-            style = MaterialTheme.typography.labelSmall,
-            color = TerminalBlue,
-            fontWeight = FontWeight.Bold,
-        )
+        Kicker(eyebrow, color = DuskBlue)
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineMedium,
+            color = Ink,
         )
         Text(
             text = detail,
             style = MaterialTheme.typography.bodyMedium,
-            color = MutedText,
+            color = WarmGray,
         )
-    }
-}
-
-@Composable
-private fun ManifestSectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = TerminalBlue,
-        fontWeight = FontWeight.Bold,
-    )
-}
-
-@Composable
-private fun SeatCabinHeader(selectedSeatId: String?) {
-    Surface(
-        color = Color.White,
-        shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-        shadowElevation = 1.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = "CABIN MAP",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TerminalBlue,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Choose your place on board",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = DeepNavy,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Muted seats are already assigned.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MutedText,
-                )
-            }
-            selectedSeatId?.let {
-                Surface(
-                    color = SoftSky,
-                    shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, RunwayLine),
-                ) {
-                    Text(
-                        text = it,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TerminalBlue,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-        }
     }
 }

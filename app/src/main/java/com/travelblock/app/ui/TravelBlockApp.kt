@@ -70,34 +70,28 @@ fun TravelBlockApp(openArrivalRequested: Boolean = false) {
     )
     val activeFlightInProgress = activeFlight != null
 
-    LaunchedEffect(activeFlightRestored) {
-        if (activeFlightRestored) return@LaunchedEffect
-        val restoredFlight = container.activeFlightSessionRepository.getActiveFlight()
-        if (restoredFlight != null && shouldRestoreAsArrival(restoredFlight.plannedArrivalAt, Instant.now())) {
-            recordRestoredArrival(container, restoredFlight)
-            container.landingAlarmScheduler.cancel()
-            container.notificationHelper.cancelFlightLandedNotification()
-            arrivalSummary = ArrivalSummary.fromCompletedFlight(
-                flight = restoredFlight,
-                pointsEarned = FlightRewardCalculator.completedReward(restoredFlight),
-            )
-            activeFlight = null
-        } else {
+    RestoreActiveFlightEffect(
+        container = container,
+        activeFlightRestored = activeFlightRestored,
+        onFlightRestored = { restoredFlight, restoredArrival ->
             activeFlight = restoredFlight
-            restoredFlight?.let(container.landingAlarmScheduler::schedule)
-        }
-        activeFlightRestored = true
-    }
+            arrivalSummary = restoredArrival
+            activeFlightRestored = true
+        },
+    )
 
-    LaunchedEffect(activeFlightRestored, arrivalSummary, openArrivalRequested) {
-        if (!activeFlightRestored || arrivalSummary == null) return@LaunchedEffect
-        if (openArrivalRequested || currentRoute == null || currentRoute == TravelBlockDestination.Home.route) {
+    OpenRestoredArrivalEffect(
+        activeFlightRestored = activeFlightRestored,
+        arrivalSummary = arrivalSummary,
+        openArrivalRequested = openArrivalRequested,
+        currentRoute = currentRoute,
+        onOpenArrival = {
             navController.navigate(TravelBlockDestination.Arrival.route) {
                 popUpTo(TravelBlockDestination.Home.route) { inclusive = false }
                 launchSingleTop = true
             }
-        }
-    }
+        },
+    )
 
     DisposableEffect(Unit) {
         onDispose {
@@ -399,4 +393,54 @@ private suspend fun recordRestoredArrival(
     )
     container.settingsRepository.setCurrentAirportCode(flight.destination.code)
     container.activeFlightSessionRepository.clearActiveFlight()
+}
+
+@Composable
+private fun RestoreActiveFlightEffect(
+    container: TravelBlockContainer,
+    activeFlightRestored: Boolean,
+    onFlightRestored: (ActiveFlight?, ArrivalSummary?) -> Unit,
+) {
+    LaunchedEffect(activeFlightRestored) {
+        if (activeFlightRestored) return@LaunchedEffect
+        val restoredFlight = container.activeFlightSessionRepository.getActiveFlight()
+        val restoredFlightHasArrived = restoredFlight != null &&
+            shouldRestoreAsArrival(restoredFlight.plannedArrivalAt, Instant.now())
+
+        if (restoredFlightHasArrived) {
+            val arrivedFlight = requireNotNull(restoredFlight)
+            recordRestoredArrival(container, arrivedFlight)
+            container.landingAlarmScheduler.cancel()
+            container.notificationHelper.cancelFlightLandedNotification()
+            onFlightRestored(
+                null,
+                ArrivalSummary.fromCompletedFlight(
+                    flight = arrivedFlight,
+                    pointsEarned = FlightRewardCalculator.completedReward(arrivedFlight),
+                ),
+            )
+        } else {
+            restoredFlight?.let(container.landingAlarmScheduler::schedule)
+            onFlightRestored(restoredFlight, null)
+        }
+    }
+}
+
+@Composable
+private fun OpenRestoredArrivalEffect(
+    activeFlightRestored: Boolean,
+    arrivalSummary: ArrivalSummary?,
+    openArrivalRequested: Boolean,
+    currentRoute: String?,
+    onOpenArrival: () -> Unit,
+) {
+    LaunchedEffect(activeFlightRestored, arrivalSummary, openArrivalRequested) {
+        val arrivalIsReady = activeFlightRestored && arrivalSummary != null
+        if (!arrivalIsReady) return@LaunchedEffect
+
+        val routeIsUninitialized = currentRoute == null
+        val routeIsHome = currentRoute == TravelBlockDestination.Home.route
+        val shouldOpenArrival = openArrivalRequested || routeIsUninitialized || routeIsHome
+        if (shouldOpenArrival) onOpenArrival()
+    }
 }

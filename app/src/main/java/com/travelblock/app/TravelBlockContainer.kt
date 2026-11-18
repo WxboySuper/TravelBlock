@@ -18,6 +18,7 @@ import com.travelblock.app.data.repository.StoreRepository
 import com.travelblock.app.data.settings.DataStoreSettingsRepository
 import com.travelblock.app.data.settings.SettingsRepository
 import com.travelblock.app.util.NotificationHelper
+import com.travelblock.app.util.LandingAlarmScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -67,7 +68,13 @@ class TravelBlockContainer(
         NotificationHelper(appContext)
     }
 
+    val landingAlarmScheduler: LandingAlarmScheduler by lazy {
+        LandingAlarmScheduler(appContext)
+    }
+
     suspend fun resetLocalData() {
+        landingAlarmScheduler.cancel()
+        notificationHelper.cancelFlightLandedNotification()
         withContext(Dispatchers.IO) {
             database.clearAllTables()
         }

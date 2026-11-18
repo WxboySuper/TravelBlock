@@ -144,6 +144,9 @@ class SettingsViewModelTest {
         override suspend fun setHapticsEnabled(enabled: Boolean) {
             settingsFlow.value = settingsFlow.value.copy(hapticsEnabled = enabled)
         }
+        override suspend fun setOnboardingComplete(complete: Boolean) { settingsFlow.value = settingsFlow.value.copy(onboardingComplete = complete) }
+        override suspend fun setDebugShortFlightsEnabled(enabled: Boolean) { settingsFlow.value = settingsFlow.value.copy(debugShortFlightsEnabled = enabled) }
+        override suspend fun setDebugFlightDurationSeconds(seconds: Int) { settingsFlow.value = settingsFlow.value.copy(debugFlightDurationSeconds = seconds) }
 
         override suspend fun setEquippedBoardingPassThemeId(id: String) {
             settingsFlow.value = settingsFlow.value.copy(equippedBoardingPassThemeId = id)

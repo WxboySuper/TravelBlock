@@ -2038,3 +2038,26 @@ $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
 
 - Still not a native Android map SDK; it is a WebView-hosted Leaflet map.
 - No emulator screenshot pass was run in this turn.
+
+## 2026-11-18 - Quick start, onboarding, and theme wiring
+
+### What changed
+
+- Added Home quick-start buttons for 15, 25, 45, 60, and 90 minute windows, plus a custom duration option. A tap chooses a reachable route whose flight time best fits the chosen window.
+- Added a rebook shortcut that uses the latest logged destination when it is reachable from the current airport, and falls back to a route that fits the previous flight duration.
+- Added a condensed check-in, standard seat, boarding pass, and gate clearance screen before Quick Start enters the cockpit. The original full booking ritual remains available from Home.
+- Added a three-step skippable onboarding flow for the focus-flight idea, home airport, and optional notification permission prompt. Home airport and onboarding completion persist in DataStore.
+- Connected the stored System, Light, and Dark preference to the app-wide Compose theme.
+- Added a debug-build-only short-flight setting with 10, 15, and 30 second flight times.
+- Bumped the app version to `0.14.0-quick-start` (`versionCode` 1260).
+
+### Verification
+
+- Added JVM tests for the quick boarding pass defaults and debug flight timing.
+- `test`, `assembleDebug`, and `lintDebug` passed after the final version metadata and Home background edits.
+- `adb devices` found no attached emulator or device.
+
+### Notes
+
+- The debug timer changes planned arrival timestamps, while the flight keeps its route duration metadata for logs and reward calculations.
+- No audio behavior was changed.

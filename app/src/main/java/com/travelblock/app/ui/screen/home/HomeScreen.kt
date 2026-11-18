@@ -18,14 +18,23 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -60,7 +69,6 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
-private val HomeBackground = Color(0xFFF4F9FD)
 private val BoardInk = DeepNavy
 private val BoardPanel = Color(0xFFFFFFFF)
 private val BoardBlue = TerminalBlue
@@ -74,6 +82,7 @@ fun HomeScreen(
     activeFlight: ActiveFlight?,
     onReturnToCockpit: () -> Unit,
     onBookSelectedRoute: (DraftFlightBooking) -> Unit,
+    onStartQuickFlight: (DraftFlightBooking) -> Unit = onBookSelectedRoute,
 ) {
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
@@ -93,6 +102,12 @@ fun HomeScreen(
         onBookSelectedRoute = {
             viewModel.createSelectedDraftBooking()?.let(onBookSelectedRoute)
         },
+        onQuickStart = { duration ->
+            viewModel.createQuickStartDraft(duration)?.let(onStartQuickFlight)
+        },
+        onRebookLastFlight = {
+            viewModel.createRebookDraft()?.let(onStartQuickFlight)
+        },
         onLoadMoreRoutes = viewModel::loadMoreRoutes,
     )
 }
@@ -105,30 +120,58 @@ fun HomeScreenContent(
     onRouteSelected: (String) -> Unit,
     onReturnToCockpit: () -> Unit = {},
     onBookSelectedRoute: () -> Unit,
+    onQuickStart: (Int) -> Unit = {},
+    onRebookLastFlight: () -> Unit = {},
     onLoadMoreRoutes: () -> Unit = {},
 ) {
-    val visibleRoutes = uiState.visibleRoutes
+    HomeScreenLayout(
+        uiState,
+        activeFlight,
+        HomeScreenActions(
+            list = HomeListActions(onDurationSelected, onRouteSelected, onLoadMoreRoutes),
+            quickStart = QuickStartActions(onQuickStart, onRebookLastFlight),
+            footer = FooterActions(onReturnToCockpit, onBookSelectedRoute),
+        ),
+    )
+}
+
+private data class HomeScreenActions(
+    val list: HomeListActions,
+    val quickStart: QuickStartActions,
+    val footer: FooterActions,
+)
+
+private data class HomeListActions(
+    val onDurationSelected: (Int) -> Unit,
+    val onRouteSelected: (String) -> Unit,
+    val onLoadMoreRoutes: () -> Unit,
+)
+
+private data class QuickStartActions(
+    val onStart: (Int) -> Unit,
+    val onRebook: () -> Unit,
+)
+
+private data class FooterActions(
+    val onReturnToCockpit: () -> Unit,
+    val onBookSelectedRoute: () -> Unit,
+)
+
+@Composable
+private fun HomeScreenLayout(
+    uiState: HomeUiState,
+    activeFlight: ActiveFlight?,
+    actions: HomeScreenActions,
+) {
     val selectedRoute = uiState.selectedRoute
     val listState = rememberLazyListState()
 
-    LaunchedEffect(listState, uiState.hasMoreRoutes, uiState.displayedRouteCount) {
-        if (!uiState.hasMoreRoutes) return@LaunchedEffect
-        snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-            if (layoutInfo.totalItemsCount == 0) return@snapshotFlow false
-            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisibleIndex >= layoutInfo.totalItemsCount - 2
-        }
-            .distinctUntilChanged()
-            .collect { nearEnd ->
-                if (nearEnd) onLoadMoreRoutes()
-            }
-    }
+    ObserveMoreDepartures(listState, uiState.hasMoreRoutes, uiState.displayedRouteCount, actions.list.onLoadMoreRoutes)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(HomeBackground),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         LazyColumn(
             state = listState,
@@ -138,68 +181,111 @@ fun HomeScreenContent(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { AirportJourneyZone(uiState.currentAirport, uiState.points, selectedRoute) }
-            uiState.pilotRankLabel?.let { item { PilotRankBanner(it, uiState.pilotProgressLabel.orEmpty()) } }
-            if (activeFlight != null) {
-                item {
-                    InFlightHomePanel(activeFlight = activeFlight)
-                }
-            } else {
-                item {
-                    when {
-                        uiState.isLoading -> EmptyState(
-                            title = "Loading departures",
-                            message = "Checking reachable airports from your current gate.",
-                        )
-                        uiState.errorMessage != null && uiState.routes.isEmpty() -> EmptyState(
-                            title = "Departure board unavailable",
-                            message = uiState.errorMessage,
-                        )
-                        uiState.routes.isEmpty() -> EmptyState(
-                            title = "No departures found",
-                            message = "No airports fit within ${uiState.selectedDurationMinutes} min. Try 25, 45, or 60 min.",
-                        )
-                        else -> RouteExplorerZone(
-                            currentAirport = uiState.currentAirport,
-                            selectedRoute = selectedRoute,
-                            selectedDurationMinutes = uiState.selectedDurationMinutes,
-                            availableDurationsMinutes = uiState.availableDurationsMinutes,
-                            visibleCount = visibleRoutes.size,
-                            totalCount = uiState.routes.size,
-                            onDurationSelected = onDurationSelected,
-                        )
-                    }
-                }
-                if (visibleRoutes.isNotEmpty()) {
-                    item {
-                        DepartureRowsHeader(
-                            visibleCount = visibleRoutes.size,
-                            totalCount = uiState.routes.size,
-                        )
-                    }
-                    itemsIndexed(visibleRoutes, key = { _, route -> route.id }) { _, route ->
-                        CompactDepartureRow(
-                            route = route,
-                            selected = route.id == uiState.selectedRouteId,
-                            onSelected = { onRouteSelected(route.id) },
-                        )
-                    }
-                    if (uiState.hasMoreRoutes) {
-                        item {
-                            LoadMoreDeparturesRow(
-                                remainingCount = uiState.remainingRouteCount,
-                                onLoadMore = onLoadMoreRoutes,
-                            )
-                        }
-                    }
-                }
+            item {
+                AirportJourneyZone(
+                    airport = uiState.currentAirport,
+                    points = uiState.points,
+                    selectedRoute = selectedRoute,
+                )
             }
+            quickStartItem(uiState, activeFlight, actions.quickStart)
+            pilotRankItem(uiState)
+            flightAndDepartureItems(uiState, activeFlight, actions.list)
         }
         TerminalActionFooter(
             selectedRoute = selectedRoute,
             activeFlight = activeFlight,
-            onReturnToCockpit = onReturnToCockpit,
-            onBookSelectedRoute = onBookSelectedRoute,
+            onReturnToCockpit = actions.footer.onReturnToCockpit,
+            onBookSelectedRoute = actions.footer.onBookSelectedRoute,
+        )
+    }
+}
+
+@Composable
+private fun ObserveMoreDepartures(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    hasMore: Boolean,
+    displayedCount: Int,
+    onLoadMore: () -> Unit,
+) {
+    LaunchedEffect(listState, hasMore, displayedCount) {
+        if (!hasMore) return@LaunchedEffect
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            if (layoutInfo.totalItemsCount == 0) return@snapshotFlow false
+            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisibleIndex >= layoutInfo.totalItemsCount - 2
+        }.distinctUntilChanged().collect { nearEnd ->
+            if (nearEnd) onLoadMore()
+        }
+    }
+}
+
+private fun LazyListScope.pilotRankItem(uiState: HomeUiState) {
+    uiState.pilotRankLabel?.let { rank ->
+        item { PilotRankBanner(rank, uiState.pilotProgressLabel.orEmpty()) }
+    }
+}
+
+private fun LazyListScope.quickStartItem(
+    uiState: HomeUiState,
+    activeFlight: ActiveFlight?,
+    actions: QuickStartActions,
+) {
+    if (activeFlight != null) return
+    item {
+        QuickStartCard(
+            lastFlightAvailable = uiState.lastFlight != null,
+            onQuickStart = actions.onStart,
+            onRebookLastFlight = actions.onRebook,
+        )
+    }
+}
+
+private fun LazyListScope.flightAndDepartureItems(
+    uiState: HomeUiState,
+    activeFlight: ActiveFlight?,
+    actions: HomeListActions,
+) {
+    if (activeFlight != null) {
+        item { InFlightHomePanel(activeFlight) }
+        return
+    }
+    item { HomeDepartureStatus(uiState, actions.onDurationSelected) }
+    if (uiState.visibleRoutes.isEmpty()) return
+    item { DepartureRowsHeader(uiState.visibleRoutes.size, uiState.routes.size) }
+    itemsIndexed(uiState.visibleRoutes, key = { _, route -> route.id }) { _, route ->
+        CompactDepartureRow(
+            route = route,
+            selected = route.id == uiState.selectedRouteId,
+            onSelected = { actions.onRouteSelected(route.id) },
+        )
+    }
+    if (uiState.hasMoreRoutes) {
+        item { LoadMoreDeparturesRow(uiState.remainingRouteCount, actions.onLoadMoreRoutes) }
+    }
+}
+
+@Composable
+private fun HomeDepartureStatus(
+    uiState: HomeUiState,
+    onDurationSelected: (Int) -> Unit,
+) {
+    when {
+        uiState.isLoading -> EmptyState(title = "Loading departures", message = "Checking reachable airports from your current gate.")
+        uiState.errorMessage != null && uiState.routes.isEmpty() -> EmptyState(title = "Departure board unavailable", message = uiState.errorMessage)
+        uiState.routes.isEmpty() -> EmptyState(
+            title = "No departures found",
+            message = "No airports fit within ${uiState.selectedDurationMinutes} min. Try 25, 45, or 60 min.",
+        )
+        else -> RouteExplorerZone(
+            currentAirport = uiState.currentAirport,
+            selectedRoute = uiState.selectedRoute,
+            selectedDurationMinutes = uiState.selectedDurationMinutes,
+            availableDurationsMinutes = uiState.availableDurationsMinutes,
+            visibleCount = uiState.visibleRoutes.size,
+            totalCount = uiState.routes.size,
+            onDurationSelected = onDurationSelected,
         )
     }
 }
@@ -387,6 +473,74 @@ private fun RouteExplorerZone(
                 maxFlightTimeMinutes = selectedDurationMinutes,
             )
         }
+    }
+}
+
+@Composable
+private fun QuickStartCard(
+    lastFlightAvailable: Boolean,
+    onQuickStart: (Int) -> Unit,
+    onRebookLastFlight: () -> Unit,
+) {
+    var showCustomDuration by remember { mutableStateOf(false) }
+    var customMinutes by remember { mutableStateOf("30") }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = BoardPanel,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, BoardLine),
+        shadowElevation = 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("QUICK START", style = MaterialTheme.typography.labelLarge, color = BoardBlue, fontWeight = FontWeight.Black)
+            Text("Choose a focus flight. We'll handle check-in, your seat, and the boarding pass.", color = MutedText, style = MaterialTheme.typography.bodySmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(15, 25, 45, 60, 90).forEach { minutes ->
+                    DurationToken(label = "${minutes}m", selected = false, onClick = { onQuickStart(minutes) })
+                }
+                DurationToken(label = "Custom", selected = false, onClick = { showCustomDuration = true })
+            }
+            if (lastFlightAvailable) {
+                TextButton(onClick = onRebookLastFlight) {
+                    Text("Rebook last flight")
+                }
+            }
+        }
+    }
+
+    if (showCustomDuration) {
+        AlertDialog(
+            onDismissRequest = { showCustomDuration = false },
+            title = { Text("Custom focus flight") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Choose a maximum flight window from 15 to 180 minutes.")
+                    OutlinedTextField(
+                        value = customMinutes,
+                        onValueChange = { value -> customMinutes = value.filter(Char::isDigit).take(3) },
+                        label = { Text("Minutes") },
+                        singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = (customMinutes.toIntOrNull() ?: 0) in 15..180,
+                    onClick = {
+                        val minutes = customMinutes.toIntOrNull() ?: return@Button
+                        showCustomDuration = false
+                        onQuickStart(minutes)
+                    },
+                ) { Text("Start flight") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomDuration = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 
@@ -1283,7 +1437,10 @@ private fun HomeRouteCardUiModel.boardStatusLabel(): String {
 @Composable
 private fun PilotRankBanner(rank: String, progress: String) {
     Surface(color = BoardPanel, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, BoardLine)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             Text(rank, fontWeight = FontWeight.Bold, color = BoardInk)
             Text(progress, color = MutedText)
         }

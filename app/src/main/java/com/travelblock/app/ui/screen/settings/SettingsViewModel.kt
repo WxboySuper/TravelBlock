@@ -121,6 +121,14 @@ class SettingsViewModel(
         }
     }
 
+    fun setDebugShortFlightsEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setDebugShortFlightsEnabled(enabled) }
+    }
+
+    fun setDebugFlightDurationSeconds(seconds: Int) {
+        viewModelScope.launch { settingsRepository.setDebugFlightDurationSeconds(seconds) }
+    }
+
     fun showResetConfirmation() {
         uiState = uiState.copy(showResetConfirmation = true)
     }

@@ -29,18 +29,22 @@ import com.travelblock.app.data.settings.UserSettings
 import com.travelblock.app.domain.engine.FlightRewardCalculator
 import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.ArrivalSummary
+import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.ui.navigation.TravelBlockBottomBar
 import com.travelblock.app.ui.navigation.TravelBlockDestination
 import com.travelblock.app.ui.screen.arrival.ArrivalScreen
 import com.travelblock.app.ui.screen.book.BookScreen
+import com.travelblock.app.ui.screen.book.QuickBoardingScreen
+import com.travelblock.app.ui.screen.book.createQuickBoardingPass
 import com.travelblock.app.ui.screen.cockpit.CockpitScreen
 import com.travelblock.app.ui.screen.diversion.DiversionScreen
 import com.travelblock.app.ui.screen.home.HomeScreen
 import com.travelblock.app.ui.screen.logbook.FlightLogDetailScreen
 import com.travelblock.app.ui.screen.logbook.LogbookScreen
 import com.travelblock.app.ui.screen.settings.SettingsScreen
+import com.travelblock.app.ui.screen.onboarding.OnboardingScreen
 import com.travelblock.app.ui.screen.store.StoreScreen
 import com.travelblock.app.ui.util.FlightAudioCue
 import com.travelblock.app.ui.util.FlightAudioCuePlayer
@@ -48,26 +52,71 @@ import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.travelblock.app.MainActivity
+import com.travelblock.app.ui.theme.TravelBlockTheme
 
 @Composable
 fun TravelBlockApp(openArrivalRequested: Boolean = false) {
     val context = LocalContext.current.applicationContext
     val container = remember(context) { TravelBlockContainer(context) }
+    val settings by container.settingsRepository.settings.collectAsState(initial = UserSettings())
+    val darkTheme = when (settings.selectedTheme) {
+        "dark" -> true
+        "light" -> false
+        else -> null
+    }
+    TravelBlockTheme(darkTheme = darkTheme) {
+        TravelBlockAppContent(container, settings, openArrivalRequested)
+    }
+}
+
+@Composable
+private fun TravelBlockAppContent(
+    container: TravelBlockContainer,
+    settings: UserSettings,
+    openArrivalRequested: Boolean,
+) {
+    val activity = LocalContext.current as? MainActivity
     val state = remember { TravelBlockAppState() }
     val navController = rememberNavController()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    val settings by container.settingsRepository.settings.collectAsState(initial = UserSettings())
     val pointsBalance by container.pointsRepository.observePointsBalance().collectAsState(initial = 0)
     val coroutineScope = rememberCoroutineScope()
     val audioCuePlayer = remember { FlightAudioCuePlayer() }
     val runtime = TravelBlockRuntime(container, state, settings, pointsBalance, coroutineScope, audioCuePlayer)
 
     TravelBlockEffects(runtime, navController, currentRoute, openArrivalRequested)
-    TravelBlockShell(navController, currentRoute, runtime)
+    if (settings.onboardingComplete) {
+        TravelBlockShell(navController, currentRoute, runtime)
+    } else {
+        OnboardingFlow(container, coroutineScope, activity)
+    }
+}
+
+@Composable
+private fun OnboardingFlow(
+    container: TravelBlockContainer,
+    coroutineScope: CoroutineScope,
+    activity: MainActivity?,
+) {
+    OnboardingScreen(
+        airports = remember(container) { container.airportRepository.getAllAirports() },
+        onFinish = { homeAirport, requestNotifications ->
+            coroutineScope.launch {
+                homeAirport?.let {
+                    container.settingsRepository.setHomeAirportCode(it.code)
+                    container.settingsRepository.setCurrentAirportCode(it.code)
+                }
+                if (requestNotifications) activity?.requestNotificationPermissionIfNeeded()
+                container.settingsRepository.setOnboardingComplete(true)
+            }
+        },
+    )
 }
 
 private class TravelBlockAppState {
     var draftFlightBooking by mutableStateOf<DraftFlightBooking?>(null)
+    var quickBoardingPass by mutableStateOf<BoardingPass?>(null)
     var activeFlight by mutableStateOf<ActiveFlight?>(null)
     var arrivalSummary by mutableStateOf<ArrivalSummary?>(null)
     var diversionSummary by mutableStateOf<DiversionSummary?>(null)
@@ -178,6 +227,7 @@ private fun TravelBlockBottomBarHost(
 private fun shouldShowBottomBar(currentRoute: String?): Boolean =
     currentRoute !in setOf(
         TravelBlockDestination.Book.route,
+        TravelBlockDestination.QuickBoarding.route,
         TravelBlockDestination.Cockpit.route,
         TravelBlockDestination.Arrival.route,
         TravelBlockDestination.Diversion.route,
@@ -200,6 +250,7 @@ private fun TravelBlockNavGraph(
     ) {
         homeRoute(navController, runtime)
         bookingRoute(navController, runtime)
+        quickBoardingRoute(navController, runtime)
         cockpitRoute(navController, runtime)
         arrivalRoute(navController, runtime)
         diversionRoute(navController, runtime)
@@ -225,7 +276,39 @@ private fun NavGraphBuilder.homeRoute(
                     navigateToBooking(navController)
                 }
             },
+            onStartQuickFlight = { draft ->
+                if (runtime.state.activeFlight == null) {
+                    runtime.state.quickBoardingPass = createQuickBoardingPass(draft)
+                    navController.navigate(TravelBlockDestination.QuickBoarding.route)
+                }
+            },
         )
+    }
+}
+
+private fun NavGraphBuilder.quickBoardingRoute(
+    navController: NavHostController,
+    runtime: TravelBlockRuntime,
+) {
+    composable(TravelBlockDestination.QuickBoarding.route) {
+        runtime.state.quickBoardingPass?.let { pass ->
+            QuickBoardingScreen(
+                boardingPass = pass,
+                onBack = { navController.popBackStack() },
+                onStartFlight = { startQuickFlight(pass, runtime, navController) },
+            )
+        }
+    }
+}
+
+private fun startQuickFlight(pass: BoardingPass, runtime: TravelBlockRuntime, navController: NavHostController) {
+    playCue(runtime, FlightAudioCue.FlightStarted)
+    val flight = pass.toActiveFlight(startedAt = Instant.now()).withDebugFlightDuration(runtime.settings)
+    runtime.state.activeFlight = flight
+    runtime.coroutineScope.launch {
+        runtime.container.activeFlightSessionRepository.saveActiveFlight(flight)
+        runtime.container.landingAlarmScheduler.schedule(flight)
+        navigateToCockpit(navController, popHome = true)
     }
 }
 
@@ -253,7 +336,7 @@ private fun startFocusFlight(
     navController: NavHostController,
 ) {
     playCue(runtime, FlightAudioCue.FlightStarted)
-    val activeFlight = pass.toActiveFlight(startedAt = Instant.now())
+    val activeFlight = pass.toActiveFlight(startedAt = Instant.now()).withDebugFlightDuration(runtime.settings)
     runtime.state.activeFlight = activeFlight
     runtime.coroutineScope.launch {
         runtime.container.activeFlightSessionRepository.saveActiveFlight(activeFlight)
@@ -442,6 +525,11 @@ internal fun shouldAutoRouteToCockpit(
 ): Boolean {
     if (!activeFlightRestored || !hasActiveFlight || restoreRouteHandled) return false
     return currentRoute == null || currentRoute == TravelBlockDestination.Home.route
+}
+
+internal fun ActiveFlight.withDebugFlightDuration(settings: UserSettings): ActiveFlight {
+    if (!settings.debugShortFlightsEnabled || !com.travelblock.app.BuildConfig.DEBUG) return this
+    return copy(plannedArrivalAt = startedAt.plusSeconds(settings.debugFlightDurationSeconds.toLong()))
 }
 
 internal fun shouldRestoreAsArrival(plannedArrivalAt: Instant, now: Instant): Boolean =

@@ -120,9 +120,20 @@ class HomeViewModel(
                 val pilot = PilotProgressionEngine.summarize(logs)
                 uiState = uiState.copy(
                     pilotRankLabel = pilot.rank.rank.title,
-                    pilotProgressLabel = pilot.rank.nextRank?.let { "${pilot.rank.hoursRemaining.toInt()}h to ${it.title}" } ?: "Top rank",
+                    pilotProgressLabel = pilot.rank.nextRank?.let { "${formatRemaining(pilot.rank.hoursRemaining)} to ${it.title}" } ?: "Top rank",
                 )
             }
+        }
+    }
+
+    private fun formatRemaining(hours: Double): String {
+        val totalMinutes = kotlin.math.ceil(hours * 60.0).toInt()
+        val h = totalMinutes / 60
+        val m = totalMinutes % 60
+        return when {
+            h == 0 -> "${m}m"
+            m == 0 -> "${h}h"
+            else -> "${h}h ${m}m"
         }
     }
 

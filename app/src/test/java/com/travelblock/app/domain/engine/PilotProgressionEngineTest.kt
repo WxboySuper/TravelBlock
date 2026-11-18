@@ -51,4 +51,11 @@ class PilotProgressionEngineTest {
         val result = PilotProgressionEngine.summarize(logs, zone, Instant.parse("2026-11-18T18:00:00Z"))
         assertTrue(result.unlockedBadges.containsAll(listOf("First Flight", "Ten Flights", "Red-eye", "Transatlantic", "Seven-day Streak")))
     }
+
+    @Test fun clearSkiesBadgeSurvivesALaterDiversion() {
+        val run = (1..5).map { flight("2026-11-${it.toString().padStart(2, '0')}", Spec(to = "B$it")) }
+        val diverted = flight("2026-11-06", Spec(status = FlightLogStatus.DIVERTED.name, to = "DIV"))
+        val result = PilotProgressionEngine.summarize(run + diverted, zone, Instant.parse("2026-11-18T18:00:00Z"))
+        assertTrue("Clear Skies" in result.unlockedBadges)
+    }
 }

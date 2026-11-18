@@ -12,7 +12,13 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.travelblock.app.domain.engine.PilotProgressionEngine
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import kotlin.math.roundToInt
 
 class LogbookViewModel(
@@ -24,7 +30,7 @@ class LogbookViewModel(
 
     init {
         viewModelScope.launch {
-            flightLogRepository.observeFlightLogs().collect { entries ->
+            combine(flightLogRepository.observeFlightLogs(), localDateTicker()) { entries, _ -> entries }.collect { entries ->
                 val sortedEntries = entries.sortedByDescending { it.endedAt }
                 uiState = LogbookUiState(
                     entries = sortedEntries.map { it.toUiModel() },
@@ -35,6 +41,14 @@ class LogbookViewModel(
             }
         }
     }
+
+    /** Emits the local date, re-checking each minute, so streak and weekly stats refresh across midnight. */
+    private fun localDateTicker(): Flow<LocalDate> = flow {
+        while (true) {
+            emit(LocalDate.now(zoneId))
+            delay(60_000)
+        }
+    }.distinctUntilChanged()
 
     private fun FlightLogEntity.toUiModel(): LogbookEntryUiModel {
         return LogbookEntryUiModel(

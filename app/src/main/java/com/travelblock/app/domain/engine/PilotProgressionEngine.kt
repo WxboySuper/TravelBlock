@@ -61,7 +61,7 @@ object PilotProgressionEngine {
         completed.flatMap { listOf(it.originCode, it.destinationCode) }.filter(String::isNotBlank).distinct().sorted()
 
     private fun unlockedBadges(all: List<FlightLogEntity>, completed: List<FlightLogEntity>, streakDays: Int, zone: ZoneId): Set<String> {
-        val clearRun = all.sortedBy { it.endedAt }.asReversed().takeWhile { it.isCompleted() }.size
+        val clearRun = longestCompletedRun(all)
         val checks = listOf(
             "First Flight" to completed.isNotEmpty(),
             "Ten Flights" to (completed.size >= 10),
@@ -72,6 +72,13 @@ object PilotProgressionEngine {
             "Clear Skies" to (clearRun >= 5),
         )
         return checks.filter { it.second }.map { it.first }.toSet()
+    }
+
+    /** Longest historical run of consecutive completed flights, so a later diversion never revokes the badge. */
+    private fun longestCompletedRun(all: List<FlightLogEntity>): Int {
+        var best = 0; var run = 0
+        all.sortedBy { it.endedAt }.forEach { run = if (it.isCompleted()) run + 1 else 0; best = maxOf(best, run) }
+        return best
     }
 
     private fun isRedEye(flight: FlightLogEntity, zone: ZoneId): Boolean {

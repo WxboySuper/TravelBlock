@@ -72,6 +72,8 @@ import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.components.StickyActionScaffold
 import com.travelblock.app.ui.components.TravelDayBackdrop
 import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.scene.CheckInDeskScene
+import com.travelblock.app.ui.scene.JetBridgeScene
 import com.travelblock.app.ui.theme.Cream
 import com.travelblock.app.ui.theme.DuskBlue
 import com.travelblock.app.ui.theme.Ink
@@ -295,7 +297,7 @@ private fun CheckInSurface(
             )
         }
         if (!uiState.showSeatSelection) {
-            item { RouteMapCard(origin = origin, destination = destination) }
+            item { CheckInDeskScene(flightNumber = uiState.flightNumber, gate = uiState.gate) }
         }
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->
@@ -317,27 +319,6 @@ private fun CheckInSurface(
                 }
             }
         }
-    }
-}
-
-/** A modest real map of the route, shown on check-in only. Taps are swallowed; drags scroll the page. */
-@Composable
-private fun RouteMapCard(origin: Airport, destination: Airport) {
-    val shape = RoundedCornerShape(22.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(176.dp)
-            .clip(shape)
-            .border(1.dp, Sand, shape),
-    ) {
-        TravelMap(
-            origin = MapStop(origin.displayCode, GeoPoint(origin.latitude, origin.longitude)),
-            destination = MapStop(destination.displayCode, GeoPoint(destination.latitude, destination.longitude)),
-            modifier = Modifier.fillMaxSize(),
-        )
-        // Transparent overlay so the map never steals scroll gestures from the page.
-        Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } })
     }
 }
 
@@ -794,6 +775,7 @@ private fun GateCallScreen(
                 detail = "Take a breath. The next tap closes the cabin doors and starts Focus Mode.",
             )
         }
+        item { JetBridgeScene() }
         item {
             GateBoardingSequence(
                 gate = boardingPass.gate,

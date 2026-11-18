@@ -24,13 +24,14 @@ import kotlin.math.roundToInt
 class LogbookViewModel(
     private val flightLogRepository: FlightLogRepository,
     private val zoneId: ZoneId = ZoneId.systemDefault(),
+    dateChanges: Flow<LocalDate> = localDateTicker(zoneId),
 ) : ViewModel() {
     var uiState by mutableStateOf(LogbookUiState())
         private set
 
     init {
         viewModelScope.launch {
-            combine(flightLogRepository.observeFlightLogs(), localDateTicker()) { entries, _ -> entries }.collect { entries ->
+            combine(flightLogRepository.observeFlightLogs(), dateChanges) { entries, _ -> entries }.collect { entries ->
                 val sortedEntries = entries.sortedByDescending { it.endedAt }
                 uiState = LogbookUiState(
                     entries = sortedEntries.map { it.toUiModel() },
@@ -41,14 +42,6 @@ class LogbookViewModel(
             }
         }
     }
-
-    /** Emits the local date, re-checking each minute, so streak and weekly stats refresh across midnight. */
-    private fun localDateTicker(): Flow<LocalDate> = flow {
-        while (true) {
-            emit(LocalDate.now(zoneId))
-            delay(60_000)
-        }
-    }.distinctUntilChanged()
 
     private fun FlightLogEntity.toUiModel(): LogbookEntryUiModel {
         return LogbookEntryUiModel(
@@ -92,3 +85,11 @@ class LogbookViewModel(
         }
     }
 }
+
+/** Emits the local date, re-checking each minute, so streak and weekly stats refresh across midnight. */
+fun localDateTicker(zoneId: ZoneId): Flow<LocalDate> = flow {
+    while (true) {
+        emit(LocalDate.now(zoneId))
+        delay(60_000)
+    }
+}.distinctUntilChanged()

@@ -1,5 +1,22 @@
 # AGENT_NOTES
 
+## 2026-11-18 - Flight restore and background landing alerts
+
+### Changes
+
+- Connected restored Room sessions to `plannedArrivalAt`. Flights still in progress return to the cockpit and reschedule their alarm. Flights whose landing time passed while TravelBlock was away are recorded as completed, award points, update the current airport, and open Arrival directly.
+- Added an AlarmManager landing alert at the saved landing time. Exact alarms are used when allowed; Android 12+ falls back to `setAndAllowWhileIdle` when exact-alarm access is missing. The receiver rechecks the persisted flight and ignores stale alarm deliveries.
+- Added the Android 13 notification permission guard and an Arrival intent on the "You have landed" notification. Flight completion, diversion, and local-data reset cancel pending alarms.
+- Made completed flight and points record IDs stable across process death so restore can safely retry without duplicating logbook entries or rewards.
+- Kept cockpit navigation behind the Room save and alarm schedule, so the app does not present a started flight before its restore data and alert exist.
+- Kept Room at schema version 4 because no schema change was required. Existing 2-to-3 and 3-to-4 migrations remain explicit; there is no destructive migration fallback.
+- Added tests for expired, due, and still-active restore decisions, plus exact-alarm permission selection.
+- Changed the destination tab collections to getters after the full test run exposed an object initialization cycle that could put null into the cached list.
+
+### Verification
+
+- `JAVA_HOME='C:\Program Files\Android\Android Studio\jbr' .\gradlew.bat test assembleDebug lintDebug --no-daemon --max-workers=1`: BUILD SUCCESSFUL. All 83 unit tests passed; assemble and lint passed.
+
 ## 2026-05-19 - Phase 1: Native Android Shell
 
 ### Changed

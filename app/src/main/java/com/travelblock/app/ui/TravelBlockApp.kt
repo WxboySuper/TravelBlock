@@ -19,7 +19,10 @@ import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.data.database.PointsTransactionEntity
+import com.travelblock.app.data.database.FlightLogEntity
+import com.travelblock.app.data.database.FlightLogStatus
 import com.travelblock.app.data.settings.UserSettings
+import com.travelblock.app.domain.engine.FlightRewardCalculator
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -44,7 +47,7 @@ import java.util.UUID
 import kotlinx.coroutines.launch
 
 @Composable
-fun TravelBlockApp() {
+fun TravelBlockApp(openArrivalRequested: Boolean = false) {
     val context = LocalContext.current.applicationContext
     val container = remember(context) { TravelBlockContainer(context) }
     val navController = rememberNavController()
@@ -69,8 +72,31 @@ fun TravelBlockApp() {
 
     LaunchedEffect(activeFlightRestored) {
         if (activeFlightRestored) return@LaunchedEffect
-        activeFlight = container.activeFlightSessionRepository.getActiveFlight()
+        val restoredFlight = container.activeFlightSessionRepository.getActiveFlight()
+        if (restoredFlight != null && shouldRestoreAsArrival(restoredFlight.plannedArrivalAt, Instant.now())) {
+            recordRestoredArrival(container, restoredFlight)
+            container.landingAlarmScheduler.cancel()
+            container.notificationHelper.cancelFlightLandedNotification()
+            arrivalSummary = ArrivalSummary.fromCompletedFlight(
+                flight = restoredFlight,
+                pointsEarned = FlightRewardCalculator.completedReward(restoredFlight),
+            )
+            activeFlight = null
+        } else {
+            activeFlight = restoredFlight
+            restoredFlight?.let(container.landingAlarmScheduler::schedule)
+        }
         activeFlightRestored = true
+    }
+
+    LaunchedEffect(activeFlightRestored, arrivalSummary, openArrivalRequested) {
+        if (!activeFlightRestored || arrivalSummary == null) return@LaunchedEffect
+        if (openArrivalRequested || currentRoute == null || currentRoute == TravelBlockDestination.Home.route) {
+            navController.navigate(TravelBlockDestination.Arrival.route) {
+                popUpTo(TravelBlockDestination.Home.route) { inclusive = false }
+                launchSingleTop = true
+            }
+        }
     }
 
     DisposableEffect(Unit) {
@@ -171,16 +197,17 @@ fun TravelBlockApp() {
                         activeFlight = nextActiveFlight
                         coroutineScope.launch {
                             container.activeFlightSessionRepository.saveActiveFlight(nextActiveFlight)
+                            container.landingAlarmScheduler.schedule(nextActiveFlight)
+                            navController.navigate(TravelBlockDestination.Cockpit.route) {
+                                popUpTo(TravelBlockDestination.Home.route) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
                             val seatUpgradeTransaction = createSeatUpgradeTransaction(nextActiveFlight, Instant.now())
                             if (seatUpgradeTransaction != null) {
                                 container.pointsRepository.insertTransaction(seatUpgradeTransaction)
                             }
-                        }
-                        navController.navigate(TravelBlockDestination.Cockpit.route) {
-                            popUpTo(TravelBlockDestination.Home.route) {
-                                inclusive = false
-                            }
-                            launchSingleTop = true
                         }
                     },
                 )
@@ -195,6 +222,7 @@ fun TravelBlockApp() {
                             flightNumber = summary.flightNumber,
                             destinationCode = summary.destination.displayCode,
                         )
+                        container.landingAlarmScheduler.cancel()
                         arrivalSummary = summary
                         activeFlight = null
                         coroutineScope.launch {
@@ -209,6 +237,7 @@ fun TravelBlockApp() {
                     },
                     onFlightDiverted = { summary ->
                         audioCuePlayer.play(FlightAudioCue.FlightDiverted, enabled = settings.soundEnabled)
+                        container.landingAlarmScheduler.cancel()
                         diversionSummary = summary
                         activeFlight = null
                         coroutineScope.launch {
@@ -328,4 +357,46 @@ internal fun shouldAutoRouteToCockpit(
 ): Boolean {
     if (!activeFlightRestored || !hasActiveFlight || restoreRouteHandled) return false
     return currentRoute == null || currentRoute == TravelBlockDestination.Home.route
+}
+
+internal fun shouldRestoreAsArrival(plannedArrivalAt: Instant, now: Instant): Boolean =
+    !plannedArrivalAt.isAfter(now)
+
+private suspend fun recordRestoredArrival(
+    container: TravelBlockContainer,
+    flight: ActiveFlight,
+) {
+    val flightId = UUID.nameUUIDFromBytes(
+        "${flight.flightNumber}:${flight.startedAt.toEpochMilli()}".toByteArray(),
+    ).toString()
+    val endedAt = flight.plannedArrivalAt.toEpochMilli()
+    val pointsEarned = FlightRewardCalculator.completedReward(flight)
+    container.flightLogRepository.insertFlightLog(
+        FlightLogEntity(
+            id = flightId,
+            flightNumber = flight.flightNumber,
+            originCode = flight.origin.code,
+            destinationCode = flight.destination.code,
+            durationMinutes = flight.durationMinutes,
+            distanceMiles = flight.distanceMiles,
+            status = FlightLogStatus.COMPLETED.name,
+            startedAt = flight.startedAt.toEpochMilli(),
+            endedAt = endedAt,
+            seat = flight.seat.label,
+            pointsEarned = pointsEarned,
+            focusObjective = flight.focusObjective,
+            focusTag = flight.focusTag,
+        ),
+    )
+    container.pointsRepository.insertTransaction(
+        PointsTransactionEntity(
+            id = flightId,
+            amount = pointsEarned,
+            reason = "Completed flight",
+            createdAt = endedAt,
+            relatedFlightId = flightId,
+        ),
+    )
+    container.settingsRepository.setCurrentAirportCode(flight.destination.code)
+    container.activeFlightSessionRepository.clearActiveFlight()
 }

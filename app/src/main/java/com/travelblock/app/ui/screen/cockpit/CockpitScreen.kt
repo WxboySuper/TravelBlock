@@ -1,73 +1,93 @@
 package com.travelblock.app.ui.screen.cockpit
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
+import android.app.Activity
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import com.travelblock.app.domain.engine.FlightRouteInterpolation
+import com.travelblock.app.ui.scene.AirplaneWindow
+import com.travelblock.app.ui.scene.cabinDimFor
+import com.travelblock.app.ui.scene.localSolarHour
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.components.MapOptions
+import com.travelblock.app.ui.components.RouteStops
+import com.travelblock.app.ui.theme.Terracotta
+import com.travelblock.app.ui.theme.WarmGray
+import kotlinx.coroutines.delay
+import java.time.Instant
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.travelblock.app.TravelBlockContainer
 import com.travelblock.app.domain.engine.FlightRewardCalculator
 import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.ActiveFlightStatus
+import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.DiversionSummary
-import com.travelblock.app.domain.model.FlightMapModel
-import com.travelblock.app.ui.components.FlightProgressMapView
+import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.StampPill
+import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.components.TravelMapStyle
+import com.travelblock.app.ui.theme.Cream
+import com.travelblock.app.ui.theme.Lamp
+import com.travelblock.app.ui.theme.NightLine
+import com.travelblock.app.ui.theme.NightSky
+import com.travelblock.app.ui.theme.NightSurface
+import com.travelblock.app.ui.theme.Sand
+import com.travelblock.app.ui.theme.TravelBlockTheme
 import java.time.format.DateTimeFormatter
-import kotlin.math.pow
-
-private val FlightDeckBackground = Color(0xFF06111D)
-private val FlightDeckPanel = Color(0xFF0D2032)
-private val FlightDeckGlass = Color(0xFF123450)
-private val FlightDeckLine = Color(0xFF2D5877)
-private val FlightDeckText = Color(0xFFF4FAFF)
-private val FlightDeckMuted = Color(0xFF9EB7C9)
-private val FlightDeckBlue = Color(0xFF54C7FF)
-private val FlightDeckAmber = Color(0xFFFFC35A)
 
 @Composable
 fun CockpitScreen(
@@ -119,6 +139,10 @@ fun CockpitScreen(
     )
 }
 
+/**
+ * The view from a window seat. Outside the window the sky follows the real local time over the plane's
+ * position; the tray table holds the countdown, a seat-back map and your focus note.
+ */
 @Composable
 fun CockpitScreenContent(
     uiState: CockpitUiState,
@@ -126,604 +150,242 @@ fun CockpitScreenContent(
     onDismissDivert: () -> Unit,
     onConfirmDivert: () -> Unit,
 ) {
-    if (!uiState.hasActiveFlight) {
-        EmptyFlightDeck()
+    TravelBlockTheme(darkTheme = true) {
+        val flight = uiState.activeFlight
+        if (flight == null) {
+            LightStatusIcons(dark = true)
+            EmptyFlightDeck()
+        } else {
+            if (uiState.showDivertDialog) {
+                DivertDialog(flight, uiState, onDismissDivert, onConfirmDivert)
+            }
+            ActiveCockpit(flight, uiState, onDivertRequested)
+        }
+    }
+}
+
+/** Light status-bar icons over a dark cabin, dark icons over a bright one. Restored on leave. */
+@Composable
+private fun LightStatusIcons(dark: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(view, dark) {
+        val window = (view.context as? Activity)?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        val previous = controller?.isAppearanceLightStatusBars
+        controller?.isAppearanceLightStatusBars = !dark
+        onDispose { if (previous != null) controller.isAppearanceLightStatusBars = previous }
+    }
+}
+
+@Composable
+private fun ActiveCockpit(flight: ActiveFlight, uiState: CockpitUiState, onDivertRequested: () -> Unit) {
+    val progress = uiState.progress.coerceIn(0f, 1f)
+    val position = FlightRouteInterpolation.interpolate(flight.origin.toGeo(), flight.destination.toGeo(), progress.toDouble())
+    val longitude = rememberUpdatedState(position.longitude)
+    var hour by remember { mutableFloatStateOf(localSolarHour(Instant.now(), position.longitude)) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            hour = localSolarHour(Instant.now(), longitude.value)
+            delay(20_000)
+        }
+    }
+    val dim = cabinDimFor(hour)
+    val look = CabinLook(
+        wall = lerp(Color(0xFFD9CFBD), Color(0xFF17151F), dim),
+        tray = lerp(Color(0xFFF1E9DA), Color(0xFF232238), dim),
+        ink = lerp(Ink, Cream, dim),
+        quiet = lerp(WarmGray, Sand, dim),
+        accent = lerp(Terracotta, Lamp, dim),
+    )
+    LightStatusIcons(dark = dim > 0.5f)
+
+    Column(Modifier.fillMaxSize().background(look.wall)) {
+        WindowHeader(flight, uiState.status, look, Modifier.statusBarsPadding())
+        AirplaneWindow(hour, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 26.dp, vertical = 6.dp))
+        TrayTable(flight, uiState, look, onDivertRequested)
+    }
+}
+
+private class CabinLook(val wall: Color, val tray: Color, val ink: Color, val quiet: Color, val accent: Color)
+
+@Composable
+private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look: CabinLook, modifier: Modifier = Modifier) {
+    val kicker = when (status) {
+        ActiveFlightStatus.Active -> "Seat ${flight.seat.label} / ${flight.flightNumber}"
+        ActiveFlightStatus.Arrived -> "Landing"
+        ActiveFlightStatus.Diverted -> "Diverted"
+    }
+    Column(modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
+        Kicker(kicker, color = look.quiet)
+        Text(
+            "Flying to ${flight.destination.city.ifBlank { flight.destination.displayCode }}",
+            style = MaterialTheme.typography.headlineSmall,
+            color = look.ink,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun TrayTable(flight: ActiveFlight, uiState: CockpitUiState, look: CabinLook, onDivertRequested: () -> Unit) {
+    val shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)
+    val arrive = uiState.estimatedArrival?.format(DateTimeFormatter.ofPattern("h:mm a")) ?: "--"
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .shadow(18.dp, shape, clip = false)
+            .background(look.tray, shape)
+            .navigationBarsPadding()
+            .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.align(Alignment.CenterHorizontally).width(46.dp).height(5.dp).background(look.quiet.copy(alpha = 0.4f), RoundedCornerShape(50)))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Kicker("Landing in", color = look.quiet)
+                Text(uiState.timeRemainingLabel, style = MaterialTheme.typography.displayLarge, color = look.ink)
+            }
+            if (flight.focusObjective.isNotBlank() || flight.focusTag.isNotBlank()) StickyNote(flight.focusTag, flight.focusObjective)
+        }
+        Text("${flight.origin.displayCode}  to  ${flight.destination.displayCode}   /   arrive $arrive", style = MaterialTheme.typography.bodyMedium, color = look.accent)
+        PlaneTrack(uiState.progress, look)
+        SeatBackScreen(flight, uiState)
+        TrayFooter(uiState.status, look, onDivertRequested, Modifier.align(Alignment.CenterHorizontally))
+    }
+}
+
+@Composable
+private fun TrayFooter(status: ActiveFlightStatus, look: CabinLook, onDivertRequested: () -> Unit, modifier: Modifier = Modifier) {
+    if (status == ActiveFlightStatus.Active) {
+        Text(
+            "End flight early",
+            style = MaterialTheme.typography.labelLarge,
+            color = look.quiet,
+            modifier = modifier.clip(RoundedCornerShape(50)).clickable(onClick = onDivertRequested).padding(horizontal = 18.dp, vertical = 8.dp),
+        )
         return
     }
+    val message = if (status == ActiveFlightStatus.Arrived) "Touching down..." else "Saved to your logbook"
+    Text(message, style = MaterialTheme.typography.labelLarge, color = look.accent, modifier = modifier.padding(vertical = 8.dp))
+}
 
-    val flight = requireNotNull(uiState.activeFlight)
-    val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
+/** A little paper post-it holding what you are working on. */
+@Composable
+private fun StickyNote(tag: String, objective: String) {
+    Column(
+        Modifier
+            .widthIn(max = 150.dp)
+            .graphicsLayer { rotationZ = -3f }
+            .shadow(3.dp, RoundedCornerShape(4.dp))
+            .background(Color(0xFFFFE58A), RoundedCornerShape(4.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        if (tag.isNotBlank()) Text(tag.uppercase(), style = MaterialTheme.typography.labelSmall, color = Color(0xFF7A5B00))
+        if (objective.isNotBlank()) Text(objective, style = MaterialTheme.typography.bodySmall, color = Color(0xFF3A2E00), maxLines = 3)
+    }
+}
 
-    if (uiState.showDivertDialog) {
-        AlertDialog(
-            onDismissRequest = onDismissDivert,
-            containerColor = FlightDeckPanel,
-            titleContentColor = FlightDeckText,
-            textContentColor = FlightDeckMuted,
-            title = { Text("Divert flight?") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${flight.origin.code} to ${flight.destination.code}")
-                    Text("Focused so far: ${uiState.elapsedLabel}")
-                    Text("Miles flown: ${uiState.milesFlownLabel}")
-                    Text("This saves a diverted flight and reduces completion rewards.")
-                }
-            },
-            confirmButton = {
-                FlightDeckButton(label = "Divert Flight", onClick = onConfirmDivert, danger = true)
-            },
-            dismissButton = {
-                OutlinedButton(onClick = onDismissDivert) {
-                    Text("Stay Focused")
-                }
-            },
+/** A dotted line with a plane that slides along it as the flight progresses. */
+@Composable
+private fun PlaneTrack(progress: Float, look: CabinLook) {
+    val fraction = progress.coerceIn(0f, 1f)
+    BoxWithConstraints(Modifier.fillMaxWidth().height(26.dp)) {
+        val iconSize = 22.dp
+        Canvas(Modifier.fillMaxSize()) {
+            val y = size.height / 2
+            drawLine(look.quiet.copy(alpha = 0.45f), Offset(0f, y), Offset(size.width, y), strokeWidth = 4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 14f)), cap = StrokeCap.Round)
+            drawLine(look.accent, Offset(0f, y), Offset(size.width * fraction, y), strokeWidth = 5f, cap = StrokeCap.Round)
+        }
+        Icon(
+            Icons.Rounded.Flight,
+            contentDescription = null,
+            tint = look.accent,
+            modifier = Modifier.align(Alignment.CenterStart).offset(x = (maxWidth - iconSize) * fraction).size(iconSize).graphicsLayer { rotationZ = 90f },
         )
     }
+}
 
+/** The seat-back entertainment screen, showing the live flight map. */
+@Composable
+private fun SeatBackScreen(flight: ActiveFlight, uiState: CockpitUiState) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF071827), FlightDeckBackground, Color(0xFF03080E)),
-                ),
-            ),
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = 16.dp,
-                bottom = 128.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            item {
-                FlightDeckHeader(
-                    status = uiState.status,
-                    flightNumber = flight.flightNumber,
-                    destinationCode = flight.destination.code,
-                    destinationName = flight.destination.name,
-                )
-            }
-            item {
-                InFlightHero(
-                    originCode = flight.origin.code,
-                    destinationCode = flight.destination.code,
-                    distanceMiles = flight.distanceMiles,
-                    durationMinutes = flight.durationMinutes,
-                    progress = uiState.progress,
-                    timeRemaining = uiState.timeRemainingLabel,
-                    elapsed = uiState.elapsedLabel,
-                    milesFlown = uiState.milesFlownLabel,
-                    milesRemaining = uiState.milesRemainingLabel,
-                    eta = uiState.estimatedArrival?.format(timeFormatter) ?: "--",
-                    flightMap = uiState.flightMap,
-                )
-            }
-            item {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    FlightInstrument("FLOWN", uiState.milesFlownLabel)
-                    FlightInstrument("LEFT", uiState.milesRemainingLabel)
-                    FlightInstrument("TOTAL", uiState.totalDistanceLabel)
-                    FlightInstrument("SEAT", flight.seat.label)
-                    FlightInstrument("ALT", "28,000 ft")
-                    FlightInstrument("SPD", "360 mph")
-                }
-            }
-            if (flight.focusObjective.isNotBlank() || flight.focusTag.isNotBlank()) {
-                item {
-                    FocusCargoPanel(
-                        tag = flight.focusTag,
-                        objective = flight.focusObjective,
-                    )
-                }
-            }
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-        FlightDeckTray(
-            status = uiState.status,
-            elapsed = uiState.elapsedLabel,
-            onDivertRequested = onDivertRequested,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
-    }
-}
-
-@Composable
-private fun FlightDeckHeader(
-    status: ActiveFlightStatus,
-    flightNumber: String,
-    destinationCode: String,
-    destinationName: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = when (status) {
-                    ActiveFlightStatus.Active -> "FOCUS FLIGHT ACTIVE"
-                    ActiveFlightStatus.Arrived -> "ARRIVAL SEQUENCE"
-                    ActiveFlightStatus.Diverted -> "DIVERTED"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = FlightDeckBlue,
-                fontWeight = FontWeight.Black,
-            )
-            Text(
-                text = "Cruising to $destinationCode",
-                style = MaterialTheme.typography.headlineSmall,
-                color = FlightDeckText,
-                fontWeight = FontWeight.Black,
-            )
-            Text(
-                text = destinationName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = FlightDeckMuted,
-            )
-        }
-        Surface(
-            color = FlightDeckGlass,
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, FlightDeckLine),
-        ) {
-            Text(
-                text = flightNumber,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = FlightDeckText,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun InFlightHero(
-    originCode: String,
-    destinationCode: String,
-    distanceMiles: Double,
-    durationMinutes: Int,
-    progress: Float,
-    timeRemaining: String,
-    elapsed: String,
-    milesFlown: String,
-    milesRemaining: String,
-    eta: String,
-    flightMap: FlightMapModel?,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = FlightDeckPanel,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, FlightDeckLine),
-        shadowElevation = 8.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CabinWindow(progress = progress)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = timeRemaining,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = FlightDeckText,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = "ETA $eta",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = FlightDeckAmber,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            val resolvedMap = requireNotNull(flightMap)
-            FlightProgressMapView(
-                flightMap = resolvedMap,
-                originCode = originCode,
-                destinationCode = destinationCode,
-                progressLabel = "$durationMinutes min · ${distanceMiles.toInt()} mi",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(170.dp),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                CabinProgressTile("TRAVELED", milesFlown, elapsed, Modifier.weight(1f))
-                CabinProgressTile("REMAINING", milesRemaining, timeRemaining, Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun CabinProgressTile(
-    label: String,
-    value: String,
-    detail: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        color = FlightDeckGlass,
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, FlightDeckLine),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = FlightDeckBlue,
-                fontWeight = FontWeight.Black,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = FlightDeckText,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = detail,
-                style = MaterialTheme.typography.labelSmall,
-                color = FlightDeckMuted,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CabinWindow(progress: Float) {
-    val infinite = rememberInfiniteTransition(label = "cloudDrift")
-    val drift by infinite.animateFloat(
-        initialValue = -0.10f,
-        targetValue = 1.10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(9000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "cloudDrift",
-    )
-    Surface(
-        modifier = Modifier
+        Modifier
             .fillMaxWidth()
-            .height(170.dp),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(86.dp),
-        border = BorderStroke(10.dp, Color(0xFF263B4D)),
+            .height(118.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF05070E))
+            .padding(3.dp)
+            .clip(RoundedCornerShape(15.dp)),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF7FD8FF), Color(0xFF2D8BD0), Color(0xFF173E66)),
-                    ),
-                ),
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val cloud = Color.White.copy(alpha = 0.52f)
-                drawCircle(cloud, radius = 22.dp.toPx(), center = Offset(size.width * drift, size.height * 0.35f))
-                drawCircle(cloud.copy(alpha = 0.38f), radius = 30.dp.toPx(), center = Offset(size.width * (drift - 0.16f), size.height * 0.48f))
-                drawCircle(cloud.copy(alpha = 0.30f), radius = 24.dp.toPx(), center = Offset(size.width * (drift + 0.18f), size.height * 0.56f))
-                drawLine(
-                    color = Color.White.copy(alpha = 0.36f),
-                    start = Offset(size.width * 0.12f, size.height * 0.76f),
-                    end = Offset(size.width * 0.88f, size.height * 0.58f),
-                    strokeWidth = 2.dp.toPx(),
-                    cap = StrokeCap.Round,
-                )
-            }
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(18.dp),
-                color = Color.White.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(999.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.24f)),
-            ) {
-                Text(
-                    text = "${(progress * 100).toInt()}% ROUTE",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CurvedRouteDisplay(
-    originCode: String,
-    destinationCode: String,
-    progress: Float,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(104.dp),
-        ) {
-            val start = Offset(18.dp.toPx(), size.height * 0.72f)
-            val control = Offset(size.width * 0.50f, size.height * 0.06f)
-            val end = Offset(size.width - 18.dp.toPx(), size.height * 0.72f)
-            val path = Path().apply {
-                moveTo(start.x, start.y)
-                quadraticTo(control.x, control.y, end.x, end.y)
-            }
-            drawPath(
-                path = path,
-                color = FlightDeckBlue.copy(alpha = 0.30f),
-                style = Stroke(
-                    width = 4.dp.toPx(),
-                    cap = StrokeCap.Round,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f),
-                ),
-            )
-            val t = progress.coerceIn(0f, 1f)
-            fun quad(a: Float, b: Float, c: Float): Float {
-                return ((1 - t).pow(2) * a) + (2 * (1 - t) * t * b) + (t.pow(2) * c)
-            }
-            val plane = Offset(
-                x = quad(start.x, control.x, end.x),
-                y = quad(start.y, control.y, end.y),
-            )
-            drawCircle(FlightDeckAmber, radius = 6.dp.toPx(), center = start)
-            drawCircle(FlightDeckText, radius = 5.dp.toPx(), center = end)
-            drawCircle(FlightDeckBlue, radius = 11.dp.toPx(), center = plane)
-            drawLine(
-                color = FlightDeckBlue,
-                start = Offset(plane.x - 18.dp.toPx(), plane.y + 7.dp.toPx()),
-                end = Offset(plane.x + 18.dp.toPx(), plane.y - 7.dp.toPx()),
-                strokeWidth = 3.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            RouteCode(code = originCode, label = "ORIGIN")
-            RouteCode(code = destinationCode, label = "DESTINATION", alignEnd = true)
-        }
-    }
-}
-
-@Composable
-private fun RouteCode(
-    code: String,
-    label: String,
-    alignEnd: Boolean = false,
-) {
-    Column(horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = FlightDeckMuted,
-            fontWeight = FontWeight.Bold,
+        TravelMap(
+            stops = RouteStops(flight.origin.toStop(), flight.destination.toStop()),
+            modifier = Modifier.fillMaxSize(),
+            progress = uiState.progress.coerceIn(0f, 1f),
+            options = MapOptions(style = TravelMapStyle.Night),
         )
         Text(
-            text = code,
-            style = MaterialTheme.typography.headlineSmall,
-            color = FlightDeckText,
-            fontWeight = FontWeight.Black,
+            "${uiState.milesRemainingLabel} to go",
+            style = MaterialTheme.typography.labelMedium,
+            color = Cream,
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Color(0x99000000), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
 }
 
 @Composable
-private fun FlightInstrument(label: String, value: String) {
-    Surface(
-        modifier = Modifier.width(104.dp),
-        color = FlightDeckPanel,
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, FlightDeckLine),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
+private fun DivertDialog(flight: ActiveFlight, uiState: CockpitUiState, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = NightSurface,
+        titleContentColor = Cream,
+        textContentColor = Sand,
+        shape = RoundedCornerShape(26.dp),
+        title = { Text("Land early?", style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("${flight.origin.code} to ${flight.destination.code}")
+                Text("Focused so far: ${uiState.elapsedLabel}")
+                Text("Miles flown: ${uiState.milesFlownLabel}")
+                Text("You will land at a nearby airport and keep what you have flown so far. Completion rewards are reduced.")
+            }
+        },
+        confirmButton = {
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = FlightDeckBlue,
-                fontWeight = FontWeight.Bold,
+                "Divert flight",
+                style = MaterialTheme.typography.labelLarge,
+                color = Sand,
+                modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onConfirm).padding(horizontal = 14.dp, vertical = 10.dp),
             )
+        },
+        dismissButton = {
             Text(
-                text = value,
-                style = MaterialTheme.typography.titleSmall,
-                color = FlightDeckText,
-                fontWeight = FontWeight.Bold,
+                "Stay focused",
+                style = MaterialTheme.typography.labelLarge,
+                color = Lamp,
+                modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onDismiss).padding(horizontal = 14.dp, vertical = 10.dp),
             )
-        }
-    }
-}
-
-@Composable
-private fun FocusCargoPanel(tag: String, objective: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = FlightDeckGlass,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, FlightDeckLine),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
-        ) {
-            Text(
-                text = "FOCUS CARGO",
-                style = MaterialTheme.typography.labelSmall,
-                color = FlightDeckBlue,
-                fontWeight = FontWeight.Black,
-            )
-            if (tag.isNotBlank()) {
-                Surface(
-                    color = FlightDeckAmber.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(999.dp),
-                    border = BorderStroke(1.dp, FlightDeckAmber.copy(alpha = 0.45f)),
-                ) {
-                    Text(
-                        text = tag,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = FlightDeckAmber,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-            if (objective.isNotBlank()) {
-                Text(
-                    text = objective,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = FlightDeckText,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FlightDeckTray(
-    status: ActiveFlightStatus,
-    elapsed: String,
-    onDivertRequested: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = Color(0xFF07111C).copy(alpha = 0.98f),
-        shadowElevation = 16.dp,
-        border = BorderStroke(1.dp, FlightDeckLine),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                color = FlightDeckBlue.copy(alpha = 0.14f),
-                border = BorderStroke(1.dp, FlightDeckBlue.copy(alpha = 0.42f)),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "NAV",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = FlightDeckBlue,
-                        fontWeight = FontWeight.Black,
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = "FLIGHT DECK",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = FlightDeckMuted,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Elapsed $elapsed",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = FlightDeckText,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            if (status == ActiveFlightStatus.Active) {
-                FlightDeckButton(label = "Divert", onClick = onDivertRequested, danger = true)
-            } else {
-                Text(
-                    text = if (status == ActiveFlightStatus.Arrived) "LANDING" else "SAVED",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = FlightDeckAmber,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FlightDeckButton(
-    label: String,
-    onClick: () -> Unit,
-    danger: Boolean = false,
-) {
-    Surface(
-        modifier = Modifier
-            .height(44.dp)
-            .clickable(onClick = onClick),
-        color = if (danger) FlightDeckAmber else FlightDeckBlue,
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
-    ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 14.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (danger) Color(0xFF221600) else Color.White,
-                fontWeight = FontWeight.Black,
-            )
-        }
-    }
+        },
+    )
 }
 
 @Composable
 private fun EmptyFlightDeck() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FlightDeckBackground)
-            .padding(20.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(
-            color = FlightDeckPanel,
-            shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, FlightDeckLine),
+    Box(Modifier.fillMaxSize().background(NightSky).padding(24.dp), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.background(NightSurface, RoundedCornerShape(26.dp)).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = "Flight deck empty",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = FlightDeckText,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Start from a boarding pass to enter Focus Mode.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = FlightDeckMuted,
-                )
-            }
+            Text("No flight in the air", style = MaterialTheme.typography.headlineSmall, color = Cream)
+            Text(
+                "Check in for a flight from the Home tab and your cockpit will open here.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Sand,
+            )
         }
     }
 }
+
+private fun Airport.toStop() = MapStop(displayCode, GeoPoint(latitude, longitude))
+
+private fun Airport.toGeo() = GeoPoint(latitude, longitude)

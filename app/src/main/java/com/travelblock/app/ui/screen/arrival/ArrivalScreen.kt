@@ -1,23 +1,23 @@
 package com.travelblock.app.ui.screen.arrival
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import com.travelblock.app.ui.components.StickyActionScaffold
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,20 +26,34 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.travelblock.app.domain.model.ActiveFlightStatus
+import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.ArrivalSummary
-import com.travelblock.app.ui.components.FlightProgressMapView
+import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.RouteStops
+import com.travelblock.app.ui.components.PaperCard
+import com.travelblock.app.ui.components.PrimaryButton
+import com.travelblock.app.ui.components.SecondaryButton
+import com.travelblock.app.ui.components.StampPill
+import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.scene.ArrivalScene
+import com.travelblock.app.ui.scene.ArrivalLocation
+import com.travelblock.app.ui.theme.Cream
+import com.travelblock.app.ui.theme.DuskBlue
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Sage
+import com.travelblock.app.ui.theme.Terracotta
+import com.travelblock.app.ui.theme.WarmGray
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
-import com.travelblock.app.ui.components.buildFlightMapModel
-
-private val ArrivalBackground = Color(0xFFF5F8FB)
-private val ArrivalBlue = Color(0xFF1D5F8A)
-private val ArrivalBlueSoft = Color(0xFFE5F2F8)
-private val ArrivalGreen = Color(0xFF287A55)
-private val ArrivalAmberSoft = Color(0xFFFFF3D7)
 
 @Composable
 fun ArrivalScreen(
@@ -51,296 +65,167 @@ fun ArrivalScreen(
     var showReturnHomePlaceholder by remember { mutableStateOf(false) }
 
     if (arrivalSummary == null) {
-        EmptyArrivalState(onContinueJourney = onContinueJourney)
+        EmptyArrivalState(onContinueJourney)
         return
     }
 
-    StickyActionScaffold(
-        modifier = Modifier.background(ArrivalBackground),
-        stickyAction = {
-            Button(
-                onClick = onContinueJourney,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
-            ) {
-                Text("Continue Journey")
-            }
-            OutlinedButton(
-                onClick = { showReturnHomePlaceholder = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
-            ) {
-                Text("Return Home")
-            }
-            OutlinedButton(
-                onClick = onViewLogbook,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
-            ) {
-                Text("View Logbook")
-            }
-        },
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(
-                text = "TravelBlock",
-                style = MaterialTheme.typography.labelLarge,
-                color = ArrivalBlue,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Arrived at ${arrivalSummary.destination.code}",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = arrivalSummary.destination.name,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val cityLine = listOfNotNull(
-                arrivalSummary.destination.city.takeIf { it.isNotBlank() },
-                arrivalSummary.destination.stateOrRegion?.takeIf { it.isNotBlank() },
-            ).joinToString(", ")
-            if (cityLine.isNotBlank()) {
-                Text(
-                    text = cityLine,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        item {
-            ArrivalHeroCard(arrivalSummary)
-        }
-        item {
-            FlightProgressMapView(
-                flightMap = buildFlightMapModel(
-                    origin = arrivalSummary.origin,
-                    destination = arrivalSummary.destination,
-                    progress = 1.0,
-                ),
-                originCode = arrivalSummary.origin.displayCode,
-                destinationCode = arrivalSummary.destination.displayCode,
-                progressLabel = "${arrivalSummary.durationMinutes} min · ${arrivalSummary.distanceMiles.roundToInt()} mi",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-            )
-        }
-        if (arrivalSummary.focusObjective.isNotBlank() || arrivalSummary.focusTag.isNotBlank()) {
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(18.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = "Focus cargo",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        if (arrivalSummary.focusTag.isNotBlank()) {
-                            Surface(
-                                color = ArrivalBlueSoft,
-                                shape = RoundedCornerShape(999.dp),
-                            ) {
-                                Text(
-                                    text = arrivalSummary.focusTag,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                                    color = ArrivalBlue,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                        }
-                        if (arrivalSummary.focusObjective.isNotBlank()) {
-                            Text(
-                                text = arrivalSummary.focusObjective,
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                ArrivalMetric("Focus", "${arrivalSummary.durationMinutes} min")
-                ArrivalMetric("Distance", "${arrivalSummary.distanceMiles.roundToInt()} mi")
-                ArrivalMetric("Points", "+${arrivalSummary.pointsEarned}")
-                ArrivalMetric("Seat", arrivalSummary.seat.label)
-            }
-        }
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(18.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = "Completion status",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Surface(
-                        color = ArrivalBlueSoft,
-                        shape = RoundedCornerShape(999.dp),
-                    ) {
-                        Text(
-                            text = when (arrivalSummary.status) {
-                                ActiveFlightStatus.Arrived -> "Completed"
-                                ActiveFlightStatus.Active -> "Active"
-                                ActiveFlightStatus.Diverted -> "Diverted"
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = ArrivalBlue,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                    Text(
-                        text = "Your flight has been saved to the logbook, points were awarded, and your current airport is now ${arrivalSummary.destination.code}.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = "Continue Journey opens the departure board from ${arrivalSummary.destination.displayCode} so the next route starts where you landed.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ArrivalBlue,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-        }
-        if (showReturnHomePlaceholder) {
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = ArrivalAmberSoft),
-                    shape = RoundedCornerShape(18.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = "Return home planning",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            text = "You are at ${arrivalSummary.destination.code}. A dedicated return-home route builder to $homeAirportCode is planned next.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-        item { Spacer(modifier = Modifier.height(8.dp)) }
-    }
-}
-
-@Composable
-private fun ArrivalHeroCard(arrivalSummary: ArrivalSummary) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(22.dp),
-    ) {
+    Box(Modifier.fillMaxSize().background(Cream)) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(top = 18.dp, bottom = 230.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AirportCodeBlock("FROM", arrivalSummary.origin.code)
-                Text(
-                    text = "TB",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = ArrivalBlue,
-                    fontWeight = FontWeight.Bold,
-                )
-                AirportCodeBlock("TO", arrivalSummary.destination.code)
+            ArrivalScene(ArrivalLocation(arrivalSummary.destination.displayCode, arrivalSummary.destination.longitude))
+            WelcomeHeader(arrivalSummary.destination)
+            RoutePostcard(arrivalSummary)
+            MetricsRow(arrivalSummary)
+            if (arrivalSummary.focusObjective.isNotBlank() || arrivalSummary.focusTag.isNotBlank()) {
+                FocusRecap(arrivalSummary.focusTag, arrivalSummary.focusObjective)
             }
-            Surface(
-                color = ArrivalGreen.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(999.dp),
-            ) {
-                Text(
-                    text = "Flight ${arrivalSummary.flightNumber} landed",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    color = ArrivalGreen,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            Text(
+                "Saved to your logbook. Your points are added, and you are now at ${arrivalSummary.destination.displayCode}. " +
+                    "Your next departure board starts right here.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = WarmGray,
+            )
+            if (showReturnHomePlaceholder) {
+                ReturnHomeNote(arrivalSummary.destination.displayCode, homeAirportCode)
+            }
+        }
+        ArrivalActions(
+            onContinueJourney = onContinueJourney,
+            onViewLogbook = onViewLogbook,
+            onReturnHome = { showReturnHomePlaceholder = true },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
+private fun WelcomeHeader(destination: Airport) {
+    val cityLine = listOfNotNull(
+        destination.city.takeIf { it.isNotBlank() },
+        destination.stateOrRegion?.takeIf { it.isNotBlank() },
+    ).joinToString(", ")
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Kicker("You have landed", color = Sage)
+            Text(
+                "Welcome to ${destination.city.ifBlank { destination.displayCode }}",
+                style = MaterialTheme.typography.displaySmall,
+                color = Ink,
+            )
+            Text(destination.name, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
+            if (cityLine.isNotBlank()) Text(cityLine, style = MaterialTheme.typography.bodySmall, color = WarmGray)
+        }
+        PassportStamp(destination.displayCode, Modifier.padding(start = 8.dp, top = 4.dp))
+    }
+}
+
+/** A rubber-stamp style badge, slightly tilted like it was pressed by hand. */
+@Composable
+private fun PassportStamp(code: String, modifier: Modifier = Modifier) {
+    val date = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("MMM d yyyy")).uppercase() }
+    Column(
+        modifier
+            .rotate(-9f)
+            .border(BorderStroke(3.dp, Terracotta.copy(alpha = 0.85f)), RoundedCornerShape(14.dp))
+            .padding(4.dp)
+            .border(BorderStroke(1.dp, Terracotta.copy(alpha = 0.6f)), RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("ARRIVED", style = MaterialTheme.typography.labelSmall, color = Terracotta)
+        Text(code, style = MaterialTheme.typography.headlineMedium, color = Terracotta)
+        Text(date, style = MaterialTheme.typography.labelSmall, color = Terracotta)
+    }
+}
+
+@Composable
+private fun RoutePostcard(summary: ArrivalSummary) {
+    PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            TravelMap(
+                stops = RouteStops(summary.origin.toStop(), summary.destination.toStop()),
+                progress = 1f,
+                modifier = Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(16.dp)),
+            )
+            Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("${summary.origin.displayCode}  to  ${summary.destination.displayCode}", style = MaterialTheme.typography.titleLarge, color = Ink)
+                StampPill("Flight ${summary.flightNumber}", color = Sage)
             }
         }
     }
 }
 
 @Composable
-private fun AirportCodeBlock(
-    label: String,
-    code: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = code,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Bold,
-        )
+private fun MetricsRow(summary: ArrivalSummary) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Metric("Focused", "${summary.durationMinutes} min", Modifier.weight(1f))
+        Metric("Distance", "${summary.distanceMiles.roundToInt()} mi", Modifier.weight(1f))
+        Metric("Points", "+${summary.pointsEarned}", Modifier.weight(1f), highlight = true)
     }
 }
 
 @Composable
-private fun ArrivalMetric(
-    label: String,
-    value: String,
+private fun Metric(label: String, value: String, modifier: Modifier = Modifier, highlight: Boolean = false) {
+    PaperCard(modifier, contentPadding = PaddingValues(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Kicker(label)
+            Text(value, style = MaterialTheme.typography.headlineSmall, color = if (highlight) Terracotta else Ink)
+        }
+    }
+}
+
+@Composable
+private fun FocusRecap(tag: String, objective: String) {
+    PaperCard(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Kicker("What you worked on")
+            if (tag.isNotBlank()) StampPill(tag, color = DuskBlue)
+            if (objective.isNotBlank()) Text(objective, style = MaterialTheme.typography.bodyLarge, color = Ink)
+        }
+    }
+}
+
+@Composable
+private fun ReturnHomeNote(here: String, homeAirportCode: String) {
+    PaperCard(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Heading home", style = MaterialTheme.typography.titleLarge, color = Ink)
+            Text(
+                "You are at $here. A route builder that takes you back to $homeAirportCode is coming soon.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = WarmGray,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArrivalActions(
+    onContinueJourney: () -> Unit,
+    onViewLogbook: () -> Unit,
+    onReturnHome: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Surface(
-        color = Color.White,
-        shape = RoundedCornerShape(16.dp),
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Cream, Cream)))
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp)
+            .padding(top = 28.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
+        PrimaryButton("Back to the terminal", onContinueJourney)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SecondaryButton("Logbook", onViewLogbook, Modifier.weight(1f))
+            SecondaryButton("Head home", onReturnHome, Modifier.weight(1f))
         }
     }
 }
@@ -348,34 +233,20 @@ private fun ArrivalMetric(
 @Composable
 private fun EmptyArrivalState(onContinueJourney: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(ArrivalBackground)
-            .padding(20.dp),
+        Modifier.fillMaxSize().background(Cream).padding(24.dp),
         verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(18.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(
-                    text = "Arrival",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Complete a focus flight to see landing details here.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(onClick = onContinueJourney) {
-                    Text("Back to Home")
-                }
-            }
-        }
+        Text("Nothing has landed yet", style = MaterialTheme.typography.headlineMedium, color = Ink, textAlign = TextAlign.Center)
+        Text(
+            "Finish a focus flight and your arrival card will appear here.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = WarmGray,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 10.dp),
+        )
+        PrimaryButton("Back to Home", onContinueJourney)
     }
 }
+
+private fun Airport.toStop() = MapStop(displayCode, GeoPoint(latitude, longitude))

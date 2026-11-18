@@ -106,7 +106,7 @@ fun TravelMap(
     }
 }
 
-private fun configureOsmdroid(context: Context) {
+internal fun configureOsmdroid(context: Context) {
     val config = Configuration.getInstance()
     config.userAgentValue = context.packageName
     val cache = java.io.File(context.cacheDir, "osmdroid").apply { mkdirs() }
@@ -116,7 +116,7 @@ private fun configureOsmdroid(context: Context) {
     config.tileFileSystemCacheTrimBytes = 60L * 1024 * 1024
 }
 
-private fun createMapView(context: Context, style: TravelMapStyle): MapView = MapView(context).apply {
+internal fun createMapView(context: Context, style: TravelMapStyle): MapView = MapView(context).apply {
     setTileSource(TileSourceFactory.MAPNIK)
     setBuiltInZoomControls(false)
     isTilesScaledToDpi = true

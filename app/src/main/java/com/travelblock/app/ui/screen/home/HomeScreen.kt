@@ -146,14 +146,7 @@ fun HomeScreenContent(
                 )
             }
             uiState.pilotRankLabel?.let { rank ->
-                item {
-                    Surface(color = BoardPanel, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, BoardLine)) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(rank, fontWeight = FontWeight.Bold, color = BoardInk)
-                            Text(uiState.pilotProgressLabel.orEmpty(), color = MutedText)
-                        }
-                    }
-                }
+                item { PilotRankBanner(rank, uiState.pilotProgressLabel.orEmpty()) }
             }
             if (activeFlight != null) {
                 item {
@@ -1292,5 +1285,15 @@ private fun HomeRouteCardUiModel.boardStatusLabel(): String {
         miles < 500 -> "Regional"
         miles < 1_200 -> "Major"
         else -> "Long"
+    }
+}
+
+@Composable
+private fun PilotRankBanner(rank: String, progress: String) {
+    Surface(color = BoardPanel, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, BoardLine)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(rank, fontWeight = FontWeight.Bold, color = BoardInk)
+            Text(progress, color = MutedText)
+        }
     }
 }

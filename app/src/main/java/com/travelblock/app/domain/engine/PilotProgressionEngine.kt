@@ -19,33 +19,64 @@ object PilotProgressionEngine {
     val badges = listOf("First Flight", "Ten Flights", "Red-eye", "Transatlantic", "Airport Collector", "Seven-day Streak", "Clear Skies")
 
     fun summarize(flights: List<FlightLogEntity>, zone: ZoneId = ZoneId.systemDefault(), now: Instant = Instant.now()): PilotSummary {
-        val completed = flights.filter { it.status == FlightLogStatus.COMPLETED.name }
+        val completed = flights.filter { it.isCompleted() }
         val hours = completed.sumOf { it.durationMinutes }.toDouble() / 60.0
+        val days = completed.map { it.endedAt.toLocalDate(zone) }.toSet()
+        val today = now.atZone(zone).toLocalDate()
+        val streak = currentStreak(days, today)
+        val best = bestStreak(days)
+        val airports = airportsVisited(completed)
+        val unlocked = unlockedBadges(flights, completed, airports.size, maxOf(streak, best), zone)
+        return PilotSummary(rankProgress(hours), streak, best, weeklyStats(completed, today, zone), airports, unlocked)
+    }
+
+    private fun FlightLogEntity.isCompleted() = status == FlightLogStatus.COMPLETED.name
+
+    private fun Long.toLocalDate(zone: ZoneId): LocalDate = Instant.ofEpochMilli(this).atZone(zone).toLocalDate()
+
+    private fun rankProgress(hours: Double): RankProgress {
         val rankIndex = ranks.indexOfLast { hours >= it.hoursRequired }.coerceAtLeast(0)
         val rank = ranks[rankIndex]
         val next = ranks.getOrNull(rankIndex + 1)
         val progress = if (next == null) 1f else ((hours - rank.hoursRequired) / (next.hoursRequired - rank.hoursRequired)).toFloat().coerceIn(0f, 1f)
-        val days = completed.map { Instant.ofEpochMilli(it.endedAt).atZone(zone).toLocalDate() }.toSet()
-        val today = now.atZone(zone).toLocalDate()
-        val streakStart = if (today in days) today else today.minusDays(1)
+        val remaining = ((next?.hoursRequired ?: rank.hoursRequired).toDouble() - hours).coerceAtLeast(0.0)
+        return RankProgress(rank, next, progress, remaining)
+    }
+
+    private fun currentStreak(days: Set<LocalDate>, today: LocalDate): Int {
+        var date = if (today in days) today else today.minusDays(1)
         var streak = 0
-        var date = streakStart
         while (date in days) { streak++; date = date.minusDays(1) }
+        return streak
+    }
+
+    private fun weeklyStats(completed: List<FlightLogEntity>, today: LocalDate, zone: ZoneId): WeekFlightStats {
         val weekStart = today.minusDays((today.dayOfWeek.value - 1).toLong())
-        val weeklyFlights = completed.filter { Instant.ofEpochMilli(it.endedAt).atZone(zone).toLocalDate() in weekStart..today }
-        val airports = completed.flatMap { listOf(it.originCode, it.destinationCode) }.filter(String::isNotBlank).distinct().sorted()
-        val allFlights = flights.sortedBy { it.endedAt }
-        val clearRun = allFlights.asReversed().takeWhile { it.status == FlightLogStatus.COMPLETED.name }.size
-        val unlocked = buildSet {
-            if (completed.isNotEmpty()) add("First Flight")
-            if (completed.size >= 10) add("Ten Flights")
-            if (completed.any { val h = Instant.ofEpochMilli(it.startedAt).atZone(zone).hour; h >= 22 || h < 5 }) add("Red-eye")
-            if (completed.any { it.distanceMiles >= 3000.0 }) add("Transatlantic")
-            if (airports.size >= 25) add("Airport Collector")
-            if (streak >= 7 || bestStreak(days) >= 7) add("Seven-day Streak")
-            if (clearRun >= 5) add("Clear Skies")
-        }
-        return PilotSummary(RankProgress(rank, next, progress, ((next?.hoursRequired ?: rank.hoursRequired).toDouble() - hours).coerceAtLeast(0.0)), streak, bestStreak(days), WeekFlightStats(weeklyFlights.sumOf { it.durationMinutes } / 60.0, weeklyFlights.size, weeklyFlights.sumOf { it.distanceMiles }, weeklyFlights.flatMap { listOf(it.originCode, it.destinationCode) }.distinct().size), airports, unlocked)
+        val week = completed.filter { it.endedAt.toLocalDate(zone) in weekStart..today }
+        val airports = week.flatMap { listOf(it.originCode, it.destinationCode) }.distinct().size
+        return WeekFlightStats(week.sumOf { it.durationMinutes } / 60.0, week.size, week.sumOf { it.distanceMiles }, airports)
+    }
+
+    private fun airportsVisited(completed: List<FlightLogEntity>): List<String> =
+        completed.flatMap { listOf(it.originCode, it.destinationCode) }.filter(String::isNotBlank).distinct().sorted()
+
+    private fun unlockedBadges(all: List<FlightLogEntity>, completed: List<FlightLogEntity>, airportCount: Int, streakDays: Int, zone: ZoneId): Set<String> {
+        val clearRun = all.sortedBy { it.endedAt }.asReversed().takeWhile { it.isCompleted() }.size
+        val checks = listOf(
+            "First Flight" to completed.isNotEmpty(),
+            "Ten Flights" to (completed.size >= 10),
+            "Red-eye" to completed.any { isRedEye(it, zone) },
+            "Transatlantic" to completed.any { it.distanceMiles >= 3000.0 },
+            "Airport Collector" to (airportCount >= 25),
+            "Seven-day Streak" to (streakDays >= 7),
+            "Clear Skies" to (clearRun >= 5),
+        )
+        return checks.filter { it.second }.map { it.first }.toSet()
+    }
+
+    private fun isRedEye(flight: FlightLogEntity, zone: ZoneId): Boolean {
+        val hour = Instant.ofEpochMilli(flight.startedAt).atZone(zone).hour
+        return hour >= 22 || hour < 5
     }
 
     private fun bestStreak(days: Set<LocalDate>): Int {

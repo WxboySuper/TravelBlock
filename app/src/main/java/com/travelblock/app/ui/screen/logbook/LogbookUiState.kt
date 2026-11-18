@@ -26,6 +26,8 @@ data class LogbookEntryUiModel(
     val isCompleted: Boolean,
     val pointsLabel: String,
     val dateLabel: String,
+    val originCode: String = "",
+    val destinationCode: String = "",
 )
 
 data class FlightLogDetailUiState(

@@ -55,6 +55,8 @@ class LogbookViewModel(
             pointsLabel = "+$pointsEarned pts",
             dateLabel = DateTimeFormatter.ofPattern("MMM d, h:mm a")
                 .format(Instant.ofEpochMilli(endedAt).atZone(zoneId)),
+            originCode = originCode,
+            destinationCode = destinationCode,
         )
     }
 

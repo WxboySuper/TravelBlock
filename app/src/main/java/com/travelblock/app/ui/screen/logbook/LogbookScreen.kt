@@ -1,45 +1,65 @@
 package com.travelblock.app.ui.screen.logbook
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FlightTakeoff
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.travelblock.app.data.repository.FlightLogRepository
-import com.travelblock.app.ui.components.EmptyState
-import com.travelblock.app.ui.components.SectionHeader
-import com.travelblock.app.ui.components.StatusChip
-import com.travelblock.app.ui.components.StatusTone
-import com.travelblock.app.ui.theme.CabinAmber
-import com.travelblock.app.ui.theme.MutedText
-import com.travelblock.app.ui.theme.SoftSky
-import com.travelblock.app.domain.engine.PilotProgressionEngine
-import kotlin.math.roundToInt
+import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.MapStop
+import com.travelblock.app.ui.components.MetricColumn
+import com.travelblock.app.ui.components.PaperCard
+import com.travelblock.app.ui.components.SecondaryButton
+import com.travelblock.app.ui.components.StampPill
+import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.theme.Cream
+import com.travelblock.app.ui.theme.DisplayFamily
+import com.travelblock.app.ui.theme.DuskBlue
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Marigold
+import com.travelblock.app.ui.theme.Sage
+import com.travelblock.app.ui.theme.Sand
+import com.travelblock.app.ui.theme.Terracotta
+import com.travelblock.app.ui.theme.WarmGray
 
+/**
+ * @param airportLookup optional code-to-airport lookup (e.g. `container.airportRepository::getAirportByCode`);
+ * when null the screen builds one itself from the bundled airport data.
+ */
 @Composable
 fun LogbookScreen(
     flightLogRepository: FlightLogRepository,
     onFlightSelected: (String) -> Unit,
+    airportLookup: AirportLookup? = null,
 ) {
     val viewModel: LogbookViewModel = viewModel(
         factory = LogbookViewModelFactory(flightLogRepository),
@@ -48,6 +68,7 @@ fun LogbookScreen(
     LogbookScreenContent(
         uiState = viewModel.uiState,
         onFlightSelected = onFlightSelected,
+        airportLookup = airportLookup,
     )
 }
 
@@ -55,194 +76,89 @@ fun LogbookScreen(
 fun LogbookScreenContent(
     uiState: LogbookUiState,
     onFlightSelected: (String) -> Unit,
+    airportLookup: AirportLookup? = null,
 ) {
+    val lookup = rememberAirportLookup(airportLookup)
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 20.dp),
+            .background(Cream)
+            .statusBarsPadding(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item {
-            Spacer(modifier = Modifier.height(12.dp))
-            SectionHeader(
-                title = "Logbook",
-                subtitle = "Your completed and diverted focus flights.",
-            )
+        item { LogbookHeader() }
+        when {
+            uiState.isLoading -> item { InfoCard("Opening your logbook...", "Gathering your flight history.") }
+            uiState.entries.isEmpty() -> item { EmptyLogbook() }
+            else -> filledLogbook(uiState, lookup, onFlightSelected)
         }
-        if (uiState.isLoading) {
-            item { EmptyState(title = "Logbook", message = "Loading flight history...") }
-        } else if (uiState.entries.isEmpty()) {
-            item {
-                EmptyState(
-                    title = "No flights logged yet",
-                    message = "Book a focus flight from Home, complete or divert it, and your travel history will appear here.",
-                )
-            }
-        } else {
-            uiState.pilot?.let { item { PilotPassportCard(it) } }
-            item { LogbookSummaryCard(uiState.summary) }
-            items(uiState.entries, key = { it.id }) { entry ->
-                LogbookEntryCard(
-                    entry = entry,
-                    onClick = { onFlightSelected(entry.id) },
-                )
-            }
-        }
-        item { Spacer(modifier = Modifier.height(20.dp)) }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+private fun LazyListScope.filledLogbook(uiState: LogbookUiState, lookup: AirportLookup?, onFlightSelected: (String) -> Unit) {
+    uiState.pilot?.let { pilot ->
+        item { PilotRankCard(pilot) }
+        item { StreakAndWeekRow(pilot) }
+    }
+    item { SectionTitle("Where you've been", "Every route you've landed, drawn on the map.") }
+    item { WhereYouveBeenCard(legsFor(uiState.entries, lookup)) }
+    item { LifetimeTotalsCard(uiState.summary) }
+    uiState.pilot?.let { pilot ->
+        item { PassportCard(pilot.airportsVisited) }
+        item { TrophyCaseCard(pilot.unlockedBadges) }
+    }
+    item { SectionTitle("Past flights", "Tap a ticket stub to see the details.") }
+    items(uiState.entries, key = { it.id }) { entry ->
+        TicketStub(entry = entry, onClick = { onFlightSelected(entry.id) })
     }
 }
 
 @Composable
-private fun PilotPassportCard(pilot: com.travelblock.app.domain.engine.PilotSummary) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Pilot record", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(pilot.rank.rank.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            if (pilot.rank.nextRank != null) {
-                androidx.compose.material3.LinearProgressIndicator(progress = { pilot.rank.progress }, modifier = Modifier.fillMaxWidth())
-                Text("${"%.1f".format(pilot.rank.hoursRemaining)} hours to ${pilot.rank.nextRank.title}", color = MutedText)
-            } else Text("Top rank reached")
-            Text("${pilot.currentStreak}-day streak · ${pilot.weekly.flights} flights this week · ${"%.1f".format(pilot.weekly.hours)} hours · ${pilot.weekly.distanceMiles.roundToInt()} mi", color = MutedText)
-            Text("Passport: ${pilot.airportsVisited.joinToString(" · ").ifBlank { "No stamps yet" }}", style = MaterialTheme.typography.bodyMedium)
-            Text("Trophy case", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            PilotProgressionEngine.badges.forEach { badge ->
-                Text("${if (badge in pilot.unlockedBadges) "★" else "◇"}  $badge", color = if (badge in pilot.unlockedBadges) CabinAmber else MutedText)
-            }
+private fun LogbookHeader() {
+    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Kicker("Your travel journal")
+        Text("Logbook", style = MaterialTheme.typography.headlineLarge, color = Ink)
+    }
+}
+
+@Composable
+private fun InfoCard(title: String, message: String) {
+    PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(20.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, color = Ink)
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
         }
     }
 }
 
 @Composable
-private fun LogbookSummaryCard(summary: LogbookSummaryUiModel) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+private fun EmptyLogbook() {
+    PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(28.dp)) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(64.dp).background(Marigold.copy(alpha = 0.25f), CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.FlightTakeoff, contentDescription = null, tint = Ink, modifier = Modifier.size(30.dp))
+            }
+            Text("No flights logged yet", style = MaterialTheme.typography.titleLarge, color = Ink)
             Text(
-                text = "Flight totals",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                "Book a focus flight from Home, land it (or divert), and your journal, passport and trophies start filling in.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = WarmGray,
+                textAlign = TextAlign.Center,
             )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SummaryMetric("Flights", summary.totalFlightsLabel)
-                SummaryMetric("Completed", summary.completedFlightsLabel)
-                SummaryMetric("Diverted", summary.divertedFlightsLabel)
-                SummaryMetric("Focus", summary.totalFocusTimeLabel)
-                SummaryMetric("Miles", summary.totalMilesLabel)
-                SummaryMetric("Points", summary.totalPointsLabel)
-            }
         }
     }
 }
 
-@Composable
-private fun SummaryMetric(
-    label: String,
-    value: String,
-) {
-    Surface(
-        color = SoftSky,
-        shape = RoundedCornerShape(14.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(text = label, color = MutedText, style = MaterialTheme.typography.labelMedium)
-            Text(text = value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-private fun LogbookEntryCard(
-    entry: LogbookEntryUiModel,
-    onClick: () -> Unit,
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier.clickable(onClick = onClick),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = entry.flightNumber,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                StatusChip(
-                    text = entry.statusLabel,
-                    tone = if (entry.isCompleted) StatusTone.Success else StatusTone.Warning,
-                )
-            }
-            Text(
-                text = entry.routeLabel,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(entry.durationLabel, color = MutedText, style = MaterialTheme.typography.bodyMedium)
-                Text(entry.distanceLabel, color = MutedText, style = MaterialTheme.typography.bodyMedium)
-                Text(entry.dateLabel, color = MutedText, style = MaterialTheme.typography.bodyMedium)
-                Text(entry.pointsLabel, color = CabinAmber, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyLogbookCard(
-    title: String = "Logbook",
-    message: String,
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(18.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MutedText,
-            )
-        }
-    }
-}
+// ---------- Flight detail ----------
 
 @Composable
 fun FlightLogDetailScreen(
     flightId: String,
     flightLogRepository: FlightLogRepository,
     onBack: () -> Unit,
+    airportLookup: AirportLookup? = null,
 ) {
     val viewModel: FlightLogDetailViewModel = viewModel(
         factory = FlightLogDetailViewModelFactory(
@@ -254,6 +170,7 @@ fun FlightLogDetailScreen(
     FlightLogDetailContent(
         uiState = viewModel.uiState,
         onBack = onBack,
+        airportLookup = airportLookup,
     )
 }
 
@@ -261,135 +178,103 @@ fun FlightLogDetailScreen(
 private fun FlightLogDetailContent(
     uiState: FlightLogDetailUiState,
     onBack: () -> Unit,
+    airportLookup: AirportLookup?,
 ) {
+    val lookup = rememberAirportLookup(airportLookup)
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxSize().background(Cream).statusBarsPadding(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Flight Detail",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        if (uiState.isLoading) {
-            item { EmptyLogbookCard(message = "Loading flight detail...") }
-        } else if (uiState.flight == null) {
-            item {
-                EmptyLogbookCard(
-                    title = "Flight not found",
-                    message = uiState.errorMessage ?: "This logbook entry could not be loaded.",
-                )
-            }
-            item {
-                androidx.compose.material3.OutlinedButton(onClick = onBack) {
-                    Text("Back to Logbook")
-                }
-            }
-        } else {
-            item { FlightDocumentCard(uiState.flight) }
-            item {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Text("Back to Logbook")
-                }
+            Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Kicker("From your journal")
+                Text("Flight detail", style = MaterialTheme.typography.headlineLarge, color = Ink)
             }
         }
-        item { Spacer(modifier = Modifier.height(20.dp)) }
+        val flight = uiState.flight
+        when {
+            uiState.isLoading -> item { InfoCard("Opening flight...", "Finding this page of your journal.") }
+            flight == null -> {
+                item { InfoCard("Flight not found", uiState.errorMessage ?: "This logbook entry could not be loaded.") }
+                item { SecondaryButton("Back to Logbook", onBack) }
+            }
+            else -> {
+                item { FlightRouteMap(flight, lookup) }
+                item { FlightTicket(flight) }
+                item { SecondaryButton("Back to Logbook", onBack) }
+            }
+        }
+        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
 @Composable
-private fun FlightDocumentCard(flight: FlightLogDetailUiModel) {
-    val statusColor = if (flight.isCompleted) MaterialTheme.colorScheme.primary else CabinAmber
-    val statusSurface = if (flight.isCompleted) SoftSky else CabinAmber.copy(alpha = 0.16f)
+private fun FlightRouteMap(flight: FlightLogDetailUiModel, lookup: AirportLookup?) {
+    val from = lookup?.invoke(flight.originCode)
+    val to = lookup?.invoke(flight.destinationCode)
+    if (from == null || to == null || !from.hasValidCoordinates || !to.hasValidCoordinates) return
+    Surface(shape = RoundedCornerShape(22.dp), color = Cream, modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(22.dp))) {
+        TravelMap(
+            origin = MapStop(from.displayCode, GeoPoint(from.latitude, from.longitude)),
+            destination = MapStop(to.displayCode, GeoPoint(to.latitude, to.longitude)),
+            modifier = Modifier.fillMaxSize(),
+            progress = if (flight.isCompleted) 1f else null,
+        )
+    }
+}
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(22.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text("TravelBlock", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    Text(flight.flightNumber, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                }
-                Surface(color = statusSurface, shape = RoundedCornerShape(999.dp)) {
-                    Text(
-                        text = flight.statusLabel,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        color = statusColor,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
+@Composable
+private fun FlightTicket(flight: FlightLogDetailUiModel) {
+    PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(20.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            TicketHeader(flight)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                AirportCode("From", flight.originCode)
+                Icon(Icons.Rounded.FlightTakeoff, contentDescription = null, tint = Terracotta, modifier = Modifier.size(28.dp))
+                AirportCode("To", flight.destinationCode, Alignment.End)
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                AirportBlock("FROM", flight.originCode)
-                AirportBlock("TO", flight.destinationCode)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(26.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                MetricColumn("Date", flight.dateLabel)
+                MetricColumn("Focus", flight.durationLabel)
+                MetricColumn("Distance", flight.distanceLabel)
+                MetricColumn("Seat", flight.seatLabel)
+                MetricColumn("Points", flight.pointsLabel)
             }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                SummaryMetric("Date", flight.dateLabel)
-                SummaryMetric("Focus", flight.durationLabel)
-                SummaryMetric("Distance", flight.distanceLabel)
-                SummaryMetric("Seat", flight.seatLabel)
-                SummaryMetric("Points", flight.pointsLabel)
-            }
-            if (flight.focusTag.isNotBlank() || flight.focusObjective.isNotBlank()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (flight.focusTag.isNotBlank()) {
-                        StatusChip(flight.focusTag, tone = StatusTone.Info)
-                    }
-                }
-                if (flight.focusObjective.isNotBlank()) {
-                    Text(
-                        text = flight.focusObjective,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-            Text(
-                text = flight.detailMessage,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MutedText,
-            )
+            FocusNote(flight)
+            Text(flight.detailMessage, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
         }
     }
 }
 
 @Composable
-private fun AirportBlock(
-    label: String,
-    code: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MutedText, fontWeight = FontWeight.SemiBold)
-        Text(code, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+private fun TicketHeader(flight: FlightLogDetailUiModel) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Column {
+            Kicker("TravelBlock Air", color = DuskBlue)
+            Text(flight.flightNumber, style = MaterialTheme.typography.headlineSmall, color = Ink)
+        }
+        StampPill(flight.statusLabel, color = if (flight.isCompleted) Sage else Terracotta)
+    }
+}
+
+@Composable
+private fun AirportCode(label: String, code: String, align: Alignment.Horizontal = Alignment.Start) {
+    Column(horizontalAlignment = align, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Kicker(label)
+        Text(code, fontFamily = DisplayFamily, style = MaterialTheme.typography.displaySmall, color = Ink)
+    }
+}
+
+@Composable
+private fun FocusNote(flight: FlightLogDetailUiModel) {
+    if (flight.focusTag.isBlank() && flight.focusObjective.isBlank()) return
+    Surface(color = Sand.copy(alpha = 0.45f), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (flight.focusTag.isNotBlank()) Kicker(flight.focusTag, color = DuskBlue)
+            if (flight.focusObjective.isNotBlank()) {
+                Text(flight.focusObjective, style = MaterialTheme.typography.bodyLarge, color = Ink)
+            }
+        }
     }
 }

@@ -42,6 +42,7 @@ import com.travelblock.app.ui.components.PrimaryButton
 import com.travelblock.app.ui.components.SecondaryButton
 import com.travelblock.app.ui.components.StampPill
 import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.scene.ArrivalScene
 import com.travelblock.app.ui.theme.Cream
 import com.travelblock.app.ui.theme.DuskBlue
 import com.travelblock.app.ui.theme.Ink
@@ -76,6 +77,7 @@ fun ArrivalScreen(
                 .padding(top = 18.dp, bottom = 230.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            ArrivalScene(arrivalSummary.destination.displayCode, arrivalSummary.destination.longitude)
             WelcomeHeader(arrivalSummary.destination)
             RoutePostcard(arrivalSummary)
             MetricsRow(arrivalSummary)

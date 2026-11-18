@@ -109,3 +109,56 @@ fun JetBridgeScene(modifier: Modifier = Modifier, localHour: Float = 14f) {
 }
 
 private fun Modifier.fillMaxSize(): Modifier = this.fillMaxWidth().height(2000.dp)
+
+/**
+ * Arriving in a city: its skyline against the sky at that city's real local time, windows lit after
+ * dark, and your plane drifting down toward the runway.
+ */
+@Composable
+fun ArrivalScene(cityCode: String, longitude: Double, modifier: Modifier = Modifier) {
+    val hour = androidx.compose.runtime.remember(cityCode) { localSolarHour(java.time.Instant.now(), longitude) }
+    val night = skyPaletteFor(hour).night
+    val transition = rememberInfiniteTransition(label = "arrival")
+    val glide by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
+    Box(modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(26.dp))) {
+        SkyScene(hour, Modifier.fillMaxSize(), speed = 0.35f)
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            // Landing plane gliding in from the left.
+            val px = w * (-0.1f + 1.2f * glide)
+            val py = h * (0.18f + 0.22f * glide)
+            val body = Color(0xFFF4F1EA)
+            drawRoundRect(body, Offset(px, py), Size(w * 0.13f, h * 0.045f), CornerRadius(14f))
+            drawRect(Color(0xFFCF6F4A), Offset(px + w * 0.015f, py - h * 0.04f), Size(w * 0.02f, h * 0.045f))
+            drawLine(Color(0xFFB5B2AC), Offset(px + w * 0.05f, py + h * 0.02f), Offset(px + w * 0.09f, py + h * 0.07f), strokeWidth = 6f)
+            // Skyline, generated from the airport code so every city looks its own.
+            val seed = cityCode.fold(7) { acc, c -> acc * 31 + c.code }
+            val base = h * 0.84f
+            var x = -10f
+            var i = 0
+            while (x < w) {
+                val r = ((seed + i * 7919) % 100 + 100) % 100 / 100f
+                val bw = w * (0.05f + 0.06f * r)
+                val bh = h * (0.14f + 0.36f * ((seed / 3 + i * 104729) % 100 + 100) % 100 / 100f)
+                val shade = Color(0xFF1F2336).copy(alpha = 0.55f + 0.4f * r)
+                drawRect(shade, Offset(x, base - bh), Size(bw, bh))
+                if (night > 0.35f || (night > 0.2f && i % 2 == 0)) {
+                    var wy = base - bh + 12f
+                    while (wy < base - 14f) {
+                        var wx = x + 8f
+                        while (wx < x + bw - 10f) {
+                            if ((wx.toInt() + wy.toInt() + i) % 3 != 0) drawRect(Color(0xFFFFD98A), Offset(wx, wy), Size(6f, 8f))
+                            wx += 16f
+                        }
+                        wy += 20f
+                    }
+                }
+                x += bw + 3f
+                i++
+            }
+            drawRect(Color(0xFF1B1D2A), Offset(0f, base), Size(w, h - base))
+            drawRect(Color(0xFFFFE08A), Offset(0f, base + 8f), Size(w, 3f))
+        }
+    }
+}

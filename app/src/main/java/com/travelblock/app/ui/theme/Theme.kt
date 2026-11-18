@@ -1,37 +1,64 @@
 package com.travelblock.app.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 
-private val TravelBlockLightColors = lightColorScheme(
-    primary = TerminalBlue,
-    onPrimary = GateSurface,
+private val DaylightColors = lightColorScheme(
+    primary = DuskBlue,
+    onPrimary = Paper,
     primaryContainer = SoftSky,
-    onPrimaryContainer = DeepNavy,
-    secondary = SkyBlue,
-    onSecondary = GateSurface,
-    secondaryContainer = ColorTokens.boardingBlueSoft,
-    onSecondaryContainer = DeepNavy,
-    tertiary = RunwayAmber,
-    background = CloudWhite,
-    onBackground = DeepNavy,
-    surface = GateSurface,
-    onSurface = DeepNavy,
-    surfaceVariant = SoftSky,
-    onSurfaceVariant = MutedText,
-    outline = AluminumGray,
+    onPrimaryContainer = Ink,
+    secondary = Terracotta,
+    onSecondary = Paper,
+    secondaryContainer = Sand,
+    onSecondaryContainer = Ink,
+    tertiary = Marigold,
+    onTertiary = Ink,
+    background = Cream,
+    onBackground = Ink,
+    surface = Paper,
+    onSurface = Ink,
+    surfaceVariant = Sand,
+    onSurfaceVariant = WarmGray,
+    outline = Sand,
 )
 
-private object ColorTokens {
-    val boardingBlueSoft = androidx.compose.ui.graphics.Color(0xFFDDEFFF)
-}
+private val NightColors = darkColorScheme(
+    primary = Lamp,
+    onPrimary = NightSky,
+    primaryContainer = NightSurface,
+    onPrimaryContainer = Cream,
+    secondary = SkyMist,
+    onSecondary = NightSky,
+    tertiary = Marigold,
+    background = NightSky,
+    onBackground = Cream,
+    surface = NightSurface,
+    onSurface = Cream,
+    surfaceVariant = NightLine,
+    onSurfaceVariant = Sand,
+    outline = NightLine,
+)
+
+private val SoftShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp),
+)
 
 @Composable
-fun TravelBlockTheme(content: @Composable () -> Unit) {
+fun TravelBlockTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = TravelBlockLightColors,
+        colorScheme = if (darkTheme) NightColors else DaylightColors,
         typography = TravelBlockTypography,
+        shapes = SoftShapes,
         content = content,
     )
 }

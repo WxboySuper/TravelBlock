@@ -13,6 +13,12 @@ import kotlinx.coroutines.flow.map
 
 private val Context.travelBlockDataStore by preferencesDataStore(name = "travelblock_settings")
 
+private data class AudioPreferences(
+    val soundEnabled: Boolean,
+    val announcementsEnabled: Boolean,
+    val hapticsEnabled: Boolean,
+)
+
 class DataStoreSettingsRepository(
     context: Context,
 ) : SettingsRepository {
@@ -95,13 +101,14 @@ class DataStoreSettingsRepository(
 
     private fun settingsFrom(preferences: Preferences): UserSettings {
         val homeAirportCode = preferences.homeAirportCode()
+        val audioPreferences = preferences.audioPreferences()
         return UserSettings(
             homeAirportCode = homeAirportCode,
             currentAirportCode = preferences.currentAirportCode(homeAirportCode),
             selectedTheme = preferences[SelectedThemeKey] ?: "system",
-            soundEnabled = preferences[SoundEnabledKey] ?: true,
-            announcementsEnabled = preferences[AnnouncementsEnabledKey] ?: true,
-            hapticsEnabled = preferences[HapticsEnabledKey] ?: true,
+            soundEnabled = audioPreferences.soundEnabled,
+            announcementsEnabled = audioPreferences.announcementsEnabled,
+            hapticsEnabled = audioPreferences.hapticsEnabled,
             onboardingComplete = preferences[OnboardingCompleteKey] ?: false,
             debugShortFlightsEnabled = preferences[DebugShortFlightsEnabledKey] ?: false,
             debugFlightDurationSeconds = preferences[DebugFlightDurationSecondsKey] ?: 15,
@@ -113,6 +120,12 @@ class DataStoreSettingsRepository(
     private fun Preferences.homeAirportCode() = this[HomeAirportCodeKey] ?: UserSettings.DefaultAirportCode
 
     private fun Preferences.currentAirportCode(homeAirportCode: String) = this[CurrentAirportCodeKey] ?: homeAirportCode
+
+    private fun Preferences.audioPreferences() = AudioPreferences(
+        soundEnabled = this[SoundEnabledKey] ?: true,
+        announcementsEnabled = this[AnnouncementsEnabledKey] ?: true,
+        hapticsEnabled = this[HapticsEnabledKey] ?: true,
+    )
 
     private companion object {
         val HomeAirportCodeKey = stringPreferencesKey("homeAirportCode")

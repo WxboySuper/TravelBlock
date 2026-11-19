@@ -50,6 +50,7 @@ import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.ui.theme.Cream
 import com.travelblock.app.ui.theme.DuskBlue
 import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Lamp
 import com.travelblock.app.ui.theme.Marigold
 import com.travelblock.app.ui.theme.Paper
 import com.travelblock.app.ui.theme.Sage
@@ -250,7 +251,7 @@ fun RoutePreviewMap(
 ) {
     val clampedProgress = progress?.coerceIn(0f, 1f)
     val surfaceColor = if (dark) Color(0xFF1E2740) else Paper
-    val lineColor = if (dark) Color(0xFFF2C46D) else Terracotta
+    val lineColor = if (dark) Lamp else Terracotta
     val textColor = if (dark) Cream else Ink
     val mutedColor = if (dark) Sand else WarmGray
     val borderColor = if (dark) Color(0xFF34405F) else Sand
@@ -629,7 +630,7 @@ private fun statusColors(tone: StatusTone): ChipColors {
         )
         StatusTone.Warning -> ChipColors(
             container = Marigold.copy(alpha = 0.2f),
-            content = Color(0xFF8A5F10),
+            content = Ink,
             border = Marigold.copy(alpha = 0.5f),
         )
         StatusTone.Info -> ChipColors(

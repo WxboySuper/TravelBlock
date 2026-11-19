@@ -141,4 +141,4 @@ fun MetricRow(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) { content() }
 }
 
-val JournalBackground = Cream
+val JournalBackground: Color get() = Cream

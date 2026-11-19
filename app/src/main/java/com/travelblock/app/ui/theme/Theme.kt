@@ -9,41 +9,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 
-private val DaylightColors = lightColorScheme(
-    primary = DuskBlue,
-    onPrimary = Paper,
-    primaryContainer = SoftSky,
-    onPrimaryContainer = Ink,
-    secondary = Terracotta,
-    onSecondary = Paper,
-    secondaryContainer = Sand,
-    onSecondaryContainer = Ink,
-    tertiary = Marigold,
-    onTertiary = Ink,
-    background = Cream,
-    onBackground = Ink,
-    surface = Paper,
-    onSurface = Ink,
-    surfaceVariant = Sand,
-    onSurfaceVariant = WarmGray,
-    outline = Sand,
+private fun daylightColors(p: TravelPalette) = lightColorScheme(
+    primary = p.accent,
+    onPrimary = p.paper,
+    primaryContainer = p.softSky,
+    onPrimaryContainer = p.ink,
+    secondary = p.duskBlue,
+    onSecondary = p.paper,
+    secondaryContainer = p.sand,
+    onSecondaryContainer = p.ink,
+    tertiary = p.highlight,
+    onTertiary = p.ink,
+    background = p.cream,
+    onBackground = p.ink,
+    surface = p.paper,
+    onSurface = p.ink,
+    surfaceVariant = p.sand,
+    onSurfaceVariant = p.warmGray,
+    outline = p.sand,
 )
 
-private val NightColors = darkColorScheme(
-    primary = Lamp,
-    onPrimary = NightSky,
-    primaryContainer = NightSurface,
-    onPrimaryContainer = Cream,
-    secondary = SkyMist,
-    onSecondary = NightSky,
-    tertiary = Marigold,
-    background = NightSky,
-    onBackground = Cream,
-    surface = NightSurface,
-    onSurface = Cream,
-    surfaceVariant = NightLine,
-    onSurfaceVariant = Sand,
-    outline = NightLine,
+private fun nightColors(p: TravelPalette) = darkColorScheme(
+    primary = p.lamp,
+    onPrimary = p.nightSky,
+    primaryContainer = p.nightSurface,
+    onPrimaryContainer = p.cream,
+    secondary = p.skyMist,
+    onSecondary = p.nightSky,
+    tertiary = p.highlight,
+    background = p.nightSky,
+    onBackground = p.cream,
+    surface = p.nightSurface,
+    onSurface = p.cream,
+    surfaceVariant = p.nightLine,
+    onSurfaceVariant = p.sand,
+    outline = p.nightLine,
 )
 
 private val SoftShapes = Shapes(
@@ -58,7 +58,7 @@ private val SoftShapes = Shapes(
 fun TravelBlockTheme(darkTheme: Boolean? = null, content: @Composable () -> Unit) {
     val useDarkTheme = darkTheme ?: isSystemInDarkTheme()
     MaterialTheme(
-        colorScheme = if (useDarkTheme) NightColors else DaylightColors,
+        colorScheme = if (useDarkTheme) nightColors(ActivePalette.current) else daylightColors(ActivePalette.current),
         typography = TravelBlockTypography,
         shapes = SoftShapes,
         content = content,

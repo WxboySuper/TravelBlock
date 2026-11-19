@@ -133,7 +133,7 @@ fun ArrivalScene(location: ArrivalLocation, modifier: Modifier = Modifier) {
             val w = size.width
             val h = size.height
             // Landing plane gliding in from the left, nose slightly down, gear coming out on final.
-            val plane = AirlinerStyle(Color(0xFFF4F1EA), Color(0xFFB5B2AC), Color(0xFFCF6F4A), Color(0xFF2A2630))
+            val plane = AirlinerStyle(Color(0xFFF4F1EA), Color(0xFFB5B2AC), Terracotta, Color(0xFF2A2630))
             val position = Offset(w * (-0.1f + 1.2f * glide), h * (0.2f + 0.22f * glide))
             drawAirliner(position, w * 0.22f, plane, AirlinerPose(facingRight = true, pitchDegrees = 5f, gearDown = glide > 0.55f))
             val base = h * 0.84f

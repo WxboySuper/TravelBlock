@@ -7,7 +7,7 @@ data class HomeUiState(
     val currentAirport: Airport? = null,
     val points: Int = 0,
     val selectedDurationMinutes: Int = 25,
-    val availableDurationsMinutes: List<Int> = listOf(15, 25, 45, 60, 90),
+    val availableDurationsMinutes: List<Int> = listOf(15, 25, 45, 60, 90, 120, 180, 240, 360, 480),
     val lastFlight: FlightLogEntity? = null,
     val routes: List<HomeRouteCardUiModel> = emptyList(),
     val displayedRouteCount: Int = HomeRouteDisplayDefaults.initialCount,
@@ -52,4 +52,8 @@ data class HomeRouteCardUiModel(
     val focusTimeLabel: String,
     val estimatedPointsLabel: String,
     val availabilityLabel: String,
-)
+    val legCount: Int = 1,
+    val breakMinutes: Int = 0,
+) {
+    val isLongHaul: Boolean get() = legCount > 1
+}

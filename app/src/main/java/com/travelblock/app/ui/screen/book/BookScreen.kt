@@ -316,11 +316,9 @@ private fun CheckInSurface(
         }
         if (!uiState.showSeatSelection) {
             item {
-                TripPresetPicker(uiState.tripPreset, onTripPresetSelected)
-                SessionPlannerPicker(uiState.sessionPlan, onSessionPlanSelected)
-                LongHaulDestinationPicker(
-                    TripPresetSelection(uiState.tripPreset, uiState.destination, airports),
-                    onTripDestinationSelected,
+                TripPlannerCard(
+                    TripPlannerState(uiState.tripPreset, uiState.sessionPlan, uiState.destination, airports),
+                    TripPlannerActions(onTripPresetSelected, onSessionPlanSelected, onTripDestinationSelected),
                 )
             }
         }

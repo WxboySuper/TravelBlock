@@ -149,7 +149,9 @@ class BookingViewModel(
         if (draft == null) return BookingUiState()
 
         val departureTime = LocalDateTime.now(clock).plusMinutes(8)
-        val arrivalTime = departureTime.plusMinutes(draft.durationMinutes.toLong())
+        val breakdown = draft.sessionPlan?.let(SessionPlanCalculator::calculate)
+        val plannedPreset = breakdown?.let { TripPreset("planned", "Planned session", it.legCount) }
+        val arrivalTime = departureTime.plusMinutes((breakdown?.totalFocusMinutes ?: draft.durationMinutes).toLong())
         val flightNumber = generateFlightNumber(draft)
         val seatOptions = defaultSeatOptions(
             seed = "$flightNumber-${draft.origin.code}-${draft.destination.code}-${departureTime.toLocalDate()}",
@@ -159,7 +161,7 @@ class BookingViewModel(
             draftAvailable = true,
             origin = draft.origin,
             destination = draft.destination,
-            durationMinutes = draft.durationMinutes,
+            durationMinutes = breakdown?.legDurationsMinutes?.firstOrNull() ?: draft.durationMinutes,
             distanceMiles = draft.distanceMiles,
             pointsRewardEstimate = draft.estimatedRewardPoints,
             flightNumber = flightNumber,
@@ -171,6 +173,8 @@ class BookingViewModel(
             selectedSeatId = seatOptions.firstOrNull { it.pointsCost == 0 && it.isAvailable }?.id ?: seatOptions.first().id,
             pointsBalance = pointsBalance,
             maxFlightTimeMinutes = draft.maxFlightTimeMinutes,
+            sessionPlan = draft.sessionPlan,
+            tripPreset = plannedPreset,
             seatSelectionMessage = "Standard seats are free. Upgrade seats require enough points to select.",
         )
     }

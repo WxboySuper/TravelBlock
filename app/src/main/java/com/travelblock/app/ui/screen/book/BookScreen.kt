@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -78,6 +79,7 @@ import com.travelblock.app.ui.components.StickyActionScaffold
 import com.travelblock.app.ui.components.StickyActionListOptions
 import com.travelblock.app.ui.components.TravelDayBackdrop
 import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.scene.CabinAisleScene
 import com.travelblock.app.ui.scene.CheckInDeskScene
 import com.travelblock.app.ui.scene.CheckInGateInfo
 import com.travelblock.app.ui.scene.JetBridgeScene
@@ -294,9 +296,7 @@ private fun CheckInSurface(
                 ),
             )
         }
-        if (!uiState.showSeatSelection) {
-            item { CheckInDeskScene(CheckInGateInfo(uiState.flightNumber, uiState.gate)) }
-        }
+        stepSceneItem(uiState, origin.longitude)
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->
                 BookingStepContent(
@@ -719,3 +719,14 @@ private fun GateCallScreen(
 }
 
 /** A lined-notepad style field for the one thing you are here to do. */
+
+/** The illustration that opens each check-in step: the check-in desk, then the cabin you will sit in. */
+private fun LazyListScope.stepSceneItem(uiState: BookingUiState, departureLongitude: Double) {
+    item {
+        if (uiState.showSeatSelection) {
+            CabinAisleScene(longitude = departureLongitude)
+        } else {
+            CheckInDeskScene(CheckInGateInfo(uiState.flightNumber, uiState.gate))
+        }
+    }
+}

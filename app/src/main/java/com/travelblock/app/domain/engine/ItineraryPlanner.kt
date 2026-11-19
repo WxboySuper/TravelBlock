@@ -2,26 +2,44 @@ package com.travelblock.app.domain.engine
 
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.FlightItinerary
+import com.travelblock.app.domain.model.ItinerarySchedule
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.TripPreset
 import kotlin.math.abs
 
 object ItineraryPlanner {
     fun plan(request: ItineraryRequest): FlightItinerary? {
-        val (origin, destination, preset, airports, focusMinutes) = request
-        if (origin.code == destination.code || focusMinutes <= 0) return null
+        val (origin, destination, airports, trip) = request
+        val preset = trip.preset
+        if (origin.code == destination.code || trip.focusMinutes <= 0) return null
         val route = mutableListOf<Airport>()
         val context = RouteContext(origin, destination)
         for (index in 1 until preset.legCount) {
             val target = FlightRouteInterpolation.interpolate(
                 origin.toPoint(), destination.toPoint(), index.toDouble() / preset.legCount,
             )
-            val stop = chooseStop(target, airports, route.mapTo(mutableSetOf()) { it.code }, context)
+            val excluded = route.mapTo(mutableSetOf()) { it.code }
+            val stop = chooseStop(target, airports, excluded, context)
+                ?: chooseRepeatedStop(target, airports, context)
                 ?: return null
             route += stop
         }
-        return FlightItinerary(preset, listOf(origin) + route + destination, focusMinutes)
+        return FlightItinerary(
+            preset = preset,
+            airports = listOf(origin) + route + destination,
+            schedule = ItinerarySchedule(
+                focusMinutes = trip.focusMinutes,
+                legDurationsMinutes = trip.legDurationsMinutes.ifEmpty { List(preset.legCount) { trip.focusMinutes } },
+                breakDurationsMinutes = trip.breakDurationsMinutes,
+            ),
+        )
     }
+
+    private fun chooseRepeatedStop(target: GeoPoint, airports: List<Airport>, context: RouteContext): Airport? =
+        airports.asSequence()
+            .filter(Airport::isUsableForTravelBlockRouting)
+            .filterNot { it.code == context.origin.code || it.code == context.destination.code }
+            .minByOrNull { stopScore(it, target, context) }
 
     private fun chooseStop(
         target: GeoPoint,
@@ -82,7 +100,13 @@ object ItineraryPlanner {
 data class ItineraryRequest(
     val origin: Airport,
     val destination: Airport,
-    val preset: TripPreset,
     val airports: List<Airport>,
+    val trip: ItineraryTrip,
+)
+
+data class ItineraryTrip(
+    val preset: TripPreset,
     val focusMinutes: Int,
+    val legDurationsMinutes: List<Int> = emptyList(),
+    val breakDurationsMinutes: List<Int> = emptyList(),
 )

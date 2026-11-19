@@ -18,6 +18,7 @@ data class ActiveFlight(
     val todoistProjectName: String? = null,
     val itineraryCodes: String? = null,
     val itineraryLabel: String? = null,
+    val itinerarySchedule: ActiveItinerarySchedule? = null,
     val itineraryLegIndex: Int = 0,
     val itineraryLegCount: Int = 1,
     val layoverEndsAtEpochMillis: Long? = null,
@@ -27,6 +28,9 @@ data class ActiveFlight(
 ) {
     val isItinerary: Boolean get() = itineraryCodes != null && itineraryLegCount > 1
     val isLastItineraryLeg: Boolean get() = !isItinerary || itineraryLegIndex >= itineraryLegCount - 1
+    val itineraryFocusMinutes: Int get() = itinerarySchedule?.legDurationsMinutes?.sum() ?: durationMinutes * itineraryLegCount
+    fun durationForLeg(index: Int): Int = itinerarySchedule?.legDurationsMinutes?.getOrNull(index) ?: durationMinutes
+    fun breakAfterLeg(index: Int): Int = itinerarySchedule?.breakAfter(index) ?: FlightItinerary.layoverMinutesAfter(index + 1)
     val nextTransitionAtEpochMillis: Long
         get() = if (status == ActiveFlightStatus.Layover) layoverEndsAtEpochMillis ?: plannedArrivalAt.toEpochMilli()
         else plannedArrivalAt.toEpochMilli()

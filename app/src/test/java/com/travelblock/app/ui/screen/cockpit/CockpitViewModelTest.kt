@@ -2,6 +2,7 @@ package com.travelblock.app.ui.screen.cockpit
 
 import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.ActiveFlightStatus
+import com.travelblock.app.domain.model.ActiveItinerarySchedule
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
@@ -33,6 +34,23 @@ class CockpitViewModelTest {
 
         assertEquals(ActiveFlightStatus.Arrived, viewModel.uiState.status)
         assertEquals("00:00", viewModel.uiState.timeRemainingLabel)
+    }
+
+    @Test
+    fun completedTripLegStartsItsConfiguredBreak() {
+        val clock = MutableClock(start)
+        val trip = activeFlight.copy(
+            itineraryCodes = "KOUN,KOKC,KTUL,KDAL",
+            itineraryLegCount = 3,
+            itinerarySchedule = ActiveItinerarySchedule(listOf(30, 30, 30), listOf(7, 13)),
+        )
+        val viewModel = CockpitViewModel(trip, clock, ZoneId.of("UTC"))
+
+        clock.current = trip.plannedArrivalAt.plusSeconds(1)
+        viewModel.tick()
+
+        assertEquals(ActiveFlightStatus.Layover, viewModel.uiState.status)
+        assertEquals(clock.current.plusSeconds(7 * 60L).toEpochMilli(), viewModel.uiState.activeFlight?.layoverEndsAtEpochMillis)
     }
 
     @Test

@@ -8,6 +8,8 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.TripPreset
+import com.travelblock.app.domain.model.SessionPlan
+import com.travelblock.app.domain.engine.SessionPlanCalculator
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.engine.AirportRouteEngine
 import com.travelblock.app.domain.engine.FlightRewardCalculator
@@ -22,6 +24,7 @@ class BookingViewModel(
     private val pointsBalance: Int = 0,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel() {
+    private val originalDurationMinutes = draftFlightBooking?.durationMinutes ?: 0
     var uiState by mutableStateOf(createInitialState(draftFlightBooking))
         private set
 
@@ -50,7 +53,26 @@ class BookingViewModel(
     }
 
     fun selectTripPreset(preset: TripPreset?) {
-        uiState = uiState.copy(tripPreset = preset)
+        uiState = uiState.copy(
+            tripPreset = preset,
+            sessionPlan = null,
+            durationMinutes = originalDurationMinutes,
+            arrivalTime = uiState.departureTime?.plusMinutes(originalDurationMinutes.toLong()),
+        )
+    }
+
+    fun selectSessionPlan(plan: SessionPlan?) {
+        val breakdown = plan?.let(SessionPlanCalculator::calculate)
+        uiState = uiState.copy(
+            tripPreset = if (breakdown != null) {
+                TripPreset("planned", "Planned session", breakdown.legCount)
+            } else null,
+            sessionPlan = plan.takeIf { breakdown != null },
+            durationMinutes = breakdown?.legDurationsMinutes?.firstOrNull() ?: originalDurationMinutes,
+            arrivalTime = uiState.departureTime?.plusMinutes(
+                (breakdown?.totalFocusMinutes ?: originalDurationMinutes).toLong(),
+            ),
+        )
     }
 
     fun selectTripDestination(destination: Airport) {

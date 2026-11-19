@@ -36,4 +36,7 @@ object FlightRewardCalculator {
 
 object ItineraryRewards {
     const val COMPLETION_BONUS = 100
+
+    fun completionBonus(totalFocusMinutes: Int): Int =
+        (COMPLETION_BONUS * totalFocusMinutes / 60).coerceAtLeast(COMPLETION_BONUS)
 }

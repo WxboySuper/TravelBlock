@@ -109,7 +109,7 @@ class CockpitViewModel(
     }
 
     private fun saveCompletedArrival(flight: ActiveFlight) {
-        val bonus = if (flight.isItinerary) ItineraryRewards.COMPLETION_BONUS else 0
+        val bonus = if (flight.isItinerary) ItineraryRewards.completionBonus(flight.itineraryFocusMinutes) else 0
         saveResult(
             FlightResultRequest(
                 flight = flight,
@@ -122,7 +122,7 @@ class CockpitViewModel(
 
     private fun beginLayover(flight: ActiveFlight) {
         val earned = FlightRewardCalculator.completedReward(flight)
-        val breakMinutes = FlightItinerary.layoverMinutesAfter(flight.itineraryLegIndex + 1)
+        val breakMinutes = flight.breakAfterLeg(flight.itineraryLegIndex)
         val layoverFlight = flight.copy(
             status = ActiveFlightStatus.Layover,
             itineraryPointsEarned = flight.itineraryPointsEarned + earned,
@@ -167,10 +167,11 @@ class CockpitViewModel(
         val origin = airportFor(codes.getOrNull(index)) ?: return null
         val destination = airportFor(codes.getOrNull(index + 1)) ?: return null
         val startedAt = clock.instant()
+        val durationMinutes = flight.durationForLeg(index)
         val durationSeconds = if (settings.debugShortFlightsEnabled && com.travelblock.app.BuildConfig.DEBUG) {
             settings.debugFlightDurationSeconds.toLong()
         } else {
-            flight.durationMinutes * 60L
+            durationMinutes * 60L
         }
         val arrival = startedAt.plusSeconds(durationSeconds)
         return flight.copy(
@@ -181,6 +182,7 @@ class CockpitViewModel(
             startedAt = startedAt,
             plannedArrivalAt = arrival,
             itineraryLegIndex = index,
+            durationMinutes = durationMinutes,
             layoverEndsAtEpochMillis = null,
             status = ActiveFlightStatus.Active,
         )

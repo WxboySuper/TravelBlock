@@ -114,6 +114,19 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+internal val MIGRATION_6_7_SQL = listOf(
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryDurationsMinutes` TEXT",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryBreakMinutes` TEXT",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryLongBreakMinutes` INTEGER",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryLongBreakEvery` INTEGER",
+)
+
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        MIGRATION_6_7_SQL.forEach(db::execSQL)
+    }
+}
+
 private fun SupportSQLiteDatabase.hasColumn(
     tableName: String,
     columnName: String,

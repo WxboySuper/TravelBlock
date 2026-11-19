@@ -148,6 +148,7 @@ fun SettingsScreenContent(
         item {
             PreferenceCard(uiState.settings, actions.preferences)
         }
+        item { VoiceCard() }
         item { PaletteCard() }
         item { AppUpdatesCard(updateState, lastCheckMillis, onCheckUpdates) }
         if (todoistRepository != null) item { TodoistSettingsCard(todoistRepository) }

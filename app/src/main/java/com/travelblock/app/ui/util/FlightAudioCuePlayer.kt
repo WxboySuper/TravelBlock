@@ -159,13 +159,20 @@ class FlightAudioCuePlayer(context: Context) {
     }
 
     private fun speakReady(text: AnnouncementText) {
+        textToSpeech?.let { engine ->
+            val wanted = AnnouncerVoices.pick(engine, AnnouncerVoiceStore.saved(appContext))
+            if (wanted != null && engine.voice?.name != wanted.name) engine.voice = wanted
+        }
         textToSpeech?.speak(text.value, TextToSpeech.QUEUE_ADD, null, text.value.hashCode().toString())
     }
 
     private fun configureSpeech() {
-        textToSpeech?.language = Locale.US
-        textToSpeech?.setSpeechRate(0.86f)
-        textToSpeech?.setPitch(1.12f)
+        val engine = textToSpeech ?: return
+        engine.language = Locale.US
+        // Natural speech: the engine's own pace and pitch, with the most natural installed voice (or the one picked in Settings).
+        engine.setSpeechRate(0.95f)
+        engine.setPitch(1.0f)
+        AnnouncerVoices.pick(engine, AnnouncerVoiceStore.saved(appContext))?.let { engine.voice = it }
     }
 
     fun release() {

@@ -128,6 +128,34 @@ class CockpitPersistenceTest {
     }
 
     @Test
+    fun diversionOnLaterLegKeepsCompletedLegAndDoesNotAwardTripBonus() = runTest(dispatcher) {
+        val clock = MutableClock(start.plusSeconds(30 * 60))
+        val flightLogs = FakeFlightLogRepository()
+        val points = FakePointsRepository()
+        val sessions = FakeActiveFlightSessionRepository()
+        val airports = listOf(activeFlight.origin, activeFlight.destination, TestAirports.tulsa)
+        val tripFlight = activeFlight.copy(itineraryCodes = "KOUN,KOKC,KTUL", itineraryLegCount = 2)
+        val viewModel = CockpitViewModel(
+            tripFlight, clock, ZoneId.of("UTC"), flightLogs, points, FakeSettingsRepository().repository,
+            sessions, airports,
+        )
+
+        viewModel.tick()
+        advanceUntilIdle()
+        viewModel.skipLayover()
+        advanceUntilIdle()
+        viewModel.boardNextLeg()
+        advanceUntilIdle()
+        clock.current = clock.instant().plusSeconds(5 * 60)
+        viewModel.confirmDivert()
+        advanceUntilIdle()
+
+        assertEquals(listOf("COMPLETED", "DIVERTED"), flightLogs.logs.map { it.status })
+        assertTrue(points.transactions.none { it.reason == "Completed long-haul trip" })
+        assertNull(sessions.flight)
+    }
+
+    @Test
     fun divertedFlightInsertsDivertedLogWithoutMovingCurrentAirport() = runTest(dispatcher) {
         val clock = MutableClock(start.plusSeconds(5 * 60))
         val flightLogs = FakeFlightLogRepository()

@@ -130,10 +130,12 @@ fun BookScreen(
         onSessionPlanSelected = viewModel::selectSessionPlan,
         onTripDestinationSelected = viewModel::selectTripDestination,
         onHubSelected = viewModel::selectHubConnection,
-        onTodoistTaskSelected = viewModel::selectTodoistTask,
+        onTodoistTaskSelected = viewModel::toggleTodoistTask,
+        overview = TripOverviewActions(viewModel::setTaskPerLeg, viewModel::continueFromOverview, onCancelBooking),
         onPreflightCheckChanged = viewModel::setPreflightCheck,
         onContinueToSeatSelection = viewModel::continueToSeatSelection,
-        onBackToManifest = viewModel::returnToManifest,
+        // Check-in only happens once per trip: from a later leg's seat map, back means back to the layover.
+        onBackToManifest = if (draftFlightBooking?.continuation?.itineraryTaskPerLeg == false) onCancelBooking else viewModel::returnToManifest,
         onContinue = viewModel::continueToBoardingPass,
         onBoardFlight = viewModel::boardFlight,
         onBackToReview = viewModel::returnToReview,
@@ -172,9 +174,14 @@ fun BookScreenContent(
     onTripDestinationSelected: (Airport) -> Unit = {},
     onHubSelected: (HubConnection?) -> Unit = {},
     airports: List<Airport> = emptyList(),
+    overview: TripOverviewActions = TripOverviewActions(),
 ) {
     if (!uiState.draftAvailable) {
         EmptyBookingState()
+        return
+    }
+    if (uiState.showTripOverview) {
+        TripOverviewScreen(uiState, overview)
         return
     }
 
@@ -293,7 +300,7 @@ private fun CheckInSurface(
 ) {
     val flowStep = if (uiState.showSeatSelection) BookingFlowStep.SeatSelection else BookingFlowStep.Manifest
     val origin = requireNotNull(uiState.origin)
-    val destination = requireNotNull(uiState.destination)
+    val destination = requireNotNull(uiState.legDestination)
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
@@ -319,7 +326,8 @@ private fun CheckInSurface(
                 ),
             )
         }
-        if (!uiState.showSeatSelection) {
+        item { TripRouteLine(uiState.tripStops) }
+        if (uiState.showTripCard) {
             item {
                 TripPlannerSection(
                     uiState,
@@ -509,7 +517,7 @@ private fun GateCallScreen(
         }
         item {
             Text(
-                text = "Next stop: ${boardingPass.destination.displayCode}. Timer: ${boardingPass.focusDurationMinutes} min.",
+                text = "Next stop: ${boardingPass.legDestination.displayCode}. Timer: ${boardingPass.focusDurationMinutes} min.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = WarmGray,
             )

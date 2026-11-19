@@ -36,6 +36,7 @@ import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.data.todoist.TodoistRepository
+import com.travelblock.app.domain.model.TaskRefs
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.RouteStops
@@ -89,7 +90,7 @@ fun ArrivalScreen(
             WelcomeHeader(arrivalSummary.destination)
             RoutePostcard(arrivalSummary)
             TodoistArrivalCard(
-                task = arrivalSummary.todoistTaskId?.let { id -> arrivalSummary.todoistTaskContent?.let { TodoistArrivalTask(id, it) } },
+                tasks = TaskRefs.decode(arrivalSummary.todoistTaskId, arrivalSummary.todoistTaskContent).map { TodoistArrivalTask(it.id, it.content) },
                 repository = actions.todoistRepository,
             )
             MetricsRow(arrivalSummary)

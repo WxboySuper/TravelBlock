@@ -21,6 +21,8 @@ data class ActiveFlight(
     val itinerarySchedule: ActiveItinerarySchedule? = null,
     val itineraryLegIndex: Int = 0,
     val itineraryLegCount: Int = 1,
+    /** True when each flight of the trip gets its own tasks; false when one set of tasks covers the whole trip. */
+    val itineraryTaskPerLeg: Boolean = false,
     val layoverEndsAtEpochMillis: Long? = null,
     val itineraryPointsEarned: Int = 0,
     val itineraryDistanceMiles: Double = 0.0,

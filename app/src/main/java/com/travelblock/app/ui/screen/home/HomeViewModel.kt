@@ -95,6 +95,8 @@ class HomeViewModel(
             durationMinutes = suggestion.route.estimatedDurationMinutes,
             hub = suggestion.hub,
             hubChoiceMade = true,
+            stops = suggestion.stops.takeIf { it.size > 2 }.orEmpty(),
+            tripLocked = true,
             sessionPlan = if (suggestion.hub == null) AutoSessionPlan.forTotal(suggestion.focusMinutes) else null,
         )
     }

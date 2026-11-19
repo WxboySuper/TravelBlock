@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.travelblock.app.domain.model.DraftFlightBooking
+import com.travelblock.app.domain.model.TaskRef
+import com.travelblock.app.domain.model.TaskRefs
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.TripPreset
@@ -59,6 +61,7 @@ class BookingViewModel(
             sessionPlan = null,
             hub = null,
             hubChosen = false,
+            stops = emptyList(),
             durationMinutes = originalDurationMinutes,
             arrivalTime = uiState.departureTime?.plusMinutes(originalDurationMinutes.toLong()),
         )
@@ -69,6 +72,7 @@ class BookingViewModel(
         uiState = uiState.copy(
             hub = null,
             hubChosen = false,
+            stops = emptyList(),
             tripPreset = if (breakdown != null) {
                 TripPreset("planned", "Planned session", breakdown.legCount)
             } else null,
@@ -87,6 +91,7 @@ class BookingViewModel(
             uiState = uiState.copy(
                 hub = null,
                 hubChosen = true,
+                stops = emptyList(),
                 tripPreset = null,
                 durationMinutes = originalDurationMinutes,
                 arrivalTime = departure?.plusMinutes(originalDurationMinutes.toLong()),
@@ -96,6 +101,7 @@ class BookingViewModel(
         uiState = uiState.copy(
             hub = connection,
             hubChosen = true,
+            stops = emptyList(),
             tripPreset = TripPreset("hub", "Via ${connection.hub.displayCode}", 2),
             sessionPlan = null,
             durationMinutes = connection.firstLegMinutes,
@@ -109,6 +115,7 @@ class BookingViewModel(
         uiState = uiState.copy(
             hub = null,
             hubChosen = false,
+            stops = emptyList(),
             destination = destination,
             distanceMiles = distance,
             pointsRewardEstimate = FlightRewardCalculator.completedReward(uiState.durationMinutes, distance),
@@ -121,6 +128,35 @@ class BookingViewModel(
             todoistTaskId = null,
             todoistTaskContent = null,
             todoistProjectName = null,
+        )
+    }
+
+    /** A trip planned ahead opens on its overview; a later leg opens on its seat, or on its tasks when each leg has its own. */
+    private fun startingStage(draft: DraftFlightBooking): BookingStage = when {
+        draft.continuation != null && draft.continuation.itineraryTaskPerLeg -> BookingStage.Manifest
+        draft.continuation != null -> BookingStage.SeatSelection
+        draft.tripLocked && draft.stops.size > 2 -> BookingStage.TripOverview
+        else -> BookingStage.Manifest
+    }
+
+    fun setTaskPerLeg(perLeg: Boolean) {
+        uiState = uiState.copy(taskPerLeg = perLeg)
+    }
+
+    fun continueFromOverview() {
+        transition(BookingFlowAction.ContinueFromOverview)
+    }
+
+    /** Add the task to the ones this flight is flown for, or take it off if it is already there. */
+    fun toggleTodoistTask(task: TodoistTask?) {
+        if (task == null) return selectTodoistTask(null)
+        val current = TaskRefs.decode(uiState.todoistTaskId, uiState.todoistTaskContent)
+        val tasks = if (current.any { it.id == task.id }) current.filterNot { it.id == task.id } else current + TaskRef(task.id, task.content)
+        uiState = uiState.copy(
+            focusObjective = tasks.joinToString(" + ") { it.content }.take(MaxObjectiveLength),
+            todoistTaskId = TaskRefs.encodeIds(tasks),
+            todoistTaskContent = TaskRefs.encodeContents(tasks),
+            todoistProjectName = task.projectName.takeIf { tasks.isNotEmpty() },
         )
     }
 
@@ -191,7 +227,7 @@ class BookingViewModel(
             origin = draft.origin,
             destination = draft.destination,
             durationMinutes = shape.firstLegMinutes,
-            distanceMiles = draft.distanceMiles,
+            distanceMiles = firstLegMiles(draft),
             pointsRewardEstimate = draft.estimatedRewardPoints,
             flightNumber = flightNumber,
             gate = generateGate(draft),
@@ -205,6 +241,10 @@ class BookingViewModel(
             sessionPlan = draft.sessionPlan,
             hub = draft.hub,
             hubChosen = draft.hubChoiceMade,
+            stops = draft.stops,
+            tripLocked = draft.tripLocked,
+            bookingStage = startingStage(draft),
+            taskPerLeg = draft.continuation?.itineraryTaskPerLeg ?: false,
             tripPreset = shape.preset,
             seatSelectionMessage = "Standard seats are free. Upgrade seats require enough points to select.",
         )
@@ -231,6 +271,12 @@ class BookingViewModel(
                 }
             }
         }
+    }
+
+    /** The pre-flight screens are about the first flight, so a planned trip shows that leg's distance. */
+    private fun firstLegMiles(draft: DraftFlightBooking): Double {
+        val stops = draft.stops
+        return if (stops.size > 2) AirportRouteEngine().distanceMiles(stops[0], stops[1]) else draft.distanceMiles
     }
 
     private fun defaultSeatOptions(seed: String): List<SeatOption> {

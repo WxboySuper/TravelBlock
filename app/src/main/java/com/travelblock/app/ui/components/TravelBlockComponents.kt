@@ -435,7 +435,7 @@ private fun BoardingPassAirportRow(boardingPass: BoardingPass) {
             tint = Ink.copy(alpha = 0.7f),
             modifier = Modifier.size(28.dp).rotate(90f),
         )
-        BoardingAirport(AirportLabel(boardingPass.destination.displayCode, boardingPass.destination.city), alignEnd = true)
+        BoardingAirport(AirportLabel(boardingPass.legDestination.displayCode, boardingPass.legDestination.city), alignEnd = true)
     }
 }
 

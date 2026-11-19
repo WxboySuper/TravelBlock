@@ -121,6 +121,16 @@ internal val MIGRATION_6_7_SQL = listOf(
     "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryLongBreakEvery` INTEGER",
 )
 
+internal val MIGRATION_7_8_SQL = listOf(
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryTaskPerLeg` INTEGER NOT NULL DEFAULT 0",
+)
+
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        MIGRATION_7_8_SQL.forEach(db::execSQL)
+    }
+}
+
 val MIGRATION_6_7 = object : Migration(6, 7) {
     override fun migrate(db: SupportSQLiteDatabase) {
         MIGRATION_6_7_SQL.forEach(db::execSQL)

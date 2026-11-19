@@ -25,32 +25,33 @@ import kotlinx.coroutines.launch
 data class TodoistArrivalTask(val id: String, val content: String)
 
 @Composable
-fun TodoistArrivalCard(task: TodoistArrivalTask?, repository: TodoistRepository?) {
-    if (task == null || repository == null) return
-    TodoistArrivalCardContent(task, repository)
+fun TodoistArrivalCard(tasks: List<TodoistArrivalTask>, repository: TodoistRepository?) {
+    if (tasks.isEmpty() || repository == null) return
+    TodoistArrivalCardContent(tasks, repository)
 }
 
 @Composable
-private fun TodoistArrivalCardContent(task: TodoistArrivalTask, repository: TodoistRepository) {
-    var dismissed by remember(task.id) { mutableStateOf(false) }
-    var completed by remember(task.id) { mutableStateOf(false) }
-    var busy by remember(task.id) { mutableStateOf(false) }
-    var error by remember(task.id) { mutableStateOf<String?>(null) }
+private fun TodoistArrivalCardContent(tasks: List<TodoistArrivalTask>, repository: TodoistRepository) {
+    val key = tasks.joinToString(",") { it.id }
+    var dismissed by remember(key) { mutableStateOf(false) }
+    var completed by remember(key) { mutableStateOf(false) }
+    var busy by remember(key) { mutableStateOf(false) }
+    var error by remember(key) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     if (dismissed) return
     PaperCard(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("You flew on: ${task.content}", color = Ink, style = MaterialTheme.typography.titleMedium)
+            Text(if (tasks.size == 1) "You flew on: ${tasks.single().content}" else "You flew on ${tasks.size} tasks", color = Ink, style = MaterialTheme.typography.titleMedium)
+            if (tasks.size > 1) tasks.forEach { Text(it.content, color = WarmGray, style = MaterialTheme.typography.bodyMedium) }
             CompletionChoice(CompletionUiState(completed, busy, error), CompletionActions(complete = {
                 busy = true
                 scope.launch {
-                    when (val result = repository.completeTask(task.id)) {
-                        is TodoistResult.Success -> { completed = true; error = null }
-                        is TodoistResult.Failure -> error = result.message
-                    }
+                    val failure = tasks.firstNotNullOfOrNull { task -> (repository.completeTask(task.id) as? TodoistResult.Failure)?.message }
+                    completed = failure == null
+                    error = failure
                     busy = false
                 }
-            }, dismiss = { dismissed = true }))
+            }, dismiss = { dismissed = true }, plural = tasks.size > 1))
         }
     }
 }
@@ -75,4 +76,4 @@ private fun CompletionChoice(
 }
 
 private data class CompletionUiState(val completed: Boolean, val busy: Boolean, val error: String?)
-private data class CompletionActions(val complete: () -> Unit, val dismiss: () -> Unit)
+private data class CompletionActions(val complete: () -> Unit, val dismiss: () -> Unit, val plural: Boolean = false)

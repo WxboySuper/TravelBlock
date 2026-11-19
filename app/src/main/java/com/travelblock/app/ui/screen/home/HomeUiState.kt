@@ -16,6 +16,8 @@ data class HomeUiState(
     val errorMessage: String? = null,
     val pilotRankLabel: String? = null,
     val pilotProgressLabel: String? = null,
+    /** Airports already landed at, so the board and planner can mark new places. */
+    val visitedAirports: Set<String> = emptySet(),
 ) {
     val selectedRoute: HomeRouteCardUiModel?
         get() = routes.firstOrNull { it.id == selectedRouteId }
@@ -54,6 +56,7 @@ data class HomeRouteCardUiModel(
     val availabilityLabel: String,
     val legCount: Int = 1,
     val breakMinutes: Int = 0,
+    val isNew: Boolean = false,
 ) {
     val isLongHaul: Boolean get() = legCount > 1
 }

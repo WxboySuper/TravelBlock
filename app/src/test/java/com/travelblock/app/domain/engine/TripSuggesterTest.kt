@@ -37,6 +37,27 @@ class TripSuggesterTest {
         assertTrue(options.all { it.stops.size >= 2 && it.focusMinutes == 240 })
     }
 
+    @Test
+    fun `smaller airports are offered when major airports only is off`() {
+        val small = airport("KSML", "SML", 35.5, -97.0)
+        val options = TripSuggester.options(origin, all + small, TripWish(minutes = 60, connectThroughHubs = false, majorAirportsOnly = false))
+
+        assertTrue(options.any { it.route.destination.code == "KSML" })
+    }
+
+    @Test
+    fun `somewhere new beats somewhere already visited and is marked new`() {
+        val a = airport("KNEW", "NEW", 36.0, -97.0)
+        val b = airport("KOLD", "OLD", 36.0, -97.01)
+        val wish = TripWish(minutes = 60, connectThroughHubs = false, majorAirportsOnly = false, visited = setOf("KOLD"))
+
+        val options = TripSuggester.options(origin, listOf(origin, a, b), wish)
+
+        assertEquals("KNEW", options.first().route.destination.code)
+        assertTrue(options.first().isNew)
+        assertTrue(options.filter { it.route.destination.code == "KOLD" }.none { it.isNew })
+    }
+
     private fun airport(code: String, iata: String, latitude: Double, longitude: Double) =
         Airport(code, code, iata, iata, iata, null, "US", latitude, longitude, null)
 }

@@ -68,6 +68,13 @@ private fun ActiveFlightSessionEntity.toDomainModel(): ActiveFlight {
         focusTag = focusTag,
         todoistTaskId = todoistTaskId,
         todoistTaskContent = todoistTaskContent,
+        itineraryCodes = itineraryCodes,
+        itineraryLabel = itineraryLabel,
+        itineraryLegIndex = itineraryLegIndex,
+        itineraryLegCount = itineraryLegCount,
+        layoverEndsAtEpochMillis = layoverEndsAtEpochMillis,
+        itineraryPointsEarned = itineraryPointsEarned,
+        itineraryDistanceMiles = itineraryDistanceMiles,
         status = ActiveFlightStatus.valueOf(status),
     )
 }
@@ -109,6 +116,13 @@ private fun ActiveFlight.toEntity(): ActiveFlightSessionEntity {
         focusTag = focusTag,
         todoistTaskId = todoistTaskId,
         todoistTaskContent = todoistTaskContent,
+        itineraryCodes = itineraryCodes,
+        itineraryLabel = itineraryLabel,
+        itineraryLegIndex = itineraryLegIndex,
+        itineraryLegCount = itineraryLegCount,
+        layoverEndsAtEpochMillis = layoverEndsAtEpochMillis,
+        itineraryPointsEarned = itineraryPointsEarned,
+        itineraryDistanceMiles = itineraryDistanceMiles,
         status = status.name,
     )
 }

@@ -10,7 +10,7 @@ import androidx.room.RoomDatabase
         UnlockEntity::class,
         ActiveFlightSessionEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class TravelBlockDatabase : RoomDatabase() {

@@ -3,6 +3,7 @@ package com.travelblock.app.ui.screen.book
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.SeatOption
+import com.travelblock.app.domain.model.TripPreset
 import com.travelblock.app.data.todoist.TodoistTask
 import java.time.LocalDateTime
 
@@ -28,6 +29,7 @@ data class BookingUiState(
     val todoistTaskId: String? = null,
     val todoistTaskContent: String? = null,
     val todoistProjectName: String? = null,
+    val tripPreset: TripPreset? = null,
     val cabinSecured: Boolean = false,
     val materialsReady: Boolean = false,
     val distractionsStowed: Boolean = false,
@@ -62,6 +64,7 @@ data class BookingUiState(
                 todoistTaskId = todoistTaskId,
                 todoistTaskContent = todoistTaskContent,
                 todoistProjectName = todoistProjectName,
+                tripPreset = tripPreset,
             )
         }
 

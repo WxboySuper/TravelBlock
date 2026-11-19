@@ -7,6 +7,10 @@ import androidx.lifecycle.ViewModel
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.domain.model.TripPreset
+import com.travelblock.app.domain.model.Airport
+import com.travelblock.app.domain.engine.AirportRouteEngine
+import com.travelblock.app.domain.engine.FlightRewardCalculator
 import com.travelblock.app.data.todoist.TodoistTask
 import java.time.Clock
 import java.time.LocalDateTime
@@ -42,6 +46,20 @@ class BookingViewModel(
         uiState = uiState.copy(
             selectedSeatId = seatId,
             seatSelectionMessage = upgradeMessage,
+        )
+    }
+
+    fun selectTripPreset(preset: TripPreset?) {
+        uiState = uiState.copy(tripPreset = preset)
+    }
+
+    fun selectTripDestination(destination: Airport) {
+        val origin = uiState.origin ?: return
+        val distance = AirportRouteEngine().distanceMiles(origin, destination)
+        uiState = uiState.copy(
+            destination = destination,
+            distanceMiles = distance,
+            pointsRewardEstimate = FlightRewardCalculator.completedReward(uiState.durationMinutes, distance),
         )
     }
 

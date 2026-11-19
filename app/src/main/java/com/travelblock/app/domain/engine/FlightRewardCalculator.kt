@@ -33,3 +33,7 @@ object FlightRewardCalculator {
     private const val MinimumDiversionRewardProgress = 0.25
     private const val DiversionRewardMultiplier = 0.5
 }
+
+object ItineraryRewards {
+    const val COMPLETION_BONUS = 100
+}

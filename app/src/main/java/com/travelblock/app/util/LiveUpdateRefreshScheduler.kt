@@ -12,8 +12,10 @@ class LiveUpdateRefreshScheduler(private val context: Context) {
 
     fun schedule(flight: ActiveFlight, nowMillis: Long = System.currentTimeMillis()) {
         val manager = alarmManager ?: return
-        val untilArrival = (flight.plannedArrivalAt.toEpochMilli() - nowMillis).coerceAtLeast(1L)
-        val triggerAt = nowMillis + minOf(REFRESH_INTERVAL_MILLIS, untilArrival)
+        val untilTransition = flight.nextTransitionAtEpochMillis - nowMillis
+        val refreshDelay = if (untilTransition <= 0L) REFRESH_INTERVAL_MILLIS
+        else minOf(REFRESH_INTERVAL_MILLIS, untilTransition)
+        val triggerAt = nowMillis + refreshDelay
         val pending = pendingIntent(flight.startedAt.toEpochMilli())
         try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()) {

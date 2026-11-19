@@ -5,6 +5,7 @@ import com.travelblock.app.domain.model.FlightItinerary
 import com.travelblock.app.domain.model.ItinerarySchedule
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.TripPreset
+import com.travelblock.app.domain.model.isMajorHub
 import kotlin.math.abs
 
 object ItineraryPlanner {
@@ -47,10 +48,13 @@ object ItineraryPlanner {
         excludedCodes: Set<String>,
         context: RouteContext,
     ): Airport? {
-        return airports.asSequence()
+        val candidates = airports.asSequence()
             .filter(Airport::isUsableForTravelBlockRouting)
             .filterNot { it.code == context.origin.code || it.code == context.destination.code || it.code in excludedCodes }
-            .minByOrNull { airport -> stopScore(airport, target, context) }
+            .toList()
+        // Connections happen at major hubs; a small airport is only ever the start or the end of a trip.
+        val pool = candidates.filter { it.isMajorHub }.ifEmpty { candidates }
+        return pool.minByOrNull { airport -> stopScore(airport, target, context) }
     }
 
     private fun stopScore(

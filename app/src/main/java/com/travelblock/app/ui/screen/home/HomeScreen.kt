@@ -343,7 +343,7 @@ private fun FastTrack(lastFlightAvailable: Boolean, onQuickStart: (Int) -> Unit,
             Text("Running late? Skip the queue.", style = MaterialTheme.typography.titleLarge, color = Ink)
             Text("We handle check-in, your seat and the boarding pass.", style = MaterialTheme.typography.bodySmall, color = WarmGray)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(15, 25, 45, 60, 90).forEach { SoftChip("$it min", selected = false, onClick = { onQuickStart(it) }) }
+                listOf(15, 25, 45, 60, 90, 120, 240, 480).forEach { SoftChip(quickStartLabel(it), selected = false, onClick = { onQuickStart(it) }) }
                 SoftChip("Custom", selected = false, onClick = { showCustom = true })
             }
             if (lastFlightAvailable) {
@@ -362,13 +362,13 @@ private fun FastTrack(lastFlightAvailable: Boolean, onQuickStart: (Int) -> Unit,
 @Composable
 private fun CustomDurationDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
     var minutes by remember { mutableStateOf("30") }
-    val valid = (minutes.toIntOrNull() ?: 0) in 15..180
+    val valid = (minutes.toIntOrNull() ?: 0) in 15..480
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Custom focus flight") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Choose a flight window from 15 to 180 minutes.")
+                Text("Choose a flight window from 15 to 480 minutes. Anything over 90 becomes a long haul with breaks.")
                 OutlinedTextField(minutes, { minutes = it.filter(Char::isDigit).take(3) }, label = { Text("Minutes") }, singleLine = true)
             }
         },
@@ -376,6 +376,9 @@ private fun CustomDurationDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
+
+/** Fast-track chip text: minutes up to 90, hours beyond. */
+private fun quickStartLabel(minutes: Int): String = if (minutes >= 120) "${minutes / 60} hr" else "$minutes min"
 
 /** The tab label for a focus length: minutes for short ones, hours from two hours up. */
 private fun durationTabLabel(minutes: Int): String = if (minutes >= 120) "${minutes / 60} HR" else "$minutes MIN"

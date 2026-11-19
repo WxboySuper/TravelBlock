@@ -19,6 +19,9 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+private const val QUICK_START_MIN_TOLERANCE = 5
+private const val QUICK_START_TOLERANCE_DIVISOR = 10
+
 class HomeViewModel(
     private val airportRepository: AirportRepository,
     private val settingsRepository: SettingsRepository? = null,
@@ -67,15 +70,18 @@ class HomeViewModel(
 
     fun createQuickStartDraft(durationMinutes: Int = uiState.selectedDurationMinutes): DraftFlightBooking? {
         val origin = uiState.currentAirport ?: return null
-        val route = airportRepository.getReachableAirports(origin.code, durationMinutes)
-            .minByOrNull { abs(durationMinutes - it.estimatedDurationMinutes) }
+        val routes = airportRepository.getReachableAirports(origin.code, durationMinutes)
+        // Routes come major-hub first: take the first one close enough to the time asked for, else the closest.
+        val tolerance = maxOf(QUICK_START_MIN_TOLERANCE, durationMinutes / QUICK_START_TOLERANCE_DIVISOR)
+        val route = routes.firstOrNull { abs(durationMinutes - it.estimatedDurationMinutes) <= tolerance }
+            ?: routes.minByOrNull { abs(durationMinutes - it.estimatedDurationMinutes) }
             ?: return null
         return route.toDraftBooking(durationMinutes)
     }
 
     fun createRebookDraft(): DraftFlightBooking? {
         val previous = uiState.lastFlight ?: return null
-        val duration = previous.durationMinutes.coerceIn(15, 180)
+        val duration = previous.durationMinutes.coerceIn(15, 480)
         val routes = airportRepository.getReachableAirports(
             originCode = uiState.currentAirport?.code ?: return null,
             durationMinutes = maxOf(duration, uiState.selectedDurationMinutes),

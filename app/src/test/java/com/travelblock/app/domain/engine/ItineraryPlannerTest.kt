@@ -23,6 +23,18 @@ class ItineraryPlannerTest {
     }
 
     @Test
+    fun `connections use a major hub even when a small airport sits closer to the ideal point`() {
+        val origin = airport("AAA", 0.0, 0.0)
+        val destination = airport("ZZZ", 0.0, 30.0)
+        val small = airport("SML", 0.0, 15.0)
+        val hub = airport("DEN", 0.0, 18.0)
+
+        val trip = ItineraryPlanner.plan(ItineraryRequest(origin, destination, listOf(small, hub), ItineraryTrip(TripPreset("test", "Test", 2), 25)))
+
+        assertEquals(listOf("AAA", "DEN", "ZZZ"), trip?.airports?.map(Airport::code))
+    }
+
+    @Test
     fun `planner rejects impossible route and same airport`() {
         val origin = airport("AAA", 0.0, 0.0)
         val preset = TripPreset("test", "Test", 2)

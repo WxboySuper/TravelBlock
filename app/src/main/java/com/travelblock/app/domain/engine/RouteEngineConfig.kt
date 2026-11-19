@@ -18,6 +18,8 @@ object RouteEngineConfig {
     const val RegionalAirportPriorityBoost = 0.42
     const val NamedAirportPriorityBoost = 0.18
     const val CompleteCodePriorityBoost = 0.12
+    /** Bigger than every name-based boost: major hubs always list first. */
+    const val MajorHubPriorityBoost = 2.0
 
     val MajorAirportNameSignals = listOf(
         "international",

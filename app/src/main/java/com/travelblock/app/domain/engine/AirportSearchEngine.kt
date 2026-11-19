@@ -1,8 +1,12 @@
 package com.travelblock.app.domain.engine
 
 import com.travelblock.app.domain.model.Airport
+import com.travelblock.app.domain.model.isMajorHub
 
 object AirportSearchEngine {
+    /** Enough to put a major airport ahead of a small one that matches the same way, not ahead of an exact code. */
+    private const val HUB_BONUS = 30
+
     fun search(
         airports: List<Airport>,
         query: String,
@@ -49,7 +53,7 @@ object AirportSearchEngine {
                 airport.country.lowercase().contains(term) -> 15
                 else -> 1
             }
-        } + if (airport.icao.isNotBlank() && !airport.iata.isNullOrBlank()) 10 else 0
+        } + (if (airport.icao.isNotBlank() && !airport.iata.isNullOrBlank()) 10 else 0) + (if (airport.isMajorHub) HUB_BONUS else 0)
     }
 
     private fun Airport.searchText(): String {
@@ -65,8 +69,8 @@ object AirportSearchEngine {
     }
 
     private fun defaultSort(): Comparator<Airport> {
-        return compareByDescending<Airport> {
-            if (it.icao.isNotBlank() && !it.iata.isNullOrBlank()) 1 else 0
-        }.thenBy { it.code }
+        return compareByDescending<Airport> { if (it.isMajorHub) 1 else 0 }
+            .thenByDescending { if (it.icao.isNotBlank() && !it.iata.isNullOrBlank()) 1 else 0 }
+            .thenBy { it.code }
     }
 }

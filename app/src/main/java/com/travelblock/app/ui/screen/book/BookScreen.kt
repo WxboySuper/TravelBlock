@@ -52,6 +52,8 @@ import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
+import com.travelblock.app.domain.engine.HubConnection
+import com.travelblock.app.domain.engine.HubRouting
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.SessionPlan
 import com.travelblock.app.data.todoist.TodoistRepository
@@ -128,6 +130,7 @@ fun BookScreen(
         onTripPresetSelected = viewModel::selectTripPreset,
         onSessionPlanSelected = viewModel::selectSessionPlan,
         onTripDestinationSelected = viewModel::selectTripDestination,
+        onHubSelected = viewModel::selectHubConnection,
         onTodoistTaskSelected = viewModel::selectTodoistTask,
         onPreflightCheckChanged = viewModel::setPreflightCheck,
         onContinueToSeatSelection = viewModel::continueToSeatSelection,
@@ -168,6 +171,7 @@ fun BookScreenContent(
     onTripPresetSelected: (com.travelblock.app.domain.model.TripPreset?) -> Unit = {},
     onSessionPlanSelected: (SessionPlan?) -> Unit = {},
     onTripDestinationSelected: (Airport) -> Unit = {},
+    onHubSelected: (HubConnection?) -> Unit = {},
     airports: List<Airport> = emptyList(),
 ) {
     if (!uiState.draftAvailable) {
@@ -211,6 +215,7 @@ fun BookScreenContent(
                     onTripPresetSelected = onTripPresetSelected,
                     onSessionPlanSelected = onSessionPlanSelected,
                     onTripDestinationSelected = onTripDestinationSelected,
+                    onHubSelected = onHubSelected,
                     airports = airports,
                     todoistRepository = todoistRepository,
                     onTodoistTaskSelected = onTodoistTaskSelected,
@@ -277,6 +282,7 @@ private fun CheckInSurface(
     onTripPresetSelected: (com.travelblock.app.domain.model.TripPreset?) -> Unit,
     onSessionPlanSelected: (SessionPlan?) -> Unit,
     onTripDestinationSelected: (Airport) -> Unit,
+    onHubSelected: (HubConnection?) -> Unit,
     airports: List<Airport>,
     todoistRepository: TodoistRepository?,
     onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
@@ -316,9 +322,12 @@ private fun CheckInSurface(
         }
         if (!uiState.showSeatSelection) {
             item {
+                val hub = remember(origin.code, uiState.destination?.code, airports) {
+                    uiState.destination?.let { HubRouting.connect(origin, it, airports) }
+                }
                 TripPlannerCard(
-                    TripPlannerState(uiState.tripPreset, uiState.sessionPlan, uiState.destination, airports),
-                    TripPlannerActions(onTripPresetSelected, onSessionPlanSelected, onTripDestinationSelected),
+                    TripPlannerState(uiState.tripPreset, uiState.sessionPlan, uiState.destination, airports, HubOption(hub, uiState.viaHub)),
+                    TripPlannerActions(onTripPresetSelected, onSessionPlanSelected, onTripDestinationSelected, onHubSelected),
                 )
             }
         }

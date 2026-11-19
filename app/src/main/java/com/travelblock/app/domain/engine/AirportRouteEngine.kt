@@ -2,6 +2,7 @@ package com.travelblock.app.domain.engine
 
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.FlightRoute
+import com.travelblock.app.domain.model.isMajorHub
 import com.travelblock.app.domain.model.RouteAvailabilityResult
 import kotlin.math.abs
 import kotlin.math.asin
@@ -108,7 +109,8 @@ class AirportRouteEngine(
         } else {
             0.0
         }
-        return airportSizeScore + codeScore
+        val hubScore = if (airport.isMajorHub) config.MajorHubPriorityBoost else 0.0
+        return airportSizeScore + codeScore + hubScore
     }
 
     private fun greatCircleDistanceMiles(

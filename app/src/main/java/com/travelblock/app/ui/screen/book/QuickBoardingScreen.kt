@@ -51,6 +51,8 @@ import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.domain.model.TripPreset
+import com.travelblock.app.domain.engine.SessionPlanCalculator
 import com.travelblock.app.ui.theme.CabinAmber
 import com.travelblock.app.ui.theme.MutedText
 import java.time.LocalDateTime
@@ -68,6 +70,7 @@ fun createQuickBoardingPass(
     )
     val flightNumber = "TB${(draft.destination.code.sumOf { it.code } + draft.durationMinutes) % 900 + 100}"
     val departure = now.plusMinutes(1)
+    val breakdown = draft.sessionPlan?.let(SessionPlanCalculator::calculate)
     return BoardingPass(
         flightNumber = flightNumber,
         origin = draft.origin,
@@ -76,13 +79,16 @@ fun createQuickBoardingPass(
         gate = "${draft.destination.code.lastOrNull() ?: 'A'}${(draft.distanceMiles.toInt() % 18) + 1}",
         boardingGroup = "Group 4",
         departureTime = departure,
-        arrivalTime = departure.plusMinutes(draft.durationMinutes.toLong()),
-        focusDurationMinutes = draft.durationMinutes,
+        arrivalTime = departure.plusMinutes((breakdown?.totalFocusMinutes ?: draft.durationMinutes).toLong()),
+        focusDurationMinutes = breakdown?.legDurationsMinutes?.firstOrNull() ?: draft.durationMinutes,
         maxFlightTimeMinutes = draft.maxFlightTimeMinutes,
         distanceMiles = draft.distanceMiles,
         estimatedRewardPoints = draft.estimatedRewardPoints,
         focusObjective = "",
         focusTag = "",
+        // A long quick start is a long haul: carry its plan so the trip is flown leg by leg.
+        tripPreset = breakdown?.let { TripPreset("planned", "Planned session", it.legCount) },
+        sessionPlan = draft.sessionPlan.takeIf { breakdown != null },
     )
 }
 
@@ -111,13 +117,18 @@ fun QuickBoardingScreen(
         Kicker("Fast track", color = Sage)
         Text("Straight to your gate", style = MaterialTheme.typography.headlineLarge, color = Ink)
         JetBridgeScene()
-        QuickMoment("Checked in", "Flight ${boardingPass.flightNumber} / ${boardingPass.focusDurationMinutes} minute focus flight", done >= 1)
+        QuickMoment("Checked in", "Flight ${boardingPass.flightNumber} / ${quickTripSummary(boardingPass)}", done >= 1)
         QuickMoment("Boarding pass issued", "Seat ${boardingPass.seat.label} / ${boardingPass.boardingGroup}", done >= 2)
         QuickMoment("Gate ${boardingPass.gate} cleared", "${boardingPass.origin.displayCode} to ${boardingPass.destination.displayCode}", done >= 3)
         Spacer(modifier = Modifier.height(8.dp))
         PrimaryButton(if (cleared) "Start focus flight" else "Walking to the gate...", onClick = onStartFlight, enabled = cleared)
         SecondaryButton("Back to departures", onClick = onBack)
     }
+}
+
+private fun quickTripSummary(pass: BoardingPass): String {
+    val legs = pass.sessionPlan?.let(SessionPlanCalculator::calculate)
+    return if (legs == null) "${pass.focusDurationMinutes} minute focus flight" else "long haul, ${legs.legCount} flights with breaks"
 }
 
 /** One stop on the walk, ticking from an empty circle to a check once it is done. */

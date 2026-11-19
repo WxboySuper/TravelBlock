@@ -12,6 +12,7 @@ import com.travelblock.app.domain.model.SessionPlan
 import com.travelblock.app.domain.engine.SessionPlanCalculator
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.engine.AirportRouteEngine
+import com.travelblock.app.domain.engine.HubConnection
 import com.travelblock.app.domain.engine.FlightRewardCalculator
 import com.travelblock.app.data.todoist.TodoistTask
 import java.time.Clock
@@ -56,6 +57,7 @@ class BookingViewModel(
         uiState = uiState.copy(
             tripPreset = preset,
             sessionPlan = null,
+            viaHub = false,
             durationMinutes = originalDurationMinutes,
             arrivalTime = uiState.departureTime?.plusMinutes(originalDurationMinutes.toLong()),
         )
@@ -64,6 +66,7 @@ class BookingViewModel(
     fun selectSessionPlan(plan: SessionPlan?) {
         val breakdown = plan?.let(SessionPlanCalculator::calculate)
         uiState = uiState.copy(
+            viaHub = false,
             tripPreset = if (breakdown != null) {
                 TripPreset("planned", "Planned session", breakdown.legCount)
             } else null,
@@ -75,10 +78,32 @@ class BookingViewModel(
         )
     }
 
+    /** Connect a short trip through a major hub (or go back to the direct hop with null). */
+    fun selectHubConnection(connection: HubConnection?) {
+        val departure = uiState.departureTime
+        if (connection == null) {
+            uiState = uiState.copy(
+                viaHub = false,
+                tripPreset = null,
+                durationMinutes = originalDurationMinutes,
+                arrivalTime = departure?.plusMinutes(originalDurationMinutes.toLong()),
+            )
+            return
+        }
+        uiState = uiState.copy(
+            viaHub = true,
+            tripPreset = TripPreset("hub", "Via ${connection.hub.displayCode}", 2),
+            sessionPlan = null,
+            durationMinutes = connection.firstLegMinutes,
+            arrivalTime = departure?.plusMinutes((connection.totalFocusMinutes + connection.layoverMinutes).toLong()),
+        )
+    }
+
     fun selectTripDestination(destination: Airport) {
         val origin = uiState.origin ?: return
         val distance = AirportRouteEngine().distanceMiles(origin, destination)
         uiState = uiState.copy(
+            viaHub = false,
             destination = destination,
             distanceMiles = distance,
             pointsRewardEstimate = FlightRewardCalculator.completedReward(uiState.durationMinutes, distance),

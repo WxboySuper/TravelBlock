@@ -57,6 +57,8 @@ class LogbookViewModel(
                 .format(Instant.ofEpochMilli(endedAt).atZone(zoneId)),
             originCode = originCode,
             destinationCode = destinationCode,
+            distanceMiles = distanceMiles,
+            focusTag = focusTag,
         )
     }
 

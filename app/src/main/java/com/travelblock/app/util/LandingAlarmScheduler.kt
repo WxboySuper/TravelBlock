@@ -85,6 +85,8 @@ class LandingAlarmReceiver : android.content.BroadcastReceiver() {
                     flightNumber = activeFlight.flightNumber,
                     destinationCode = activeFlight.destination.displayCode,
                 )
+                container.liveUpdateRefreshScheduler.cancel()
+                container.liveFlightNotificationHelper.cancel()
             } finally {
                 pendingResult.finish()
             }

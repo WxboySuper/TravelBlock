@@ -58,6 +58,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import com.travelblock.app.MainActivity
 import com.travelblock.app.ui.theme.TravelBlockTheme
 
@@ -157,6 +158,7 @@ private fun TravelBlockEffects(
         onDispose { runtime.audioCuePlayer.release() }
     }
     RestoreActiveFlightEffect(runtime)
+    LiveFlightUpdatesEffect(runtime.state.activeFlight, runtime.container)
     OpenRestoredArrivalEffect(
         ArrivalEffectInputs(
             activeFlightRestored = runtime.state.activeFlightRestored,
@@ -398,6 +400,8 @@ private fun completeFlight(
         flightNumber = summary.flightNumber,
         destinationCode = summary.destination.displayCode,
     )
+    runtime.container.liveUpdateRefreshScheduler.cancel()
+    runtime.container.liveFlightNotificationHelper.cancel()
     runtime.container.landingAlarmScheduler.cancel()
     runtime.state.arrivalSummary = summary
     runtime.state.activeFlight = null
@@ -412,6 +416,8 @@ private fun divertFlight(
 ) {
     playCue(runtime, FlightAudioCue.FlightDiverted)
     runtime.container.landingAlarmScheduler.cancel()
+    runtime.container.liveUpdateRefreshScheduler.cancel()
+    runtime.container.liveFlightNotificationHelper.cancel()
     runtime.state.diversionSummary = summary
     runtime.state.activeFlight = null
     runtime.coroutineScope.launch { runtime.container.activeFlightSessionRepository.clearActiveFlight() }
@@ -626,6 +632,8 @@ private fun RestoreActiveFlightEffect(runtime: TravelBlockRuntime) {
 private suspend fun restoreArrivedFlight(flight: ActiveFlight, runtime: TravelBlockRuntime) {
     recordRestoredArrival(runtime.container, flight)
     runtime.container.landingAlarmScheduler.cancel()
+    runtime.container.liveUpdateRefreshScheduler.cancel()
+    runtime.container.liveFlightNotificationHelper.cancel()
     runtime.container.notificationHelper.cancelFlightLandedNotification()
     runtime.state.restore(
         null,
@@ -650,4 +658,21 @@ private fun shouldOpenRestoredArrival(inputs: ArrivalEffectInputs): Boolean {
     if (!inputs.activeFlightRestored || inputs.arrivalSummary == null) return false
     return inputs.openArrivalRequested || inputs.currentRoute == null ||
         inputs.currentRoute == TravelBlockDestination.Home.route
+}
+
+@Composable
+private fun LiveFlightUpdatesEffect(
+    flight: ActiveFlight?,
+    container: TravelBlockContainer,
+) {
+    LaunchedEffect(flight?.startedAt) {
+        if (flight == null) return@LaunchedEffect
+        if (!container.liveFlightNotificationHelper.canPostNotifications()) return@LaunchedEffect
+        container.liveFlightNotificationHelper.show(flight)
+        container.liveUpdateRefreshScheduler.schedule(flight)
+        while (true) {
+            delay(60_000L)
+            container.liveFlightNotificationHelper.show(flight)
+        }
+    }
 }

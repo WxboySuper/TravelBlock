@@ -4,6 +4,7 @@ import com.travelblock.app.data.database.ActiveFlightSessionDao
 import com.travelblock.app.data.database.ActiveFlightSessionEntity
 import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.ActiveFlightStatus
+import com.travelblock.app.domain.model.ActiveItinerarySchedule
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
@@ -42,6 +43,7 @@ class DefaultActiveFlightSessionRepositoryTest {
         val repository = DefaultActiveFlightSessionRepository(dao)
         val layover = activeFlight.copy(
             itineraryCodes = "KOUN,KOKC,KTUL,KDAL",
+            itinerarySchedule = ActiveItinerarySchedule(listOf(48, 48, 48), listOf(10, 10), 20, 4),
             itineraryLabel = "Domestic",
             itineraryLegIndex = 1,
             itineraryLegCount = 3,

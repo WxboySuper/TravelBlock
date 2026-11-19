@@ -1,9 +1,11 @@
 package com.travelblock.app.domain.engine
 
 import com.travelblock.app.domain.model.ActiveFlight
+import com.travelblock.app.domain.model.ActiveItinerarySchedule
 import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.Airport
 import java.time.Instant
+import com.travelblock.app.domain.engine.SessionPlanCalculator
 
 fun createInitialFlight(
     pass: BoardingPass,
@@ -12,8 +14,19 @@ fun createInitialFlight(
 ): ActiveFlight {
     val singleFlight = pass.toActiveFlight(startedAt)
     val preset = pass.tripPreset ?: return singleFlight
+    val breakdown = pass.sessionPlan?.let(SessionPlanCalculator::calculate)
     val itinerary = ItineraryPlanner.plan(
-        ItineraryRequest(pass.origin, pass.destination, preset, airports, pass.focusDurationMinutes),
+        ItineraryRequest(
+            origin = pass.origin,
+            destination = pass.destination,
+            airports = airports,
+            trip = ItineraryTrip(
+                preset = preset,
+                focusMinutes = pass.focusDurationMinutes,
+                legDurationsMinutes = breakdown?.legDurationsMinutes.orEmpty(),
+                breakDurationsMinutes = breakdown?.breakDurationsMinutes.orEmpty(),
+            ),
+        ),
     ) ?: return singleFlight
     val first = itinerary.airports.take(2)
     val engine = AirportRouteEngine()
@@ -26,8 +39,14 @@ fun createInitialFlight(
         distanceMiles = engine.distanceMiles(first[0], first[1]),
         itineraryCodes = itinerary.airports.joinToString(",") { it.code },
         itineraryLabel = preset.label,
+        itinerarySchedule = ActiveItinerarySchedule(
+            legDurationsMinutes = itinerary.legDurationsMinutes,
+            breakDurationsMinutes = itinerary.breakDurationsMinutes,
+            longBreakMinutes = pass.sessionPlan?.breaks?.longMinutes,
+            longBreakEvery = pass.sessionPlan?.breaks?.longEveryBlocks,
+        ),
         itineraryLegIndex = 0,
-        itineraryLegCount = preset.legCount,
+        itineraryLegCount = itinerary.legDurationsMinutes.size,
         itineraryDistanceMiles = totalDistance,
     )
 }

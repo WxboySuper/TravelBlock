@@ -15,7 +15,7 @@ class ItineraryPlannerTest {
         val destination = airport("ZZZ", 0.0, 30.0)
         val candidates = listOf(airport("HUB", 0.0, 15.0), airport("ALT", 5.0, 20.0))
 
-        val trip = ItineraryPlanner.plan(ItineraryRequest(origin, destination, TripPreset("test", "Test", 2), candidates, 25))
+        val trip = ItineraryPlanner.plan(ItineraryRequest(origin, destination, candidates, ItineraryTrip(TripPreset("test", "Test", 2), 25)))
 
         assertNotNull(trip)
         assertEquals(listOf("AAA", "HUB", "ZZZ"), trip?.airports?.map(Airport::code))
@@ -26,8 +26,23 @@ class ItineraryPlannerTest {
     fun `planner rejects impossible route and same airport`() {
         val origin = airport("AAA", 0.0, 0.0)
         val preset = TripPreset("test", "Test", 2)
-        assertNull(ItineraryPlanner.plan(ItineraryRequest(origin, origin, preset, emptyList(), 25)))
-        assertNull(ItineraryPlanner.plan(ItineraryRequest(origin, airport("ZZZ", 0.0, 30.0), preset, emptyList(), 25)))
+        val trip = ItineraryTrip(preset, 25)
+        assertNull(ItineraryPlanner.plan(ItineraryRequest(origin, origin, emptyList(), trip)))
+        assertNull(ItineraryPlanner.plan(ItineraryRequest(origin, airport("ZZZ", 0.0, 30.0), emptyList(), trip)))
+    }
+
+    @Test
+    fun `planner supports twenty four legs when only one connecting airport is nearby`() {
+        val origin = airport("AAA", 0.0, 0.0)
+        val destination = airport("ZZZ", 0.0, 0.01)
+        val hub = airport("HUB", 1.0, 0.005)
+        val itinerary = ItineraryPlanner.plan(
+            ItineraryRequest(origin, destination, listOf(hub), ItineraryTrip(TripPreset("planned", "Planned", 24), 30)),
+        )
+
+        assertEquals(25, itinerary?.airports?.size)
+        assertEquals(24, itinerary?.preset?.legCount)
+        assertEquals("HUB", itinerary?.airports?.get(12)?.code)
     }
 
     @Test
@@ -39,7 +54,7 @@ class ItineraryPlannerTest {
         val kef = airport("BIKF", 63.98, -22.61).copy(iata = "KEF", country = "IS")
 
         val trip = ItineraryPlanner.plan(
-            ItineraryRequest(origin, destination, TripPreset("long", "Transpacific", 2), listOf(anc, hnl, kef), 25),
+            ItineraryRequest(origin, destination, listOf(anc, hnl, kef), ItineraryTrip(TripPreset("long", "Transpacific", 2), 25)),
         )
 
         assertEquals("PANC", trip?.airports?.get(1)?.code)

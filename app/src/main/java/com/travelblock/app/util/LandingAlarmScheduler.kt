@@ -116,7 +116,7 @@ class LandingAlarmReceiver : android.content.BroadcastReceiver() {
         val id = java.util.UUID.nameUUIDFromBytes("${flight.flightNumber}:${flight.startedAt.toEpochMilli()}".toByteArray()).toString()
         container.flightLogRepository.insertFlightLog(flight.toCompletedLog(id, points))
         container.pointsRepository.insertTransaction(flight.toCompletedPoints(id, points))
-        val minutes = com.travelblock.app.domain.model.FlightItinerary.layoverMinutesAfter(flight.itineraryLegIndex + 1)
+        val minutes = flight.breakAfterLeg(flight.itineraryLegIndex)
         val layover = flight.copy(
             status = com.travelblock.app.domain.model.ActiveFlightStatus.Layover,
             itineraryPointsEarned = flight.itineraryPointsEarned + points,

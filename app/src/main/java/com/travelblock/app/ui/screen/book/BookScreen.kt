@@ -53,6 +53,7 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.domain.model.SessionPlan
 import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.ui.components.BoardingPassCard
 import com.travelblock.app.ui.components.BoardingPassReveal
@@ -125,6 +126,7 @@ fun BookScreen(
         onObjectiveChanged = viewModel::updateFocusObjective,
         onFocusTagSelected = viewModel::selectFocusTag,
         onTripPresetSelected = viewModel::selectTripPreset,
+        onSessionPlanSelected = viewModel::selectSessionPlan,
         onTripDestinationSelected = viewModel::selectTripDestination,
         onTodoistTaskSelected = viewModel::selectTodoistTask,
         onPreflightCheckChanged = viewModel::setPreflightCheck,
@@ -164,6 +166,7 @@ fun BookScreenContent(
     todoistRepository: TodoistRepository? = null,
     onOpenTodoistSettings: () -> Unit = {},
     onTripPresetSelected: (com.travelblock.app.domain.model.TripPreset?) -> Unit = {},
+    onSessionPlanSelected: (SessionPlan?) -> Unit = {},
     onTripDestinationSelected: (Airport) -> Unit = {},
     airports: List<Airport> = emptyList(),
 ) {
@@ -206,6 +209,7 @@ fun BookScreenContent(
                     onObjectiveChanged = onObjectiveChanged,
                     onFocusTagSelected = onFocusTagSelected,
                     onTripPresetSelected = onTripPresetSelected,
+                    onSessionPlanSelected = onSessionPlanSelected,
                     onTripDestinationSelected = onTripDestinationSelected,
                     airports = airports,
                     todoistRepository = todoistRepository,
@@ -271,6 +275,7 @@ private fun CheckInSurface(
     onObjectiveChanged: (String) -> Unit,
     onFocusTagSelected: (String) -> Unit,
     onTripPresetSelected: (com.travelblock.app.domain.model.TripPreset?) -> Unit,
+    onSessionPlanSelected: (SessionPlan?) -> Unit,
     onTripDestinationSelected: (Airport) -> Unit,
     airports: List<Airport>,
     todoistRepository: TodoistRepository?,
@@ -312,6 +317,7 @@ private fun CheckInSurface(
         if (!uiState.showSeatSelection) {
             item {
                 TripPresetPicker(uiState.tripPreset, onTripPresetSelected)
+                SessionPlannerPicker(uiState.sessionPlan, onSessionPlanSelected)
                 LongHaulDestinationPicker(
                     TripPresetSelection(uiState.tripPreset, uiState.destination, airports),
                     onTripDestinationSelected,
@@ -401,240 +407,6 @@ private fun EmptyBookingState() {
                 message = "Choose a departure from Home to start your check-in.",
             ),
         )
-    }
-}
-
-/** A real-cabin seat map: a fuselage outline with window markers, row numbers down the aisle, and seat-back shapes. */
-@Composable
-private fun CabinSeatMap(
-    seats: List<SeatOption>,
-    selectedSeatId: String?,
-    seatSelectionMessage: String?,
-    onSeatSelected: (String) -> Unit,
-) {
-    PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text("Cabin map", style = MaterialTheme.typography.titleLarge, color = Ink)
-                    Text("Muted seats are already taken.", style = MaterialTheme.typography.bodySmall, color = WarmGray)
-                }
-                selectedSeatId?.let { StampPill(text = "Seat $it", color = DuskBlue) }
-            }
-            SeatLegend()
-            seatSelectionMessage?.let {
-                Surface(
-                    color = SoftSky,
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Sand),
-                ) {
-                    Text(
-                        text = it,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = DuskBlue,
-                    )
-                }
-            }
-            Fuselage {
-                CabinColumnLabels()
-                seats.groupBy { it.label.dropLast(1).toInt() }
-                    .toSortedMap()
-                    .forEach { (rowNumber, rowSeats) ->
-                        CabinSeatRow(
-                            rowNumber = rowNumber,
-                            rowSeats = rowSeats.sortedBy { it.label.last() },
-                            selectedSeatId = selectedSeatId,
-                            onSeatSelected = onSeatSelected,
-                        )
-                    }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Fuselage(content: @Composable () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Cream,
-        shape = RoundedCornerShape(topStart = 72.dp, topEnd = 72.dp, bottomStart = 26.dp, bottomEnd = 26.dp),
-        border = BorderStroke(1.5.dp, Sand),
-    ) {
-        Column(
-            modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 22.dp, bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Front of cabin",
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.labelSmall,
-                color = WarmGray,
-                textAlign = TextAlign.Center,
-            )
-            content()
-        }
-    }
-}
-
-@Composable
-private fun CabinColumnLabels() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Spacer(Modifier.width(WindowWidth))
-        listOf("A", "B", "C").forEach { ColumnLabel(it, Modifier.weight(1f)) }
-        Spacer(Modifier.weight(0.8f))
-        listOf("D", "E", "F").forEach { ColumnLabel(it, Modifier.weight(1f)) }
-        Spacer(Modifier.width(WindowWidth))
-    }
-}
-
-@Composable
-private fun ColumnLabel(label: String, modifier: Modifier) {
-    Text(
-        text = label,
-        modifier = modifier,
-        style = MaterialTheme.typography.labelSmall,
-        color = WarmGray,
-        textAlign = TextAlign.Center,
-    )
-}
-
-private val WindowWidth = 6.dp
-
-@Composable
-private fun CabinSeatRow(
-    rowNumber: Int,
-    rowSeats: List<SeatOption>,
-    selectedSeatId: String?,
-    onSeatSelected: (String) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CabinWindow()
-        rowSeats.forEachIndexed { index, seat ->
-            if (index == 3) {
-                Text(
-                    text = rowNumber.toString(),
-                    modifier = Modifier.weight(0.8f),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Marigold,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            SeatButton(
-                seat = seat,
-                selected = seat.id == selectedSeatId,
-                onSelected = { onSeatSelected(seat.id) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        CabinWindow()
-    }
-}
-
-@Composable
-private fun CabinWindow() {
-    Box(
-        modifier = Modifier
-            .width(WindowWidth)
-            .height(18.dp)
-            .clip(RoundedCornerShape(50))
-            .background(SoftSky)
-            .border(1.dp, Sand, RoundedCornerShape(50)),
-    )
-}
-
-@Composable
-private fun SeatButton(
-    seat: SeatOption,
-    selected: Boolean,
-    onSelected: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val containerColor = when {
-        selected -> DuskBlue
-        !seat.isAvailable -> Sand.copy(alpha = 0.55f)
-        else -> seatTint(seat.ticketClass)
-    }
-    val textColor = when {
-        selected -> Paper
-        seat.isAvailable -> Ink
-        else -> WarmGray.copy(alpha = 0.6f)
-    }
-
-    Surface(
-        color = containerColor,
-        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 8.dp, bottomEnd = 8.dp),
-        border = BorderStroke(1.dp, if (selected) DuskBlue else Sand),
-        modifier = modifier
-            .padding(horizontal = 2.dp, vertical = 1.dp)
-            .height(40.dp)
-            .semantics {
-                contentDescription = if (seat.isAvailable) seat.label else "${seat.label} unavailable"
-            }
-            .toggleable(
-                value = selected,
-                enabled = seat.isAvailable || selected,
-                role = Role.RadioButton,
-                onValueChange = { onSelected() },
-            ),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (selected) {
-                Icon(Icons.Rounded.Check, contentDescription = null, tint = Paper, modifier = Modifier.size(18.dp))
-            } else {
-                Text(
-                    text = seat.label.takeLast(1),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = textColor,
-                )
-            }
-        }
-    }
-}
-
-private fun seatTint(ticketClass: TicketClass): Color = when (ticketClass) {
-    TicketClass.Premium -> Color(0xFFF8E3B4)
-    TicketClass.ExtraLegroom -> Color(0xFFDCEBDD)
-    TicketClass.Window -> Color(0xFFD9E6F2)
-    TicketClass.Standard -> SoftSky
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SeatLegend() {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        LegendItem("Standard", SoftSky)
-        LegendItem("Window", seatTint(TicketClass.Window))
-        LegendItem("Extra legroom", seatTint(TicketClass.ExtraLegroom))
-        LegendItem("Premium", seatTint(TicketClass.Premium))
-        LegendItem("Taken", Sand.copy(alpha = 0.55f))
-    }
-}
-
-@Composable
-private fun LegendItem(label: String, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(
-            Modifier
-                .size(width = 16.dp, height = 14.dp)
-                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 3.dp, bottomEnd = 3.dp))
-                .background(color)
-                .border(1.dp, Sand, RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 3.dp, bottomEnd = 3.dp)),
-        )
-        Text(label, style = MaterialTheme.typography.labelSmall, color = WarmGray)
     }
 }
 

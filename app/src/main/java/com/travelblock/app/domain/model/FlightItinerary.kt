@@ -3,17 +3,23 @@ package com.travelblock.app.domain.model
 data class FlightItinerary(
     val preset: TripPreset,
     val airports: List<Airport>,
-    val focusMinutes: Int,
+    val schedule: ItinerarySchedule,
     val currentLeg: Int = 0,
 ) {
     init {
         require(airports.size == preset.legCount + 1)
-        require(focusMinutes > 0)
         require(currentLeg in 0 until preset.legCount)
+        require(schedule.focusMinutes > 0)
+        require(schedule.legDurationsMinutes.size == preset.legCount && schedule.legDurationsMinutes.all { it > 0 })
+        require(schedule.breakDurationsMinutes.isEmpty() || schedule.breakDurationsMinutes.size == preset.legCount - 1)
     }
 
+    val focusMinutes: Int get() = schedule.focusMinutes
+    val legDurationsMinutes: List<Int> get() = schedule.legDurationsMinutes
+    val breakDurationsMinutes: List<Int> get() = schedule.breakDurationsMinutes
     val isLastLeg: Boolean get() = currentLeg == preset.legCount - 1
-    val layoverMinutes: Int get() = layoverMinutesAfter(currentLeg + 1)
+    val layoverMinutes: Int get() = breakDurationsMinutes.getOrNull(currentLeg) ?: layoverMinutesAfter(currentLeg + 1)
+    val totalFocusMinutes: Int get() = legDurationsMinutes.sum()
 
     fun nextLeg(): FlightItinerary = copy(currentLeg = currentLeg + 1)
 
@@ -27,3 +33,9 @@ data class FlightItinerary(
             else STANDARD_LAYOVER_MINUTES
     }
 }
+
+data class ItinerarySchedule(
+    val focusMinutes: Int,
+    val legDurationsMinutes: List<Int>,
+    val breakDurationsMinutes: List<Int> = emptyList(),
+)

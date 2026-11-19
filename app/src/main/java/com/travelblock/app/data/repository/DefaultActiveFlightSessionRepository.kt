@@ -4,6 +4,7 @@ import com.travelblock.app.data.database.ActiveFlightSessionDao
 import com.travelblock.app.data.database.ActiveFlightSessionEntity
 import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.ActiveFlightStatus
+import com.travelblock.app.domain.model.ActiveItinerarySchedule
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
@@ -70,6 +71,7 @@ private fun ActiveFlightSessionEntity.toDomainModel(): ActiveFlight {
         todoistTaskContent = todoistTaskContent,
         itineraryCodes = itineraryCodes,
         itineraryLabel = itineraryLabel,
+        itinerarySchedule = toItinerarySchedule(),
         itineraryLegIndex = itineraryLegIndex,
         itineraryLegCount = itineraryLegCount,
         layoverEndsAtEpochMillis = layoverEndsAtEpochMillis,
@@ -118,11 +120,25 @@ private fun ActiveFlight.toEntity(): ActiveFlightSessionEntity {
         todoistTaskContent = todoistTaskContent,
         itineraryCodes = itineraryCodes,
         itineraryLabel = itineraryLabel,
+        itineraryDurationsMinutes = itinerarySchedule?.legDurationsMinutes?.joinToString(","),
+        itineraryBreakMinutes = itinerarySchedule?.breakDurationsMinutes?.takeIf { it.isNotEmpty() }?.joinToString(","),
+        itineraryLongBreakMinutes = itinerarySchedule?.longBreakMinutes,
+        itineraryLongBreakEvery = itinerarySchedule?.longBreakEvery,
         itineraryLegIndex = itineraryLegIndex,
         itineraryLegCount = itineraryLegCount,
         layoverEndsAtEpochMillis = layoverEndsAtEpochMillis,
         itineraryPointsEarned = itineraryPointsEarned,
         itineraryDistanceMiles = itineraryDistanceMiles,
         status = status.name,
+    )
+}
+
+private fun ActiveFlightSessionEntity.toItinerarySchedule(): ActiveItinerarySchedule? {
+    val legs = itineraryDurationsMinutes?.split(',')?.mapNotNull(String::toIntOrNull) ?: return null
+    return ActiveItinerarySchedule(
+        legDurationsMinutes = legs,
+        breakDurationsMinutes = itineraryBreakMinutes?.split(',')?.mapNotNull(String::toIntOrNull).orEmpty(),
+        longBreakMinutes = itineraryLongBreakMinutes,
+        longBreakEvery = itineraryLongBreakEvery,
     )
 }

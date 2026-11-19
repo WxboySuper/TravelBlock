@@ -25,7 +25,7 @@ data class ArrivalSummary(
                 origin = routeAirports.firstOrNull { it.code == routeCodes.firstOrNull() } ?: flight.origin,
                 destination = routeAirports.firstOrNull { it.code == routeCodes.lastOrNull() } ?: flight.destination,
                 flightNumber = flight.flightNumber,
-                durationMinutes = flight.durationMinutes * flight.itineraryLegCount,
+                durationMinutes = flight.itineraryFocusMinutes,
                 distanceMiles = if (flight.isItinerary) flight.itineraryDistanceMiles else flight.distanceMiles,
                 seat = flight.seat,
                 pointsEarned = pointsEarned + flight.itineraryPointsEarned,

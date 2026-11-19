@@ -124,7 +124,7 @@ private fun OnboardingFlow(
     )
 }
 
-private class TravelBlockAppState {
+internal class TravelBlockAppState {
     var draftFlightBooking by mutableStateOf<DraftFlightBooking?>(null)
     var quickBoardingPass by mutableStateOf<BoardingPass?>(null)
     var activeFlight by mutableStateOf<ActiveFlight?>(null)
@@ -140,7 +140,7 @@ private class TravelBlockAppState {
     }
 }
 
-private data class TravelBlockRuntime(
+internal data class TravelBlockRuntime(
     val container: TravelBlockContainer,
     val state: TravelBlockAppState,
     val settings: UserSettings,
@@ -174,7 +174,7 @@ private fun TravelBlockEffects(
     RestoreCockpitRouteEffect(runtime, navController, currentRoute)
 }
 
-private data class ArrivalEffectInputs(
+internal data class ArrivalEffectInputs(
     val activeFlightRestored: Boolean,
     val arrivalSummary: ArrivalSummary?,
     val openArrivalRequested: Boolean,
@@ -604,164 +604,3 @@ internal fun shouldRestoreAsArrival(plannedArrivalAt: Instant, now: Instant): Bo
 internal fun shouldRestoreAsArrival(flight: ActiveFlight, now: Instant): Boolean =
     flight.status != com.travelblock.app.domain.model.ActiveFlightStatus.Layover &&
         shouldRestoreAsArrival(flight.plannedArrivalAt, now)
-
-private suspend fun recordRestoredArrival(
-    container: TravelBlockContainer,
-    flight: ActiveFlight,
-) {
-    val legPoints = FlightRewardCalculator.completedReward(flight)
-    val bonus = if (flight.isItinerary) com.travelblock.app.domain.engine.ItineraryRewards.COMPLETION_BONUS else 0
-    recordRestoredLeg(container, flight, legPoints, bonus)
-}
-
-private suspend fun recordRestoredLeg(
-    container: TravelBlockContainer,
-    flight: ActiveFlight,
-    pointsEarned: Int,
-    tripBonus: Int = 0,
-) {
-    val flightId = UUID.nameUUIDFromBytes(
-        "${flight.flightNumber}:${flight.startedAt.toEpochMilli()}".toByteArray(),
-    ).toString()
-    val endedAt = flight.plannedArrivalAt.toEpochMilli()
-    container.flightLogRepository.insertFlightLog(
-        FlightLogEntity(
-            id = flightId,
-            flightNumber = flight.flightNumber,
-            originCode = flight.origin.code,
-            destinationCode = flight.destination.code,
-            durationMinutes = flight.durationMinutes,
-            distanceMiles = flight.distanceMiles,
-            status = FlightLogStatus.COMPLETED.name,
-            startedAt = flight.startedAt.toEpochMilli(),
-            endedAt = endedAt,
-            seat = flight.seat.label,
-            pointsEarned = pointsEarned,
-            focusObjective = flight.focusObjective,
-            focusTag = flight.focusTag,
-            todoistTaskId = flight.todoistTaskId,
-            todoistTaskContent = flight.todoistTaskContent,
-        ),
-    )
-    container.pointsRepository.insertTransaction(
-        PointsTransactionEntity(
-            id = flightId,
-            amount = pointsEarned,
-            reason = "Completed flight",
-            createdAt = endedAt,
-            relatedFlightId = flightId,
-        ),
-    )
-    if (tripBonus > 0) {
-        container.pointsRepository.insertTransaction(
-            PointsTransactionEntity(
-                id = "$flightId-trip-bonus",
-                amount = tripBonus,
-                reason = "Completed long-haul trip",
-                createdAt = endedAt,
-                relatedFlightId = flightId,
-            ),
-        )
-    }
-    container.settingsRepository.setCurrentAirportCode(AirportCode(flight.destination.code))
-}
-
-@Composable
-private fun RestoreActiveFlightEffect(runtime: TravelBlockRuntime) {
-    val state = runtime.state
-    LaunchedEffect(state.activeFlightRestored) {
-        if (state.activeFlightRestored) return@LaunchedEffect
-        val flight = runtime.container.activeFlightSessionRepository.getActiveFlight()
-        restoreFlightSession(flight, runtime)
-    }
-}
-
-private suspend fun restoreFlightSession(flight: ActiveFlight?, runtime: TravelBlockRuntime) {
-    if (flight == null) {
-        runtime.state.restore(null, null)
-        return
-    }
-    val now = Instant.now()
-    if (flight.status == com.travelblock.app.domain.model.ActiveFlightStatus.Layover) {
-        restoreLayover(flight, runtime)
-    } else if (shouldRestoreAsArrival(flight, now) && flight.isItinerary && !flight.isLastItineraryLeg) {
-        restoreLandedItineraryLeg(flight, runtime)
-    } else if (shouldRestoreAsArrival(flight, now)) {
-        restoreArrivedFlight(flight, runtime)
-    } else {
-        runtime.container.landingAlarmScheduler.schedule(flight)
-        runtime.state.restore(flight, null)
-    }
-}
-
-private suspend fun restoreLayover(flight: ActiveFlight, runtime: TravelBlockRuntime) {
-    runtime.container.landingAlarmScheduler.schedule(flight)
-    runtime.container.liveFlightNotificationHelper.show(flight)
-    runtime.container.liveUpdateRefreshScheduler.schedule(flight)
-    runtime.state.restore(flight, null)
-}
-
-private suspend fun restoreLandedItineraryLeg(flight: ActiveFlight, runtime: TravelBlockRuntime) {
-    val points = FlightRewardCalculator.completedReward(flight)
-    recordRestoredLeg(runtime.container, flight, points)
-    val minutes = com.travelblock.app.domain.model.FlightItinerary.layoverMinutesAfter(flight.itineraryLegIndex + 1)
-    val next = flight.copy(
-        status = com.travelblock.app.domain.model.ActiveFlightStatus.Layover,
-        itineraryPointsEarned = flight.itineraryPointsEarned + points,
-        layoverEndsAtEpochMillis = flight.plannedArrivalAt.toEpochMilli() +
-            java.time.Duration.ofMinutes(minutes.toLong()).toMillis(),
-    )
-    runtime.container.activeFlightSessionRepository.saveActiveFlight(next)
-    restoreLayover(next, runtime)
-}
-
-private suspend fun restoreArrivedFlight(flight: ActiveFlight, runtime: TravelBlockRuntime) {
-    recordRestoredArrival(runtime.container, flight)
-    runtime.container.activeFlightSessionRepository.clearActiveFlight()
-    runtime.container.landingAlarmScheduler.cancel()
-    runtime.container.liveUpdateRefreshScheduler.cancel()
-    runtime.container.liveFlightNotificationHelper.cancel()
-    runtime.container.notificationHelper.cancelFlightLandedNotification()
-    runtime.state.restore(
-        null,
-        ArrivalSummary.fromCompletedFlight(
-            flight = flight,
-            pointsEarned = FlightRewardCalculator.completedReward(flight) +
-                if (flight.isItinerary) com.travelblock.app.domain.engine.ItineraryRewards.COMPLETION_BONUS else 0,
-            routeAirports = runtime.container.airportRepository.getAllAirports(),
-        ),
-    )
-}
-
-@Composable
-private fun OpenRestoredArrivalEffect(
-    inputs: ArrivalEffectInputs,
-    onOpenArrival: () -> Unit,
-) {
-    LaunchedEffect(inputs.activeFlightRestored, inputs.arrivalSummary, inputs.openArrivalRequested) {
-        if (shouldOpenRestoredArrival(inputs)) onOpenArrival()
-    }
-}
-
-private fun shouldOpenRestoredArrival(inputs: ArrivalEffectInputs): Boolean {
-    if (!inputs.activeFlightRestored || inputs.arrivalSummary == null) return false
-    return inputs.openArrivalRequested || inputs.currentRoute == null ||
-        inputs.currentRoute == TravelBlockDestination.Home.route
-}
-
-@Composable
-private fun LiveFlightUpdatesEffect(
-    flight: ActiveFlight?,
-    container: TravelBlockContainer,
-) {
-    LaunchedEffect(flight?.startedAt, flight?.status, flight?.itineraryLegIndex, flight?.layoverEndsAtEpochMillis) {
-        if (flight == null) return@LaunchedEffect
-        if (!container.liveFlightNotificationHelper.canPostNotifications()) return@LaunchedEffect
-        container.liveFlightNotificationHelper.show(flight)
-        container.liveUpdateRefreshScheduler.schedule(flight)
-        while (true) {
-            delay(60_000L)
-            container.liveFlightNotificationHelper.show(flight)
-        }
-    }
-}

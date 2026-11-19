@@ -67,13 +67,16 @@ fun SessionPlannerPicker(
 }
 
 @OptIn(ExperimentalLayoutApi::class)
+/** "Long break every" counts focus blocks, everything else is minutes (or hours). */
+private fun choiceText(row: String, value: Int): String = if (row.endsWith("every")) "$value blocks" else valueLabel(value)
+
 @Composable
 private fun PlannerChoiceRow(label: String, choices: List<Int>, selected: Int, onSelected: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             choices.forEach { value ->
-                FilterChip(selected == value, { onSelected(value) }, label = { Text(valueLabel(value)) })
+                FilterChip(selected == value, { onSelected(value) }, label = { Text(choiceText(label, value)) })
             }
         }
     }

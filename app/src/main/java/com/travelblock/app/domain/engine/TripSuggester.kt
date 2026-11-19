@@ -14,6 +14,8 @@ data class TripWish(
     val majorAirportsOnly: Boolean = true,
     /** Airports (any code form) the traveller has already landed at; the planner prefers somewhere new. */
     val visited: Set<String> = emptySet(),
+    /** True for a "land by" deadline: a hub layover then eats into the time available. */
+    val layoversCountAgainstTime: Boolean = false,
 )
 
 /** One offer from the planner: where it goes, every airport on the way (hubs included) and how long it focuses. */
@@ -45,7 +47,7 @@ object TripSuggester {
             .filter { !wish.majorAirportsOnly || it.destination.isMajorHub }
             .sortedBy { abs(wish.minutes - it.estimatedDurationMinutes) }
             .take(MAX_CANDIDATES)
-            .map { route -> Fit(suggestionFor(route, hubs, airports, wish), wish.minutes) }
+            .map { route -> Fit(suggestionFor(route, hubs, airports, wish), wish) }
         // The best fit in each direction, then the best few overall, so the options really differ.
         return fits.groupBy { quadrant(origin, it.suggestion.route.destination) }.values
             .map { inDirection -> inDirection.minBy(Fit::score) }
@@ -58,10 +60,11 @@ object TripSuggester {
      * How well a suggestion suits: minutes away from the time asked for (hub detour included), plus a nudge
      * against somewhere already visited and a smaller one against small airports.
      */
-    private class Fit(val suggestion: TripSuggestion, private val wanted: Int) {
+    private class Fit(val suggestion: TripSuggestion, private val wish: TripWish) {
         val score: Int
             get() {
-                val gap = abs(wanted - (suggestion.hub?.totalFocusMinutes ?: suggestion.route.estimatedDurationMinutes))
+                val layover = suggestion.hub?.layoverMinutes?.takeIf { wish.layoversCountAgainstTime } ?: 0
+                val gap = abs(wish.minutes - (suggestion.hub?.totalFocusMinutes?.plus(layover) ?: suggestion.route.estimatedDurationMinutes))
                 val visitedPenalty = if (suggestion.isNew) 0 else VISITED_PENALTY_MINUTES
                 val smallPenalty = if (suggestion.route.destination.isMajorHub) 0 else SMALL_AIRPORT_PENALTY_MINUTES
                 return gap + visitedPenalty + smallPenalty

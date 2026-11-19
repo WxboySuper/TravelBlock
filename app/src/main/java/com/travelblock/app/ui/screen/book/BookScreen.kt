@@ -266,45 +266,21 @@ private fun CheckInSurface(
     onBackToManifest: () -> Unit,
     onContinue: () -> Unit,
 ) {
-    val flowStep = if (uiState.showSeatSelection) {
-        BookingFlowStep.SeatSelection
-    } else {
-        BookingFlowStep.Manifest
-    }
+    val flowStep = if (uiState.showSeatSelection) BookingFlowStep.SeatSelection else BookingFlowStep.Manifest
     val origin = requireNotNull(uiState.origin)
     val destination = requireNotNull(uiState.destination)
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
         options = StickyActionListOptions(horizontalPadding = 20.dp),
-        stickyAction = {
-            if (!uiState.showSeatSelection) {
-                PrimaryButton(text = "Check-in complete", onClick = onContinueToSeatSelection)
-                SecondaryButton(text = "Back to departures", onClick = onCancelBooking)
-            } else {
-                PrimaryButton(
-                    text = "Generate boarding pass",
-                    onClick = onContinue,
-                    enabled = uiState.selectedSeat != null,
-                )
-                SecondaryButton(text = "Back to trip manifest", onClick = onBackToManifest)
-            }
-        },
+        stickyAction = { BookingStickyActions(uiState, onContinueToSeatSelection, onCancelBooking, onContinue, onBackToManifest) },
     ) {
         item {
             Spacer(modifier = Modifier.height(12.dp))
             BookingProgressRail(currentStep = flowStep)
         }
         item {
-            PhaseHeader(
-                eyebrow = if (uiState.showSeatSelection) "Cabin" else "Check-in desk",
-                title = if (uiState.showSeatSelection) "Choose your seat" else "Pack your focus",
-                detail = if (uiState.showSeatSelection) {
-                    "Pick the spot you will carry into Focus Mode."
-                } else {
-                    "Tell us what you are working on, so this flight has a purpose."
-                },
-            )
+            CheckInPhaseHeader(uiState)
         }
         item {
             CompactRouteDocket(
@@ -323,27 +299,87 @@ private fun CheckInSurface(
         }
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->
-                when (step) {
-                    BookingFlowStep.Manifest -> ManifestCard(
-                        uiState = uiState,
-                        onObjectiveChanged = onObjectiveChanged,
-                        onFocusTagSelected = onFocusTagSelected,
-                        todoistRepository = todoistRepository,
-                        onTodoistTaskSelected = onTodoistTaskSelected,
-                        onOpenTodoistSettings = onOpenTodoistSettings,
-                        onPreflightCheckChanged = onPreflightCheckChanged,
-                        onSkipToSeats = onContinueToSeatSelection,
-                    )
-                    BookingFlowStep.SeatSelection -> CabinSeatMap(
-                        seats = uiState.seatOptions,
-                        selectedSeatId = uiState.selectedSeatId,
-                        seatSelectionMessage = uiState.seatSelectionMessage,
-                        onSeatSelected = onSeatSelected,
-                    )
-                    else -> Unit
-                }
+                BookingStepContent(
+                    step,
+                    uiState,
+                    onSeatSelected,
+                    BookingManifestActions(
+                        onObjectiveChanged,
+                        onFocusTagSelected,
+                        todoistRepository,
+                        onTodoistTaskSelected,
+                        onOpenTodoistSettings,
+                        onPreflightCheckChanged,
+                        onContinueToSeatSelection,
+                    ),
+                )
             }
         }
+    }
+}
+
+private data class BookingManifestActions(
+    val objectiveChanged: (String) -> Unit,
+    val focusTagSelected: (String) -> Unit,
+    val todoistRepository: TodoistRepository?,
+    val todoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
+    val openTodoistSettings: () -> Unit,
+    val preflightCheckChanged: (String, Boolean) -> Unit,
+    val skipToSeats: () -> Unit,
+)
+
+@Composable
+private fun BookingStickyActions(
+    uiState: BookingUiState,
+    onCheckIn: () -> Unit,
+    onCancel: () -> Unit,
+    onContinue: () -> Unit,
+    onBack: () -> Unit,
+) {
+    if (!uiState.showSeatSelection) {
+        PrimaryButton(text = "Check-in complete", onClick = onCheckIn)
+        SecondaryButton(text = "Back to departures", onClick = onCancel)
+        return
+    }
+    PrimaryButton(text = "Generate boarding pass", onClick = onContinue, enabled = uiState.selectedSeat != null)
+    SecondaryButton(text = "Back to trip manifest", onClick = onBack)
+}
+
+@Composable
+private fun CheckInPhaseHeader(uiState: BookingUiState) {
+    val seatStep = uiState.showSeatSelection
+    PhaseHeader(
+        eyebrow = if (seatStep) "Cabin" else "Check-in desk",
+        title = if (seatStep) "Choose your seat" else "Pack your focus",
+        detail = if (seatStep) "Pick the spot you will carry into Focus Mode." else "Tell us what you are working on, so this flight has a purpose.",
+    )
+}
+
+@Composable
+private fun BookingStepContent(
+    step: BookingFlowStep,
+    uiState: BookingUiState,
+    onSeatSelected: (String) -> Unit,
+    actions: BookingManifestActions,
+) {
+    when (step) {
+        BookingFlowStep.Manifest -> ManifestCard(
+            uiState = uiState,
+            onObjectiveChanged = actions.objectiveChanged,
+            onFocusTagSelected = actions.focusTagSelected,
+            todoistRepository = actions.todoistRepository,
+            onTodoistTaskSelected = actions.todoistTaskSelected,
+            onOpenTodoistSettings = actions.openTodoistSettings,
+            onPreflightCheckChanged = actions.preflightCheckChanged,
+            onSkipToSeats = actions.skipToSeats,
+        )
+        BookingFlowStep.SeatSelection -> CabinSeatMap(
+            seats = uiState.seatOptions,
+            selectedSeatId = uiState.selectedSeatId,
+            seatSelectionMessage = uiState.seatSelectionMessage,
+            onSeatSelected = onSeatSelected,
+        )
+        else -> Unit
     }
 }
 

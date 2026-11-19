@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.travelblock.app.TravelBlockContainer
+import com.travelblock.app.data.settings.UserSettings
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.ui.components.SectionHeader
 import com.travelblock.app.ui.components.StatusChip
@@ -42,6 +43,26 @@ import com.travelblock.app.ui.theme.CabinAmber
 import com.travelblock.app.ui.theme.MutedText
 import com.travelblock.app.ui.theme.RunwayLine
 import com.travelblock.app.ui.theme.SoftSky
+
+data class AirportPickerActions(
+    val open: (AirportPickerMode) -> Unit,
+    val dismiss: () -> Unit,
+    val searchChanged: (String) -> Unit,
+    val selected: (Airport) -> Unit,
+)
+
+data class HomeAirportActions(val confirm: (Boolean) -> Unit, val dismiss: () -> Unit)
+data class AirportActions(val picker: AirportPickerActions, val home: HomeAirportActions)
+data class SoundSettingsActions(
+    val themeSelected: (String) -> Unit,
+    val soundChanged: (Boolean) -> Unit,
+    val announcementsChanged: (Boolean) -> Unit,
+    val hapticsChanged: (Boolean) -> Unit,
+)
+data class DebugSettingsActions(val shortFlightsChanged: (Boolean) -> Unit, val durationSelected: (Int) -> Unit)
+data class PreferenceActions(val sound: SoundSettingsActions, val debug: DebugSettingsActions)
+data class ResetActions(val show: () -> Unit, val dismiss: () -> Unit, val reset: () -> Unit)
+data class SettingsActions(val airports: AirportActions, val preferences: PreferenceActions, val reset: ResetActions)
 
 @Composable
 fun SettingsScreen(container: TravelBlockContainer) {
@@ -55,40 +76,24 @@ fun SettingsScreen(container: TravelBlockContainer) {
 
     SettingsScreenContent(
         uiState = viewModel.uiState,
-        onOpenAirportPicker = viewModel::openAirportPicker,
-        onDismissAirportPicker = viewModel::dismissAirportPicker,
-        onAirportSearchChanged = viewModel::onAirportSearchChanged,
-        onAirportSelected = viewModel::selectAirport,
-        onConfirmHomeAirportChange = viewModel::confirmHomeAirportChange,
-        onDismissHomeAirportConfirmation = viewModel::dismissHomeAirportConfirmation,
-        onThemeSelected = viewModel::setSelectedTheme,
-        onSoundEnabledChanged = viewModel::setSoundEnabled,
-        onHapticsEnabledChanged = viewModel::setHapticsEnabled,
-        onDebugShortFlightsChanged = viewModel::setDebugShortFlightsEnabled,
-        onDebugDurationSelected = viewModel::setDebugFlightDurationSeconds,
-        onShowResetConfirmation = viewModel::showResetConfirmation,
-        onDismissResetConfirmation = viewModel::dismissResetConfirmation,
-        onResetLocalData = viewModel::resetAllLocalData,
+        actions = SettingsActions(
+            airports = AirportActions(
+                picker = AirportPickerActions(viewModel::openAirportPicker, viewModel::dismissAirportPicker, viewModel::onAirportSearchChanged, viewModel::selectAirport),
+                home = HomeAirportActions(viewModel::confirmHomeAirportChange, viewModel::dismissHomeAirportConfirmation),
+            ),
+            preferences = PreferenceActions(
+                sound = SoundSettingsActions(viewModel::setSelectedTheme, viewModel::setSoundEnabled, viewModel::setAnnouncementsEnabled, viewModel::setHapticsEnabled),
+                debug = DebugSettingsActions(viewModel::setDebugShortFlightsEnabled, viewModel::setDebugFlightDurationSeconds),
+            ),
+            reset = ResetActions(viewModel::showResetConfirmation, viewModel::dismissResetConfirmation, viewModel::resetAllLocalData),
+        ),
     )
 }
 
 @Composable
 fun SettingsScreenContent(
     uiState: SettingsUiState,
-    onOpenAirportPicker: (AirportPickerMode) -> Unit,
-    onDismissAirportPicker: () -> Unit,
-    onAirportSearchChanged: (String) -> Unit,
-    onAirportSelected: (Airport) -> Unit,
-    onConfirmHomeAirportChange: (Boolean) -> Unit,
-    onDismissHomeAirportConfirmation: () -> Unit,
-    onThemeSelected: (String) -> Unit,
-    onSoundEnabledChanged: (Boolean) -> Unit,
-    onHapticsEnabledChanged: (Boolean) -> Unit,
-    onDebugShortFlightsChanged: (Boolean) -> Unit = {},
-    onDebugDurationSelected: (Int) -> Unit = {},
-    onShowResetConfirmation: () -> Unit,
-    onDismissResetConfirmation: () -> Unit,
-    onResetLocalData: () -> Unit,
+    actions: SettingsActions,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -111,26 +116,15 @@ fun SettingsScreenContent(
             AirportSettingsCard(
                 homeAirport = uiState.homeAirport,
                 currentAirport = uiState.currentAirport,
-                onChangeHome = { onOpenAirportPicker(AirportPickerMode.Home) },
-                onChangeCurrent = { onOpenAirportPicker(AirportPickerMode.Current) },
+                onChangeHome = { actions.airports.picker.open(AirportPickerMode.Home) },
+                onChangeCurrent = { actions.airports.picker.open(AirportPickerMode.Current) },
             )
         }
         item {
-            PreferenceCard(
-                selectedTheme = uiState.settings.selectedTheme,
-                soundEnabled = uiState.settings.soundEnabled,
-                hapticsEnabled = uiState.settings.hapticsEnabled,
-                debugShortFlightsEnabled = uiState.settings.debugShortFlightsEnabled,
-                debugFlightDurationSeconds = uiState.settings.debugFlightDurationSeconds,
-                onThemeSelected = onThemeSelected,
-                onSoundEnabledChanged = onSoundEnabledChanged,
-                onHapticsEnabledChanged = onHapticsEnabledChanged,
-                onDebugShortFlightsChanged = onDebugShortFlightsChanged,
-                onDebugDurationSelected = onDebugDurationSelected,
-            )
+            PreferenceCard(uiState.settings, actions.preferences)
         }
         item {
-            ResetDataCard(onShowResetConfirmation = onShowResetConfirmation)
+            ResetDataCard(onShowResetConfirmation = actions.reset.show)
         }
         item {
             AboutCard()
@@ -139,9 +133,14 @@ fun SettingsScreenContent(
         }
     }
 
-    AirportPickerOverlay(uiState, onAirportSearchChanged, onAirportSelected, onDismissAirportPicker)
-    HomeAirportConfirmationOverlay(uiState.pendingHomeAirport, onConfirmHomeAirportChange, onDismissHomeAirportConfirmation)
-    ResetConfirmationOverlay(uiState.showResetConfirmation, onResetLocalData, onDismissResetConfirmation)
+    SettingsOverlays(uiState, actions)
+}
+
+@Composable
+private fun SettingsOverlays(uiState: SettingsUiState, actions: SettingsActions) {
+    AirportPickerOverlay(uiState, actions.airports.picker.searchChanged, actions.airports.picker.selected, actions.airports.picker.dismiss)
+    HomeAirportConfirmationOverlay(uiState.pendingHomeAirport, actions.airports.home.confirm, actions.airports.home.dismiss)
+    ResetConfirmationOverlay(uiState.showResetConfirmation, actions.reset.reset, actions.reset.dismiss)
 }
 
 @Composable
@@ -262,51 +261,49 @@ private fun AirportPreferenceRow(
 
 @Composable
 private fun PreferenceCard(
-    selectedTheme: String,
-    soundEnabled: Boolean,
-    hapticsEnabled: Boolean,
-    debugShortFlightsEnabled: Boolean,
-    debugFlightDurationSeconds: Int,
-    onThemeSelected: (String) -> Unit,
-    onSoundEnabledChanged: (Boolean) -> Unit,
-    onHapticsEnabledChanged: (Boolean) -> Unit,
-    onDebugShortFlightsChanged: (Boolean) -> Unit,
-    onDebugDurationSelected: (Int) -> Unit,
+    settings: UserSettings,
+    actions: PreferenceActions,
 ) {
     SettingsCard {
         Text("Comfort", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text("Theme", style = MaterialTheme.typography.labelLarge, color = MutedText)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ThemeChip("System", "system", selectedTheme, onThemeSelected)
-            ThemeChip("Light", "light", selectedTheme, onThemeSelected)
-            ThemeChip("Dark", "dark", selectedTheme, onThemeSelected)
+            ThemeChip("System", "system", settings.selectedTheme, actions.sound.themeSelected)
+            ThemeChip("Light", "light", settings.selectedTheme, actions.sound.themeSelected)
+            ThemeChip("Dark", "dark", settings.selectedTheme, actions.sound.themeSelected)
         }
         ToggleRow(
             title = "Sound",
             description = "Controls future cabin and flight event sounds.",
-            checked = soundEnabled,
-            onCheckedChange = onSoundEnabledChanged,
+            checked = settings.soundEnabled,
+            onCheckedChange = actions.sound.soundChanged,
+        )
+        ToggleRow(
+            title = "PA announcements",
+            description = "Speak boarding and flight updates.",
+            checked = settings.announcementsEnabled,
+            onCheckedChange = actions.sound.announcementsChanged,
         )
         ToggleRow(
             title = "Haptics",
             description = "Controls future selection and flight-event vibration cues.",
-            checked = hapticsEnabled,
-            onCheckedChange = onHapticsEnabledChanged,
+            checked = settings.hapticsEnabled,
+            onCheckedChange = actions.sound.hapticsChanged,
         )
         if (com.travelblock.app.BuildConfig.DEBUG) {
             Text("Developer tools", style = MaterialTheme.typography.labelLarge, color = MutedText)
             ToggleRow(
                 title = "Short test flights",
                 description = "Use a 10 to 30 second arrival timer to test flight outcomes.",
-                checked = debugShortFlightsEnabled,
-                onCheckedChange = onDebugShortFlightsChanged,
+                checked = settings.debugShortFlightsEnabled,
+                onCheckedChange = actions.debug.shortFlightsChanged,
             )
-            if (debugShortFlightsEnabled) {
+            if (settings.debugShortFlightsEnabled) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(10, 15, 30).forEach { seconds ->
                         FilterChip(
-                            selected = debugFlightDurationSeconds == seconds,
-                            onClick = { onDebugDurationSelected(seconds) },
+                            selected = settings.debugFlightDurationSeconds == seconds,
+                            onClick = { actions.debug.durationSelected(seconds) },
                             label = { Text("${seconds}s") },
                         )
                     }

@@ -7,6 +7,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.travelblock.app.data.repository.AirportRepository
 import com.travelblock.app.data.settings.SettingsRepository
+import com.travelblock.app.data.settings.AirportCode
+import com.travelblock.app.data.settings.ThemePreference
+import com.travelblock.app.data.settings.SettingEnabled
+import com.travelblock.app.data.settings.FlightDurationSeconds
 import com.travelblock.app.domain.engine.AirportRouteEngine
 import com.travelblock.app.domain.engine.AirportSearchEngine
 import com.travelblock.app.domain.model.Airport
@@ -69,7 +73,7 @@ class SettingsViewModel(
             }
             AirportPickerMode.Current -> {
                 viewModelScope.launch {
-                    settingsRepository.setCurrentAirportCode(airport.code)
+                    settingsRepository.setCurrentAirportCode(AirportCode(airport.code))
                     uiState = uiState.copy(
                         pickerMode = null,
                         airportSearchQuery = "",
@@ -84,9 +88,9 @@ class SettingsViewModel(
     fun confirmHomeAirportChange(moveCurrentAirport: Boolean) {
         val airport = uiState.pendingHomeAirport ?: return
         viewModelScope.launch {
-            settingsRepository.setHomeAirportCode(airport.code)
+            settingsRepository.setHomeAirportCode(AirportCode(airport.code))
             if (moveCurrentAirport) {
-                settingsRepository.setCurrentAirportCode(airport.code)
+                settingsRepository.setCurrentAirportCode(AirportCode(airport.code))
             }
             uiState = uiState.copy(
                 pendingHomeAirport = null,
@@ -105,28 +109,32 @@ class SettingsViewModel(
 
     fun setSelectedTheme(theme: String) {
         viewModelScope.launch {
-            settingsRepository.setSelectedTheme(theme)
+            settingsRepository.setSelectedTheme(ThemePreference(theme))
         }
     }
 
     fun setSoundEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setSoundEnabled(enabled)
+            settingsRepository.setSoundEnabled(SettingEnabled(enabled))
         }
+    }
+
+    fun setAnnouncementsEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAnnouncementsEnabled(SettingEnabled(enabled)) }
     }
 
     fun setHapticsEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setHapticsEnabled(enabled)
+            settingsRepository.setHapticsEnabled(SettingEnabled(enabled))
         }
     }
 
     fun setDebugShortFlightsEnabled(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setDebugShortFlightsEnabled(enabled) }
+        viewModelScope.launch { settingsRepository.setDebugShortFlightsEnabled(SettingEnabled(enabled)) }
     }
 
     fun setDebugFlightDurationSeconds(seconds: Int) {
-        viewModelScope.launch { settingsRepository.setDebugFlightDurationSeconds(seconds) }
+        viewModelScope.launch { settingsRepository.setDebugFlightDurationSeconds(FlightDurationSeconds(seconds)) }
     }
 
     fun showResetConfirmation() {

@@ -12,6 +12,7 @@ import com.travelblock.app.data.repository.ActiveFlightSessionRepository
 import com.travelblock.app.data.repository.FlightLogRepository
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.settings.SettingsRepository
+import com.travelblock.app.data.settings.AirportCode
 import com.travelblock.app.domain.engine.ActiveFlightProgress
 import com.travelblock.app.domain.engine.DiversionEngine
 import com.travelblock.app.domain.engine.FlightRouteInterpolation
@@ -41,12 +42,14 @@ class CockpitViewModel(
     private val settingsRepository: SettingsRepository? = null,
     private val activeFlightSessionRepository: ActiveFlightSessionRepository? = null,
     private val airports: List<Airport> = emptyList(),
+    private val onPrepareForLanding: () -> Unit = {},
     autoTick: Boolean = false,
 ) : ViewModel() {
     var uiState by mutableStateOf(activeFlight.toUiState())
         private set
     private var resultSaved = false
     private var tickerJob: Job? = null
+    private var landingAnnouncementSent = false
 
     init {
         if (autoTick) {
@@ -74,6 +77,10 @@ class CockpitViewModel(
         if (uiState.status != ActiveFlightStatus.Active) return
 
         val snapshot = ActiveFlightProgress.snapshot(flight, clock.instant())
+        if (!landingAnnouncementSent && snapshot.remaining <= Duration.ofMinutes(2)) {
+            landingAnnouncementSent = true
+            onPrepareForLanding()
+        }
         val nextStatus = if (snapshot.isComplete) ActiveFlightStatus.Arrived else ActiveFlightStatus.Active
         uiState = flight.toUiState(status = nextStatus)
         if (nextStatus == ActiveFlightStatus.Arrived) {
@@ -177,7 +184,7 @@ class CockpitViewModel(
                 ),
             )
             if (status == FlightLogStatus.COMPLETED || status == FlightLogStatus.DIVERTED) {
-                settingsRepository.setCurrentAirportCode(landedAirport.code)
+            settingsRepository.setCurrentAirportCode(AirportCode(landedAirport.code))
             }
             activeFlightSessionRepository?.clearActiveFlight()
         }

@@ -10,6 +10,7 @@ import com.travelblock.app.data.database.UnlockEntity
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.repository.StoreRepository
 import com.travelblock.app.data.settings.SettingsRepository
+import com.travelblock.app.data.settings.EquippedItemId
 import com.travelblock.app.data.settings.UserSettings
 import com.travelblock.app.domain.engine.StoreCatalog
 import com.travelblock.app.domain.model.StoreItem
@@ -108,8 +109,8 @@ class StoreViewModel(
         val item = StoreCatalog.items.firstOrNull { it.id == itemId } ?: return StoreEquipResult.Unsupported
         if (storeRepository.getUnlockByCosmeticId(itemId) == null) return StoreEquipResult.Locked
         when (item.category) {
-            StoreItemCategory.BoardingPassTheme -> settingsRepository.setEquippedBoardingPassThemeId(item.id)
-            StoreItemCategory.AircraftIcon -> settingsRepository.setEquippedAircraftIconId(item.id)
+            StoreItemCategory.BoardingPassTheme -> settingsRepository.setEquippedBoardingPassThemeId(EquippedItemId(item.id))
+            StoreItemCategory.AircraftIcon -> settingsRepository.setEquippedAircraftIconId(EquippedItemId(item.id))
             StoreItemCategory.CabinAmbience -> return StoreEquipResult.Unsupported
         }
         return StoreEquipResult.Equipped

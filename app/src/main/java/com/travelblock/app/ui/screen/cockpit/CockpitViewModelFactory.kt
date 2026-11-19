@@ -20,6 +20,7 @@ class CockpitViewModelFactory(
     private val settingsRepository: SettingsRepository? = null,
     private val activeFlightSessionRepository: ActiveFlightSessionRepository? = null,
     private val airports: List<Airport> = emptyList(),
+    private val onPrepareForLanding: () -> Unit = {},
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CockpitViewModel::class.java)) {
@@ -33,6 +34,7 @@ class CockpitViewModelFactory(
                 settingsRepository = settingsRepository,
                 activeFlightSessionRepository = activeFlightSessionRepository,
                 airports = airports,
+                onPrepareForLanding = onPrepareForLanding,
                 autoTick = true,
             ) as T
         }

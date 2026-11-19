@@ -15,6 +15,7 @@ import com.travelblock.app.data.settings.SettingsRepository
 import com.travelblock.app.data.settings.AirportCode
 import com.travelblock.app.data.settings.UserSettings
 import com.travelblock.app.domain.engine.ActiveFlightProgress
+import com.travelblock.app.domain.engine.ActiveFlightSnapshot
 import com.travelblock.app.domain.engine.DiversionEngine
 import com.travelblock.app.domain.engine.FlightRouteInterpolation
 import com.travelblock.app.domain.engine.FlightRewardCalculator
@@ -74,41 +75,49 @@ class CockpitViewModel(
 
     fun tick() {
         val flight = uiState.activeFlight ?: return
-        if (uiState.status == ActiveFlightStatus.Arrived) {
-            return
+        when (uiState.status) {
+            ActiveFlightStatus.Arrived -> Unit
+            ActiveFlightStatus.Layover -> updateLayover(flight)
+            ActiveFlightStatus.Active -> tickActiveFlight(flight)
+            else -> Unit
         }
-        if (uiState.status == ActiveFlightStatus.Layover) {
-            uiState = flight.toUiState(status = ActiveFlightStatus.Layover)
-            return
-        }
-        if (uiState.status != ActiveFlightStatus.Active) return
+    }
 
+    private fun updateLayover(flight: ActiveFlight) {
+        uiState = flight.toUiState(status = ActiveFlightStatus.Layover)
+    }
+
+    private fun tickActiveFlight(flight: ActiveFlight) {
         val snapshot = ActiveFlightProgress.snapshot(flight, clock.instant())
         if (!landingAnnouncementSent && snapshot.remaining <= Duration.ofMinutes(2)) {
             landingAnnouncementSent = true
             onPrepareForLanding()
         }
-        val nextStatus = when {
-            snapshot.isComplete && flight.isItinerary && !flight.isLastItineraryLeg -> ActiveFlightStatus.Layover
-            snapshot.isComplete -> ActiveFlightStatus.Arrived
-            else -> ActiveFlightStatus.Active
-        }
+        val nextStatus = snapshot.toFlightStatus(flight)
         if (nextStatus == ActiveFlightStatus.Layover) {
             beginLayover(flight)
             return
         }
         uiState = flight.toUiState(status = nextStatus)
-        if (nextStatus == ActiveFlightStatus.Arrived) {
-            val bonus = if (flight.isItinerary) ItineraryRewards.COMPLETION_BONUS else 0
-            saveResult(
-                FlightResultRequest(
-                    flight = flight,
-                    status = FlightLogStatus.COMPLETED,
-                    pointsEarned = FlightRewardCalculator.completedReward(flight),
-                    tripBonus = bonus,
-                ),
-            )
-        }
+        if (nextStatus == ActiveFlightStatus.Arrived) saveCompletedArrival(flight)
+    }
+
+    private fun ActiveFlightSnapshot.toFlightStatus(flight: ActiveFlight): ActiveFlightStatus = when {
+        !isComplete -> ActiveFlightStatus.Active
+        flight.isItinerary && !flight.isLastItineraryLeg -> ActiveFlightStatus.Layover
+        else -> ActiveFlightStatus.Arrived
+    }
+
+    private fun saveCompletedArrival(flight: ActiveFlight) {
+        val bonus = if (flight.isItinerary) ItineraryRewards.COMPLETION_BONUS else 0
+        saveResult(
+            FlightResultRequest(
+                flight = flight,
+                status = FlightLogStatus.COMPLETED,
+                pointsEarned = FlightRewardCalculator.completedReward(flight),
+                tripBonus = bonus,
+            ),
+        )
     }
 
     private fun beginLayover(flight: ActiveFlight) {

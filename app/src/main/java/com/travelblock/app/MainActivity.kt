@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         openArrivalRequested = intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_ARRIVAL, false)
+        com.travelblock.app.ui.theme.PaletteStore.load(this)
         lifecycleScope.launch { updates.check() }
         // The app is always the daylight journal, so system bar icons stay dark by default; screens with dark
         // scenery (Home, onboarding scenes, cockpit) switch to light icons themselves.

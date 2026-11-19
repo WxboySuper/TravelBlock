@@ -1,6 +1,7 @@
 package com.travelblock.app.ui.components
 
 import android.graphics.Canvas
+import androidx.compose.ui.graphics.toArgb
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
@@ -116,9 +117,10 @@ private class RoutesOverlay(legs: List<RouteLeg>, style: TravelMapStyle) : Overl
     fun allPoints(): List<org.osmdroid.util.GeoPoint> = arcs.flatMap { it.points }
 
     private val night = style == TravelMapStyle.Night
-    private val ink = if (night) 0xFFFAF4E8.toInt() else 0xFF25304A.toInt()
-    private val accent = if (night) 0xFFF2C46D.toInt() else 0xFFCF6F4A.toInt()
-    private val paper = if (night) 0xFF1E2740.toInt() else 0xFFFFFBF3.toInt()
+    private val palette = com.travelblock.app.ui.theme.ActivePalette.current
+    private val ink = (if (night) palette.cream else palette.ink).toArgb()
+    private val accent = (if (night) palette.lamp else palette.accent).toArgb()
+    private val paper = (if (night) palette.nightSurface else palette.paper).toArgb()
 
     private val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.style = Paint.Style.STROKE

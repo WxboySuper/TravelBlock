@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -156,10 +157,10 @@ fun HomeScreenContent(
 private fun ConcourseHeader(uiState: HomeUiState) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Column {
-            Text(greeting().uppercase(), style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFE9C7))
+            Text(greeting().uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.92f))
             Text("Where to?", style = MaterialTheme.typography.displaySmall, color = Color.White)
             uiState.currentAirport?.let {
-                Text("Terminal ${it.displayCode} / ${it.city}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFE9C7))
+                Text("Terminal ${it.displayCode} / ${it.city}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.92f))
             }
         }
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -176,6 +177,7 @@ private fun DeparturesBoard(
     onRouteSelected: (String) -> Unit,
     onLoadMoreRoutes: () -> Unit,
 ) {
+    var showMap by rememberSaveable { mutableStateOf(false) }
     Column(
         Modifier
             .padding(horizontal = 14.dp)
@@ -187,11 +189,15 @@ private fun DeparturesBoard(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("DEPARTURES", style = MaterialTheme.typography.labelLarge, color = Lamp)
-            Text("how long can you focus?", style = MaterialTheme.typography.labelSmall, color = BoardDim)
+            BoardViewToggle(showMap) { showMap = it }
         }
         DurationTabs(uiState, onDurationSelected)
         Box(Modifier.fillMaxWidth().height(1.dp).background(BoardLine))
-        BoardBody(uiState, onRouteSelected, onLoadMoreRoutes)
+        if (showMap && uiState.routes.isNotEmpty()) {
+            DeparturesMapPanel(uiState, onRouteSelected)
+        } else {
+            BoardBody(uiState, onRouteSelected, onLoadMoreRoutes)
+        }
     }
 }
 
@@ -246,7 +252,7 @@ private fun BoardRow(route: HomeRouteCardUiModel, selected: Boolean, onClick: ()
     ) {
         FlapText(route.destinationCode, length = 3, width = 24.dp, height = 36.dp, fontSize = 20, color = tint)
         Column(Modifier.weight(1f)) {
-            Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color(0xFFF4EBDD), maxLines = 1)
+            Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.92f), maxLines = 1)
             Text(route.boardStatus(), style = MaterialTheme.typography.labelSmall, color = if (selected) Lamp else BoardDim)
         }
         FlapText(route.durationMinutes.toString().padStart(2, ' '), length = 2, width = 22.dp, height = 34.dp, fontSize = 18, color = tint)

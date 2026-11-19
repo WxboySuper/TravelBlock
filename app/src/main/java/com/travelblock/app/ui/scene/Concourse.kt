@@ -64,7 +64,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawParkedPlane(w: 
     val style = AirlinerStyle(
         body = Color(0xFFEDEAE4).copy(alpha = fade),
         shade = Color(0xFF9C9AA3).copy(alpha = fade),
-        accent = Color(0xFFCF6F4A).copy(alpha = fade),
+        accent = com.travelblock.app.ui.theme.Terracotta.copy(alpha = fade),
         window = Color(0xFF2A2630).copy(alpha = 0.85f),
     )
     val length = w * 0.62f

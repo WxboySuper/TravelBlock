@@ -2,6 +2,7 @@ package com.travelblock.app.ui.components
 
 import android.content.Context
 import android.graphics.Canvas
+import androidx.compose.ui.graphics.toArgb
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.DashPathEffect
@@ -141,7 +142,9 @@ internal fun createMapView(context: Context, style: TravelMapStyle): MapView = M
         // Soften saturation, then warm toward paper.
         ColorMatrix().apply {
             setSaturation(0.7f)
-            postConcat(ColorMatrix(floatArrayOf(1.04f, 0.02f, 0f, 0f, 6f, 0f, 1.0f, 0f, 0f, 3f, 0f, 0f, 0.9f, 0f, 0f, 0f, 0f, 0f, 1f, 0f)))
+            val warm = com.travelblock.app.ui.theme.ActivePalette.current.id == "golden"
+            // Warm toward paper for the golden palette, otherwise a neutral cool wash.
+            postConcat(ColorMatrix(if (warm) floatArrayOf(1.04f, 0.02f, 0f, 0f, 6f, 0f, 1.0f, 0f, 0f, 3f, 0f, 0f, 0.9f, 0f, 0f, 0f, 0f, 0f, 1f, 0f) else floatArrayOf(0.97f, 0f, 0f, 0f, 2f, 0f, 1.0f, 0f, 0f, 4f, 0f, 0f, 1.04f, 0f, 8f, 0f, 0f, 0f, 1f, 0f)))
         }
     }
     overlayManager.tilesOverlay.setColorFilter(ColorMatrixColorFilter(filter))
@@ -174,9 +177,10 @@ private class RouteOverlay(
     val arc: List<GeoPoint> = FlightRouteInterpolation.buildRoute(stops.origin.point, stops.destination.point, 96)
 
     private val night = style == TravelMapStyle.Night
-    private val ink = if (night) 0xFFFAF4E8.toInt() else 0xFF25304A.toInt()
-    private val accent = if (night) 0xFFF2C46D.toInt() else 0xFFCF6F4A.toInt()
-    private val paper = if (night) 0xFF1E2740.toInt() else 0xFFFFFBF3.toInt()
+    private val palette = com.travelblock.app.ui.theme.ActivePalette.current
+    private val ink = (if (night) palette.cream else palette.ink).toArgb()
+    private val accent = (if (night) palette.lamp else palette.accent).toArgb()
+    private val paper = (if (night) palette.nightSurface else palette.paper).toArgb()
 
     private val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE

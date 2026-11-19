@@ -93,8 +93,8 @@ fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Kicker("Trip")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                KindTile("Single flight", "One focus session", !longHaul, Modifier.weight(1f)) { actions.onPreset(null) }
-                KindTile("Long haul", "Several flights, with breaks", longHaul, Modifier.weight(1f)) {
+                KindTile(KindTileSpec("Single flight", "One focus session", !longHaul), Modifier.weight(1f)) { actions.onPreset(null) }
+                KindTile(KindTileSpec("Long haul", "Several flights, with breaks", longHaul), Modifier.weight(1f)) {
                     if (!longHaul) actions.onPlan(draft.toPlan())
                 }
             }
@@ -108,13 +108,16 @@ fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
     }
 }
 
+private data class KindTileSpec(val title: String, val subtitle: String, val selected: Boolean)
+
 @Composable
-private fun KindTile(title: String, subtitle: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun KindTile(spec: KindTileSpec, modifier: Modifier, onClick: () -> Unit) {
+    val selected = spec.selected
     val border = if (selected) BorderStroke(2.dp, Terracotta) else BorderStroke(1.dp, Sand)
     Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(16.dp), color = if (selected) Paper else MaterialTheme.colorScheme.background, border = border) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Ink)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = WarmGray)
+            Text(spec.title, style = MaterialTheme.typography.titleMedium, color = Ink)
+            Text(spec.subtitle, style = MaterialTheme.typography.bodySmall, color = WarmGray)
         }
     }
 }
@@ -152,9 +155,9 @@ private fun TripChip(text: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun PlanControls(draft: PlanDraft, onChange: (PlanDraft) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SliderRow("I will focus for", formatMinutes(draft.total), draft.total, 30..720, 15) { onChange(draft.copy(total = it)) }
-        SliderRow("Break about every", formatMinutes(draft.block), draft.block, 10..180, 5) { onChange(draft.copy(block = it)) }
-        SliderRow("Each break lasts", "${draft.breakMinutes} min", draft.breakMinutes, 5..30, 5) { onChange(draft.copy(breakMinutes = it)) }
+        SliderRow(SliderSpec("I will focus for", formatMinutes(draft.total), draft.total, StepRange(30..720, 15))) { onChange(draft.copy(total = it)) }
+        SliderRow(SliderSpec("Break about every", formatMinutes(draft.block), draft.block, StepRange(10..180, 5))) { onChange(draft.copy(block = it)) }
+        SliderRow(SliderSpec("Each break lasts", "${draft.breakMinutes} min", draft.breakMinutes, StepRange(5..30, 5))) { onChange(draft.copy(breakMinutes = it)) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Longer rest every $LONG_BREAK_EVERY blocks", style = MaterialTheme.typography.bodyMedium, color = Ink)
@@ -165,8 +168,15 @@ private fun PlanControls(draft: PlanDraft, onChange: (PlanDraft) -> Unit) {
     }
 }
 
+private data class StepRange(val range: IntRange, val step: Int)
+
+private data class SliderSpec(val label: String, val value: String, val current: Int, val steps: StepRange)
+
 @Composable
-private fun SliderRow(label: String, value: String, current: Int, range: IntRange, step: Int, onChange: (Int) -> Unit) {
+private fun SliderRow(spec: SliderSpec, onChange: (Int) -> Unit) {
+    val (label, value, current) = Triple(spec.label, spec.value, spec.current)
+    val range = spec.steps.range
+    val step = spec.steps.step
     Column {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = WarmGray)

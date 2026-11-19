@@ -52,6 +52,7 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.ui.components.BoardingPassCard
 import com.travelblock.app.ui.components.BoardingPassReveal
 import com.travelblock.app.ui.components.BookingFlowStep
@@ -102,6 +103,8 @@ fun BookScreen(
     onGateCleared: () -> Unit = {},
     onCancelBooking: () -> Unit,
     onStartFocusFlight: (BoardingPass) -> Unit,
+    todoistRepository: TodoistRepository? = null,
+    onOpenTodoistSettings: () -> Unit = {},
 ) {
     val viewModel: BookingViewModel = viewModel(
         key = draftFlightBooking?.let {
@@ -118,6 +121,7 @@ fun BookScreen(
         onSeatSelected = viewModel::selectSeat,
         onObjectiveChanged = viewModel::updateFocusObjective,
         onFocusTagSelected = viewModel::selectFocusTag,
+        onTodoistTaskSelected = viewModel::selectTodoistTask,
         onPreflightCheckChanged = viewModel::setPreflightCheck,
         onContinueToSeatSelection = viewModel::continueToSeatSelection,
         onBackToManifest = viewModel::returnToManifest,
@@ -127,6 +131,8 @@ fun BookScreen(
         boardingPassThemeId = boardingPassThemeId,
         onGateCleared = onGateCleared,
         onStartFocusFlight = onStartFocusFlight,
+        todoistRepository = todoistRepository,
+        onOpenTodoistSettings = onOpenTodoistSettings,
     )
 }
 
@@ -148,6 +154,9 @@ fun BookScreenContent(
     boardingPassThemeId: String = "",
     onGateCleared: () -> Unit = {},
     onStartFocusFlight: (BoardingPass) -> Unit,
+    onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit = {},
+    todoistRepository: TodoistRepository? = null,
+    onOpenTodoistSettings: () -> Unit = {},
 ) {
     if (!uiState.draftAvailable) {
         EmptyBookingState()
@@ -187,6 +196,9 @@ fun BookScreenContent(
                     },
                     onObjectiveChanged = onObjectiveChanged,
                     onFocusTagSelected = onFocusTagSelected,
+                    todoistRepository = todoistRepository,
+                    onTodoistTaskSelected = onTodoistTaskSelected,
+                    onOpenTodoistSettings = onOpenTodoistSettings,
                     onPreflightCheckChanged = onPreflightCheckChanged,
                     onContinueToSeatSelection = {
                         ritualForward = true
@@ -246,6 +258,9 @@ private fun CheckInSurface(
     onSeatSelected: (String) -> Unit,
     onObjectiveChanged: (String) -> Unit,
     onFocusTagSelected: (String) -> Unit,
+    todoistRepository: TodoistRepository?,
+    onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
+    onOpenTodoistSettings: () -> Unit,
     onPreflightCheckChanged: (String, Boolean) -> Unit,
     onContinueToSeatSelection: () -> Unit,
     onBackToManifest: () -> Unit,
@@ -313,6 +328,9 @@ private fun CheckInSurface(
                         uiState = uiState,
                         onObjectiveChanged = onObjectiveChanged,
                         onFocusTagSelected = onFocusTagSelected,
+                        todoistRepository = todoistRepository,
+                        onTodoistTaskSelected = onTodoistTaskSelected,
+                        onOpenTodoistSettings = onOpenTodoistSettings,
                         onPreflightCheckChanged = onPreflightCheckChanged,
                         onSkipToSeats = onContinueToSeatSelection,
                     )
@@ -355,6 +373,9 @@ private fun ManifestCard(
     onFocusTagSelected: (String) -> Unit,
     onPreflightCheckChanged: (String, Boolean) -> Unit,
     onSkipToSeats: () -> Unit,
+    todoistRepository: TodoistRepository?,
+    onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
+    onOpenTodoistSettings: () -> Unit,
 ) {
     PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(18.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -376,6 +397,12 @@ private fun ManifestCard(
             FocusCargoField(
                 value = uiState.focusObjective,
                 onValueChange = onObjectiveChanged,
+            )
+            TodoistTaskPicker(
+                repository = todoistRepository,
+                selectedId = uiState.todoistTaskId,
+                onTaskSelected = onTodoistTaskSelected,
+                onOpenSettings = onOpenTodoistSettings,
             )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Kicker("Cabin tag")

@@ -31,12 +31,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.travelblock.app.TravelBlockContainer
+import com.travelblock.app.data.todoist.TodoistResult
 import com.travelblock.app.data.settings.UserSettings
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.ui.components.SectionHeader
@@ -92,6 +96,7 @@ fun SettingsScreen(container: TravelBlockContainer) {
         updateState = updateState,
         lastCheckMillis = lastCheck,
         onCheckUpdates = { scope.launch { container.updateManager.check(manual = true) } },
+        todoistRepository = container.todoistRepository,
         actions = SettingsActions(
             airports = AirportActions(
                 picker = AirportPickerActions(viewModel::openAirportPicker, viewModel::dismissAirportPicker, viewModel::onAirportSearchChanged, viewModel::selectAirport),
@@ -113,6 +118,7 @@ fun SettingsScreenContent(
     updateState: UpdateUiState = UpdateUiState.Idle,
     lastCheckMillis: Long = 0L,
     onCheckUpdates: () -> Unit = {},
+    todoistRepository: com.travelblock.app.data.todoist.TodoistRepository? = null,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -143,6 +149,7 @@ fun SettingsScreenContent(
             PreferenceCard(uiState.settings, actions.preferences)
         }
         item { AppUpdatesCard(updateState, lastCheckMillis, onCheckUpdates) }
+        if (todoistRepository != null) item { TodoistSettingsCard(todoistRepository) }
         item {
             ResetDataCard(onShowResetConfirmation = actions.reset.show)
         }
@@ -154,6 +161,44 @@ fun SettingsScreenContent(
     }
 
     SettingsOverlays(uiState, actions)
+}
+
+@Composable
+private fun TodoistSettingsCard(repository: com.travelblock.app.data.todoist.TodoistRepository) {
+    val connected by repository.isConnected.collectAsState(initial = false)
+    val scope = rememberCoroutineScope()
+    var token by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    SettingsCard {
+        Text("Todoist", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(if (connected) "Connected" else "Not connected", color = MutedText)
+        if (!connected) {
+            OutlinedTextField(
+                value = token,
+                onValueChange = { token = it },
+                label = { Text("Personal API token") },
+                singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text("Find it in Todoist, Settings → Integrations → Developer.", color = MutedText, style = MaterialTheme.typography.bodySmall)
+            Button(onClick = {
+                busy = true
+                message = null
+                scope.launch {
+                    when (val result = repository.connect(token)) {
+                        is TodoistResult.Success -> { message = "Connected"; token = "" }
+                        is TodoistResult.Failure -> message = result.message
+                    }
+                    busy = false
+                }
+            }, enabled = token.isNotBlank() && !busy) { Text(if (busy) "Checking…" else "Connect") }
+        } else {
+            OutlinedButton(onClick = { scope.launch { repository.disconnect(); message = "Disconnected" } }) { Text("Disconnect") }
+        }
+        message?.let { Text(it, color = if (it == "Connected") CabinAmber else MaterialTheme.colorScheme.error) }
+    }
 }
 
 @Composable

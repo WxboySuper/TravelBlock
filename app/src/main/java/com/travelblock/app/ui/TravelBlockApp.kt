@@ -338,6 +338,8 @@ private fun NavGraphBuilder.bookingRoute(
             hapticsEnabled = runtime.settings.hapticsEnabled,
             soundEnabled = runtime.settings.soundEnabled,
             boardingPassThemeId = runtime.settings.equippedBoardingPassThemeId,
+            todoistRepository = runtime.container.todoistRepository,
+            onOpenTodoistSettings = { navController.navigate(TravelBlockDestination.Settings.route) },
             onGateCleared = { playCue(runtime, FlightAudioCue.GateCleared) },
             onCancelBooking = { navController.popBackStack(TravelBlockDestination.Home.route, false) },
             onStartFocusFlight = { pass -> startFocusFlight(pass, runtime, navController) },
@@ -431,6 +433,7 @@ private fun NavGraphBuilder.arrivalRoute(
             homeAirportCode = runtime.settings.homeAirportCode,
             onContinueJourney = { navigateToHome(navController) },
             onViewLogbook = { navigateToLogbook(navController) },
+            todoistRepository = runtime.container.todoistRepository,
         )
     }
 }
@@ -445,6 +448,7 @@ private fun NavGraphBuilder.diversionRoute(
             onReturnHome = { navigateToHome(navController) },
             onTryAgain = { navigateToHome(navController) },
             onViewLogbook = { navigateToLogbook(navController) },
+            todoistRepository = runtime.container.todoistRepository,
         )
     }
 }
@@ -595,6 +599,8 @@ private suspend fun recordRestoredArrival(
             pointsEarned = pointsEarned,
             focusObjective = flight.focusObjective,
             focusTag = flight.focusTag,
+            todoistTaskId = flight.todoistTaskId,
+            todoistTaskContent = flight.todoistTaskContent,
         ),
     )
     container.pointsRepository.insertTransaction(

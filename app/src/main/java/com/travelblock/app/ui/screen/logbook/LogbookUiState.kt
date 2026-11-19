@@ -52,4 +52,5 @@ data class FlightLogDetailUiModel(
     val detailMessage: String,
     val focusObjective: String = "",
     val focusTag: String = "",
+    val todoistTaskContent: String? = null,
 )

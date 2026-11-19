@@ -17,6 +17,9 @@ data class BoardingPass(
     val estimatedRewardPoints: Int,
     val focusObjective: String,
     val focusTag: String,
+    val todoistTaskId: String? = null,
+    val todoistTaskContent: String? = null,
+    val todoistProjectName: String? = null,
 ) {
     fun toActiveFlight(
         startedAt: java.time.Instant,
@@ -32,6 +35,9 @@ data class BoardingPass(
             plannedArrivalAt = startedAt.plusSeconds(focusDurationMinutes.toLong() * 60L),
             focusObjective = focusObjective,
             focusTag = focusTag,
+            todoistTaskId = todoistTaskId,
+            todoistTaskContent = todoistTaskContent,
+            todoistProjectName = todoistProjectName,
         )
     }
 }

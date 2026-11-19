@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.data.todoist.TodoistRepository
+import com.travelblock.app.ui.screen.arrival.TodoistArrivalCard
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.RouteStops
@@ -49,6 +51,7 @@ fun DiversionScreen(
     onReturnHome: () -> Unit,
     onTryAgain: () -> Unit,
     onViewLogbook: () -> Unit,
+    todoistRepository: TodoistRepository? = null,
 ) {
     if (diversionSummary == null) {
         EmptyDiversionState(onReturnHome)
@@ -68,6 +71,7 @@ fun DiversionScreen(
             LandedEarlyHeader(diversionSummary)
             DiversionMapCard(diversionSummary)
             KeptRow(diversionSummary)
+            TodoistArrivalCard(diversionSummary.todoistTaskId, diversionSummary.todoistTaskContent, todoistRepository)
             Text(
                 "${diversionSummary.percentComplete}% of the way to ${diversionSummary.intendedDestination.displayCode} is still yours. " +
                     "The flight is saved in your logbook, and you are now at ${diversionSummary.diversionAirport.displayCode}. " +

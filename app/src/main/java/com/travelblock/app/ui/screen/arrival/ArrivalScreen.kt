@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.RouteStops
@@ -61,6 +62,7 @@ fun ArrivalScreen(
     homeAirportCode: String,
     onContinueJourney: () -> Unit,
     onViewLogbook: () -> Unit,
+    todoistRepository: TodoistRepository? = null,
 ) {
     var showReturnHomePlaceholder by remember { mutableStateOf(false) }
 
@@ -82,6 +84,7 @@ fun ArrivalScreen(
             ArrivalScene(ArrivalLocation(arrivalSummary.destination.displayCode, arrivalSummary.destination.longitude))
             WelcomeHeader(arrivalSummary.destination)
             RoutePostcard(arrivalSummary)
+            TodoistArrivalCard(arrivalSummary.todoistTaskId, arrivalSummary.todoistTaskContent, todoistRepository)
             MetricsRow(arrivalSummary)
             if (arrivalSummary.focusObjective.isNotBlank() || arrivalSummary.focusTag.isNotBlank()) {
                 FocusRecap(arrivalSummary.focusTag, arrivalSummary.focusObjective)

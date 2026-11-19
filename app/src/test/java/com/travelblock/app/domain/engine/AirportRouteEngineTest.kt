@@ -217,17 +217,17 @@ class AirportRouteEngineTest {
 
     @Test
     fun majorHubsSortAheadOfSmallAirportsOnTheBoard() {
-        val origin = airport("KAAA", "AAA", "Origin Field", 35.0, -97.0)
-        val small = airport("KSML", "SML", "Closer Field", 35.1, -97.0)
-        val hub = airport("KOKC", "OKC", "Some Field", 35.4, -97.0)
+        val origin = airport("KAAA", "AAA", 35.0, -97.0)
+        val small = airport("KSML", "SML", 35.1, -97.0)
+        val hub = airport("KOKC", "OKC", 35.4, -97.0)
 
         val routes = engine.findReachableRoutes(origin, listOf(origin, small, hub), 60)
 
         assertEquals("KOKC", routes.first().destination.code)
     }
 
-    private fun airport(code: String, iata: String, name: String, latitude: Double, longitude: Double) =
-        Airport(code, code, iata, name, name, null, "US", latitude, longitude, null)
+    private fun airport(code: String, iata: String, latitude: Double, longitude: Double) =
+        Airport(code, code, iata, iata, iata, null, "US", latitude, longitude, null)
 
     private fun List<com.travelblock.app.domain.model.FlightRoute>.maxDistance(): Double {
         return maxOf { it.distanceMiles }

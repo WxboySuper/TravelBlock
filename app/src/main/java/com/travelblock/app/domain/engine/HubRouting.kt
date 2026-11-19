@@ -29,7 +29,9 @@ object HubRouting {
 
     /** Null when the trip already touches a major airport, or no hub makes a sensible detour. */
     fun connect(origin: Airport, destination: Airport, airports: List<Airport>): HubConnection? {
-        if (origin.code == destination.code || origin.isMajorHub || destination.isMajorHub) return null
+        if (origin.code == destination.code) return null
+        if (origin.isMajorHub) return null
+        if (destination.isMajorHub) return null
         val direct = engine.distanceMiles(origin, destination)
         val limit = direct * MAX_DETOUR_FACTOR + MAX_DETOUR_EXTRA_MILES
         val best = airports.asSequence()

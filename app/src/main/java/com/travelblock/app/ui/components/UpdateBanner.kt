@@ -21,14 +21,10 @@ fun UpdateBanner(state: UpdateUiState, info: UpdateInfo?, onUpdate: () -> Unit, 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Kicker("App update")
             info?.let { Text("Update ready - build ${it.build}", style = MaterialTheme.typography.titleMedium) }
-            when (state) {
-                is UpdateUiState.Downloading -> Text("Downloading ${(state.ratio * 100).toInt()}%")
-                UpdateUiState.Installing -> Text("Opening installer...")
-                is UpdateUiState.Error -> Text(state.message)
-                else -> if (info != null) Row {
-                    TextButton(onClick = onUpdate) { Text("Update") }
-                    TextButton(onClick = onDismiss) { Text("Dismiss") }
-                }
+            if (state is UpdateUiState.Error) Text(state.message)
+            if (info != null) Row {
+                TextButton(onClick = onUpdate) { Text("Download update") }
+                TextButton(onClick = onDismiss) { Text("Dismiss") }
             }
         }
     }

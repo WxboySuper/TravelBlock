@@ -1,27 +1,18 @@
 package com.travelblock.app.update
 
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageInstaller
 import android.net.Uri
-import android.os.Build
 import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.travelblock.app.BuildConfig
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.withContext
-import java.io.File
 
 private val Context.updateStore by preferencesDataStore("app_updates")
 
@@ -29,38 +20,25 @@ sealed interface UpdateUiState {
     data object Idle : UpdateUiState
     data object Checking : UpdateUiState
     data class Available(val info: UpdateInfo) : UpdateUiState
-    data class Downloading(val ratio: Float) : UpdateUiState
-    data object Installing : UpdateUiState
     data object UpToDate : UpdateUiState
     data class Error(val message: String) : UpdateUiState
 }
-
-data class DownloadProgress(val received: Long, val expected: Long)
-
 class UpdateManager private constructor(context: Context) {
     private val app = context.applicationContext
     private val mutableState = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
     val state: StateFlow<UpdateUiState> = mutableState.asStateFlow()
     private val mutableLastCheck = MutableStateFlow(0L)
     val lastCheckMillis: StateFlow<Long> = mutableLastCheck.asStateFlow()
-    private var pendingInfo: UpdateInfo? = null
-    private val downloader by lazy { ApkDownloader(app) }
-
-    init { InstallStatusReceiver.manager = this }
 
     companion object {
         @Volatile private var shared: UpdateManager? = null
-        private const val ACTION_INSTALL_STATUS = "com.travelblock.app.UPDATE_INSTALL_STATUS"
+        const val DownloadUrl = "https://github.com/WxboySuper/TravelBlock/releases/download/latest/TravelBlock.apk"
         val LastCheckKey = longPreferencesKey("last_check")
         val DismissedBuildKey = intPreferencesKey("dismissed_build")
 
         fun get(context: Context): UpdateManager = shared ?: synchronized(this) {
             shared ?: UpdateManager(context.applicationContext).also { shared = it }
         }
-    }
-
-    suspend fun resumePendingInstall() {
-        pendingInfo?.let { install(it) }
     }
 
     suspend fun check(manual: Boolean = false) {
@@ -104,62 +82,8 @@ class UpdateManager private constructor(context: Context) {
         return info.takeIf { it.build != dismissed }
     }
 
-    suspend fun install(info: UpdateInfo) {
-        pendingInfo = info
-        if (Build.VERSION.SDK_INT >= 26 && !app.packageManager.canRequestPackageInstalls()) {
-            mutableState.value = UpdateUiState.Error("Allow installs, then tap Update again")
-            app.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${app.packageName}" )).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            return
-        }
-        runCatching {
-            download(info).collect { progress ->
-                val ratio = if (progress.expected > 0) progress.received.toFloat() / progress.expected else 0f
-                mutableState.value = UpdateUiState.Downloading(ratio)
-            }
-            installPackage(requireNotNull(downloader.file))
-        }.onFailure { error ->
-            Log.w("TravelBlockUpdate", "Update install failed", error)
-            openReleasePage(info)
-            mutableState.value = UpdateUiState.Error("Update couldn't install. Opening release page.")
-        }
-    }
-
-    fun download(info: UpdateInfo): Flow<DownloadProgress> = downloader.download(info).onEach { progress ->
-        val ratio = if (progress.expected > 0) progress.received.toFloat() / progress.expected else 0f
-        mutableState.value = UpdateUiState.Downloading(ratio)
-    }
-
-    private fun installPackage(file: File) {
-        val installer = app.packageManager.packageInstaller
-        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-        if (Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
-        val sessionId = installer.createSession(params)
-        installer.openSession(sessionId).use { session ->
-            file.inputStream().use { input -> session.openWrite("TravelBlock.apk", 0, file.length()).use { output -> input.copyTo(output); session.fsync(output) } }
-            val intent = Intent(app, InstallStatusReceiver::class.java).setAction(ACTION_INSTALL_STATUS)
-            val callback = PendingIntent.getBroadcast(app, sessionId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
-            mutableState.value = UpdateUiState.Installing
-            session.commit(callback.intentSender)
-        }
-    }
-
-    fun handleInstallStatus(context: Context, intent: Intent) {
-        val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
-        when (status) {
-            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                val confirmation = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java) else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_INTENT)
-                confirmation?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let(context::startActivity)
-            }
-            PackageInstaller.STATUS_SUCCESS -> mutableState.value = UpdateUiState.Idle
-            else -> pendingInfo?.let { info ->
-                openReleasePage(info)
-                mutableState.value = UpdateUiState.Error("Update was cancelled or failed. Opening release page.")
-            }
-        }
-    }
-
-    private fun openReleasePage(info: UpdateInfo) {
-        openReleasePage(info.pageUrl)
+    fun openDownload() {
+        app.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DownloadUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     private fun openReleasePage(url: String) {

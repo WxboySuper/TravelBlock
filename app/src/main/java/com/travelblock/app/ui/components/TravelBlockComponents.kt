@@ -369,9 +369,9 @@ fun BoardingPassCard(
             BoardingPassStatusStamp(
                 text = "Ready to board",
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 118.dp, end = 18.dp)
-                    .rotate(-10f),
+                    .align(Alignment.TopCenter)
+                    .padding(top = 112.dp)
+                    .rotate(-8f),
             )
         }
     }

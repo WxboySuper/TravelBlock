@@ -307,12 +307,6 @@ private fun PreferenceCard(
 ) {
     SettingsCard {
         Text("Comfort", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Theme", style = MaterialTheme.typography.labelLarge, color = MutedText)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ThemeChip("System", "system", settings.selectedTheme, actions.sound.themeSelected)
-            ThemeChip("Light", "light", settings.selectedTheme, actions.sound.themeSelected)
-            ThemeChip("Dark", "dark", settings.selectedTheme, actions.sound.themeSelected)
-        }
         ToggleRow(
             title = "Sound",
             description = "Controls future cabin and flight event sounds.",
@@ -352,20 +346,6 @@ private fun PreferenceCard(
             }
         }
     }
-}
-
-@Composable
-private fun ThemeChip(
-    label: String,
-    value: String,
-    selectedTheme: String,
-    onThemeSelected: (String) -> Unit,
-) {
-    FilterChip(
-        selected = selectedTheme == value,
-        onClick = { onThemeSelected(value) },
-        label = { Text(label) },
-    )
 }
 
 @Composable

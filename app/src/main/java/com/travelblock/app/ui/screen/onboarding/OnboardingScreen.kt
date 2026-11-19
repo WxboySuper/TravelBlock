@@ -36,6 +36,7 @@ import com.travelblock.app.data.settings.UserSettings
 import com.travelblock.app.domain.engine.AirportSearchEngine
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.LightStatusBarIcons
 import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.PrimaryButton
 import com.travelblock.app.ui.scene.AirplaneWindow
@@ -78,6 +79,7 @@ fun OnboardingScreen(
         if (pinned == null) found else listOf(pinned) + found.filter { it.code != pinned.code }
     }
 
+    LightStatusBarIcons(light = page != LAST_PAGE)
     Column(Modifier.fillMaxSize().background(Cream)) {
         OnboardingScene(page, homeAirport, onSkip = { onFinish(homeAirport, false) })
         Column(
@@ -109,7 +111,7 @@ private fun OnboardingScene(page: Int, homeAirport: Airport?, onSkip: () -> Unit
                 ArrivalLocation(homeAirport?.displayCode ?: "HOME", homeAirport?.longitude ?: -97.0),
                 Modifier.fillMaxSize(),
             )
-            else -> AirplaneWindow(hour, Modifier.fillMaxSize().padding(start = 56.dp, end = 56.dp, top = 70.dp, bottom = 14.dp))
+            else -> AirplaneWindow(hour, Modifier.fillMaxSize().padding(start = 56.dp, end = 56.dp, top = 96.dp, bottom = 10.dp))
         }
         val onScene = if (page == LAST_PAGE) Ink else Color.White
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 22.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

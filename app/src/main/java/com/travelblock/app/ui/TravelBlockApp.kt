@@ -67,12 +67,9 @@ fun TravelBlockApp(openArrivalRequested: Boolean = false) {
     val context = LocalContext.current.applicationContext
     val container = remember(context) { TravelBlockContainer(context) }
     val settings by container.settingsRepository.settings.collectAsState(initial = UserSettings())
-    val darkTheme = when (settings.selectedTheme) {
-        "dark" -> true
-        "light" -> false
-        else -> null
-    }
-    TravelBlockTheme(darkTheme = darkTheme) {
+    // Every screen is designed in the daylight journal palette, so the Material components use it too
+    // regardless of the phone's dark mode. The cockpit applies its own night styling.
+    TravelBlockTheme(darkTheme = false) {
         TravelBlockAppContent(container, settings, openArrivalRequested)
     }
 }

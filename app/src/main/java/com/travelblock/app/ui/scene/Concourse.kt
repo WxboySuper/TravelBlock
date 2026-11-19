@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -37,7 +38,7 @@ import com.travelblock.app.ui.theme.Lamp
 @Composable
 fun TerminalWindows(localHour: Float, modifier: Modifier = Modifier) {
     val night = skyPaletteFor(localHour).night
-    Box(modifier) {
+    Box(modifier.clipToBounds()) {
         SkyScene(localHour, Modifier.fillMaxSize(), speed = 0.5f)
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
@@ -59,32 +60,18 @@ fun TerminalWindows(localHour: Float, modifier: Modifier = Modifier) {
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawParkedPlane(w: Float, h: Float, ground: Float, night: Float) {
-    val body = Color(0xFFEDEAE4).copy(alpha = 1f - night * 0.55f)
-    val dark = Color(0xFFB5B2AC).copy(alpha = 1f - night * 0.45f)
-    val cx = w * 0.62f
-    val y = ground - h * 0.02f
-    val len = w * 0.52f
-    drawRoundRect(body, Offset(cx - len / 2, y - h * 0.085f), Size(len, h * 0.085f), CornerRadius(h * 0.045f))
-    drawRect(dark, Offset(cx - len / 2 + len * 0.1f, y - h * 0.03f), Size(len * 0.8f, 5f))
-    val tail = Path().apply {
-        moveTo(cx + len * 0.32f, y - h * 0.075f)
-        lineTo(cx + len * 0.47f, y - h * 0.24f)
-        lineTo(cx + len * 0.52f, y - h * 0.24f)
-        lineTo(cx + len * 0.5f, y - h * 0.06f)
-        close()
-    }
-    drawPath(tail, Color(0xFFCF6F4A).copy(alpha = 1f - night * 0.4f))
-    val wing = Path().apply {
-        moveTo(cx - len * 0.05f, y - h * 0.03f)
-        lineTo(cx + len * 0.18f, y - h * 0.03f)
-        lineTo(cx - len * 0.12f, y + h * 0.045f)
-        lineTo(cx - len * 0.2f, y + h * 0.045f)
-        close()
-    }
-    drawPath(wing, dark)
-    for (i in 0..8) drawCircle(Color(0xFF2A2630).copy(alpha = 0.8f), 5f, Offset(cx - len * 0.3f + i * len * 0.065f, y - h * 0.055f))
-    // Jet bridge reaching the plane.
-    drawRect(Color(0xFF8C8F98).copy(alpha = 0.9f), Offset(cx - len * 0.46f, y - h * 0.075f), Size(len * 0.12f, h * 0.045f))
+    val fade = 1f - night * 0.45f
+    val style = AirlinerStyle(
+        body = Color(0xFFEDEAE4).copy(alpha = fade),
+        shade = Color(0xFF9C9AA3).copy(alpha = fade),
+        accent = Color(0xFFCF6F4A).copy(alpha = fade),
+        window = Color(0xFF2A2630).copy(alpha = 0.85f),
+    )
+    val length = w * 0.62f
+    val center = Offset(w * 0.6f, ground - length * 0.125f)
+    drawAirliner(center, length, style, AirlinerPose(gearDown = true))
+    // Jet bridge reaching the nose.
+    drawRect(Color(0xFF8C8F98).copy(alpha = 0.95f), Offset(center.x - length * 0.5f - w * 0.07f, center.y - length * 0.06f), Size(w * 0.08f, length * 0.07f))
 }
 
 /** One airport-board character that flips down to the next one when its value changes. */

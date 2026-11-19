@@ -6,6 +6,8 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import android.graphics.Color
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import com.travelblock.app.TravelBlockContainer
@@ -31,7 +33,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         openArrivalRequested = intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_ARRIVAL, false)
         lifecycleScope.launch { updates.check() }
-        enableEdgeToEdge()
+        // The app is always the daylight journal, so system bar icons stay dark by default; screens with dark
+        // scenery (Home, onboarding scenes, cockpit) switch to light icons themselves.
+        val lightBars = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = lightBars, navigationBarStyle = lightBars)
         setContent {
             TravelBlockTheme {
                 TravelBlockApp(openArrivalRequested = openArrivalRequested)

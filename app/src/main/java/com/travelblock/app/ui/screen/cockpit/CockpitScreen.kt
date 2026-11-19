@@ -16,7 +16,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import com.travelblock.app.domain.engine.FlightRouteInterpolation
 import com.travelblock.app.ui.scene.AirplaneWindow
 import com.travelblock.app.ui.scene.cabinDimFor
@@ -195,15 +194,11 @@ private fun ActiveCockpit(flight: ActiveFlight, uiState: CockpitUiState, onDiver
             delay(20_000)
         }
     }
-    val dim = cabinDimFor(hour)
-    val look = CabinLook(
-        wall = lerp(Color(0xFFD9CFBD), Color(0xFF17151F), dim),
-        tray = lerp(Color(0xFFF1E9DA), Color(0xFF232238), dim),
-        ink = lerp(Ink, Cream, dim),
-        quiet = lerp(WarmGray, Sand, dim),
-        accent = lerp(Terracotta, Lamp, dim),
-    )
-    LightStatusIcons(dark = dim > 0.5f)
+    // A clean switch between a bright day cabin and a dim night cabin keeps text high-contrast at dusk,
+    // where a smooth blend would leave mid-grey surfaces behind mid-grey text.
+    val night = cabinDimFor(hour) > NIGHT_CABIN_THRESHOLD
+    val look = if (night) NightCabin else DayCabin
+    LightStatusIcons(dark = night)
 
     Column(Modifier.fillMaxSize().background(look.wall)) {
         WindowHeader(flight, uiState.status, look, Modifier.statusBarsPadding())
@@ -213,6 +208,10 @@ private fun ActiveCockpit(flight: ActiveFlight, uiState: CockpitUiState, onDiver
 }
 
 private class CabinLook(val wall: Color, val tray: Color, val ink: Color, val quiet: Color, val accent: Color)
+
+private const val NIGHT_CABIN_THRESHOLD = 0.4f
+private val DayCabin = CabinLook(Color(0xFFD9CFBD), Color(0xFFF1E9DA), Ink, WarmGray, Terracotta)
+private val NightCabin = CabinLook(Color(0xFF17151F), Color(0xFF232238), Cream, Sand, Lamp)
 
 @Composable
 private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look: CabinLook, modifier: Modifier = Modifier) {

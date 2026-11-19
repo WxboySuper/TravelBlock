@@ -129,6 +129,10 @@ class SettingsViewModel(
         }
     }
 
+    fun setKeepScreenAwake(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setKeepScreenAwake(SettingEnabled(enabled)) }
+    }
+
     fun setDebugShortFlightsEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setDebugShortFlightsEnabled(SettingEnabled(enabled)) }
     }

@@ -200,6 +200,10 @@ class HomeViewModelTest {
             state.value = state.value.copy(announcementsEnabled = enabled.value)
         }
 
+        override suspend fun setKeepScreenAwake(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            state.value = state.value.copy(keepScreenAwake = enabled.value)
+        }
+
         override suspend fun setHapticsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
             state.value = state.value.copy(hapticsEnabled = enabled.value)
         }

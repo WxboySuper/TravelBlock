@@ -11,6 +11,7 @@ interface SettingsRepository {
     suspend fun setSoundEnabled(enabled: SettingEnabled)
     suspend fun setAnnouncementsEnabled(enabled: SettingEnabled)
     suspend fun setHapticsEnabled(enabled: SettingEnabled)
+    suspend fun setKeepScreenAwake(enabled: SettingEnabled)
     suspend fun setOnboardingComplete(complete: SettingEnabled)
     suspend fun setDebugShortFlightsEnabled(enabled: SettingEnabled)
     suspend fun setDebugFlightDurationSeconds(seconds: FlightDurationSeconds)

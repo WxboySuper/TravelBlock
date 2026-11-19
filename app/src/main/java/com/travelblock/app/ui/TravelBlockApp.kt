@@ -351,7 +351,7 @@ private fun NavGraphBuilder.bookingRoute(
             airports = runtime.container.airportRepository.getAllAirports(),
             onOpenTodoistSettings = { navController.navigate(TravelBlockDestination.Settings.route) },
             onGateCleared = {
-                val destination = runtime.state.draftFlightBooking?.destination
+                val destination = runtime.state.draftFlightBooking?.legDestination
                 playCue(runtime, FlightAudioCue.GateCleared, destination?.announcement(withTime = false))
             },
             onCancelBooking = { cancelBooking(runtime, navController) },

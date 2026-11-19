@@ -24,7 +24,12 @@ data class BoardingPass(
     val sessionPlan: SessionPlan? = null,
     /** The hub this trip connects through, when the traveller chose to connect a short trip. */
     val viaHubCode: String? = null,
+    /** Every airport on the trip when it has stops, so the pass can say where this first flight lands. */
+    val stops: List<Airport> = emptyList(),
 ) {
+    /** Where this flight lands: the first stop of a trip with stops, else the destination. */
+    val legDestination: Airport get() = stops.getOrNull(1) ?: destination
+
     fun toActiveFlight(
         startedAt: java.time.Instant,
     ): ActiveFlight {

@@ -294,7 +294,7 @@ private fun CheckInSurface(
 ) {
     val flowStep = if (uiState.showSeatSelection) BookingFlowStep.SeatSelection else BookingFlowStep.Manifest
     val origin = requireNotNull(uiState.origin)
-    val destination = requireNotNull(uiState.destination)
+    val destination = requireNotNull(uiState.legDestination)
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
@@ -320,7 +320,8 @@ private fun CheckInSurface(
                 ),
             )
         }
-        if (!uiState.showSeatSelection) {
+        item { TripRouteLine(uiState.tripStops) }
+        if (uiState.showTripCard) {
             item {
                 TripPlannerSection(
                     uiState,
@@ -510,7 +511,7 @@ private fun GateCallScreen(
         }
         item {
             Text(
-                text = "Next stop: ${boardingPass.destination.displayCode}. Timer: ${boardingPass.focusDurationMinutes} min.",
+                text = "Next stop: ${boardingPass.legDestination.displayCode}. Timer: ${boardingPass.focusDurationMinutes} min.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = WarmGray,
             )

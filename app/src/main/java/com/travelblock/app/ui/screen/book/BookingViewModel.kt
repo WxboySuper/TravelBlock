@@ -59,6 +59,7 @@ class BookingViewModel(
             sessionPlan = null,
             hub = null,
             hubChosen = false,
+            stops = emptyList(),
             durationMinutes = originalDurationMinutes,
             arrivalTime = uiState.departureTime?.plusMinutes(originalDurationMinutes.toLong()),
         )
@@ -69,6 +70,7 @@ class BookingViewModel(
         uiState = uiState.copy(
             hub = null,
             hubChosen = false,
+            stops = emptyList(),
             tripPreset = if (breakdown != null) {
                 TripPreset("planned", "Planned session", breakdown.legCount)
             } else null,
@@ -87,6 +89,7 @@ class BookingViewModel(
             uiState = uiState.copy(
                 hub = null,
                 hubChosen = true,
+                stops = emptyList(),
                 tripPreset = null,
                 durationMinutes = originalDurationMinutes,
                 arrivalTime = departure?.plusMinutes(originalDurationMinutes.toLong()),
@@ -96,6 +99,7 @@ class BookingViewModel(
         uiState = uiState.copy(
             hub = connection,
             hubChosen = true,
+            stops = emptyList(),
             tripPreset = TripPreset("hub", "Via ${connection.hub.displayCode}", 2),
             sessionPlan = null,
             durationMinutes = connection.firstLegMinutes,
@@ -109,6 +113,7 @@ class BookingViewModel(
         uiState = uiState.copy(
             hub = null,
             hubChosen = false,
+            stops = emptyList(),
             destination = destination,
             distanceMiles = distance,
             pointsRewardEstimate = FlightRewardCalculator.completedReward(uiState.durationMinutes, distance),
@@ -191,7 +196,7 @@ class BookingViewModel(
             origin = draft.origin,
             destination = draft.destination,
             durationMinutes = shape.firstLegMinutes,
-            distanceMiles = draft.distanceMiles,
+            distanceMiles = firstLegMiles(draft),
             pointsRewardEstimate = draft.estimatedRewardPoints,
             flightNumber = flightNumber,
             gate = generateGate(draft),
@@ -205,6 +210,8 @@ class BookingViewModel(
             sessionPlan = draft.sessionPlan,
             hub = draft.hub,
             hubChosen = draft.hubChoiceMade,
+            stops = draft.stops,
+            tripLocked = draft.tripLocked,
             bookingStage = if (draft.continuation != null) BookingStage.SeatSelection else BookingStage.Manifest,
             tripPreset = shape.preset,
             seatSelectionMessage = "Standard seats are free. Upgrade seats require enough points to select.",
@@ -232,6 +239,12 @@ class BookingViewModel(
                 }
             }
         }
+    }
+
+    /** The pre-flight screens are about the first flight, so a planned trip shows that leg's distance. */
+    private fun firstLegMiles(draft: DraftFlightBooking): Double {
+        val stops = draft.stops
+        return if (stops.size > 2) AirportRouteEngine().distanceMiles(stops[0], stops[1]) else draft.distanceMiles
     }
 
     private fun defaultSeatOptions(seed: String): List<SeatOption> {

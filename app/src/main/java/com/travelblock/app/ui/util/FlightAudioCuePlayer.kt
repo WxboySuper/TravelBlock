@@ -175,3 +175,13 @@ class FlightAudioCuePlayer(context: Context) {
         pendingSpeech = null
     }
 }
+
+/** What the PA says about an airport: its city and, on arrival, the local (solar) time there. */
+fun com.travelblock.app.domain.model.Airport.announcement(withTime: Boolean): AnnouncementDetails {
+    val city = city.ifBlank { displayCode }
+    if (!withTime) return AnnouncementDetails(city)
+    val hour = com.travelblock.app.ui.scene.localSolarHour(java.time.Instant.now(), longitude)
+    val minutes = (hour * 60).toInt() % (24 * 60)
+    val time = java.time.LocalTime.of(minutes / 60, minutes % 60)
+    return AnnouncementDetails(city, time.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.US)))
+}

@@ -110,6 +110,10 @@ fun HomeScreen(
         onQuickStart = { minutes -> viewModel.createQuickStartDraft(minutes)?.let(onStartQuickFlight) },
         onRebookLastFlight = { viewModel.createRebookDraft()?.let(onStartQuickFlight) },
         onLoadMoreRoutes = viewModel::loadMoreRoutes,
+        planner = TripPlannerHomeActions(
+            options = viewModel::tripOptions,
+            onPlan = { suggestion -> onBookSelectedRoute(viewModel.draftFor(suggestion)) },
+        ),
     )
 }
 
@@ -132,6 +136,7 @@ fun HomeScreenContent(
     onQuickStart: (Int) -> Unit = {},
     onRebookLastFlight: () -> Unit = {},
     onLoadMoreRoutes: () -> Unit = {},
+    planner: TripPlannerHomeActions = TripPlannerHomeActions(),
 ) {
     val hour = remember(uiState.currentAirport) { localSolarHour(Instant.now(), uiState.currentAirport?.longitude ?: -97.0) }
     LightStatusBarIcons()
@@ -147,6 +152,8 @@ fun HomeScreenContent(
             } else {
                 DeparturesBoard(uiState, onDurationSelected, onRouteSelected, onLoadMoreRoutes)
                 uiState.selectedRoute?.let { RouteDetails(it, onBookSelectedRoute) }
+                TripPlannerPanel(uiState.currentAirport, planner)
+                Spacer(Modifier.height(14.dp))
                 FastTrack(uiState.lastFlight != null, onQuickStart, onRebookLastFlight)
             }
             Spacer(Modifier.height(24.dp))

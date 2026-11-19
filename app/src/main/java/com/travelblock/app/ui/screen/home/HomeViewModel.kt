@@ -12,6 +12,9 @@ import com.travelblock.app.domain.engine.PilotProgressionEngine
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.settings.SettingsRepository
 import com.travelblock.app.domain.engine.FlightRewardCalculator
+import com.travelblock.app.domain.engine.TripSuggester
+import com.travelblock.app.domain.engine.TripSuggestion
+import com.travelblock.app.domain.engine.TripWish
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.FlightRoute
 import com.travelblock.app.domain.model.RouteAvailabilityResult
@@ -77,6 +80,22 @@ class HomeViewModel(
             ?: routes.minByOrNull { abs(durationMinutes - it.estimatedDurationMinutes) }
             ?: return null
         return route.toDraftBooking(durationMinutes)
+    }
+
+    /** A few trips for this wish to choose from, built through real hubs. Cheap enough to ask on every tap. */
+    fun tripOptions(wish: TripWish): List<TripSuggestion> {
+        val origin = uiState.currentAirport ?: return emptyList()
+        return TripSuggester.options(origin, airportRepository.getAllAirports(), wish)
+    }
+
+    fun draftFor(suggestion: TripSuggestion): DraftFlightBooking {
+        val draft = suggestion.route.toDraftBooking(suggestion.focusMinutes)
+        return draft.copy(
+            durationMinutes = suggestion.route.estimatedDurationMinutes,
+            hub = suggestion.hub,
+            hubChoiceMade = true,
+            sessionPlan = if (suggestion.hub == null) AutoSessionPlan.forTotal(suggestion.focusMinutes) else null,
+        )
     }
 
     fun createRebookDraft(): DraftFlightBooking? {

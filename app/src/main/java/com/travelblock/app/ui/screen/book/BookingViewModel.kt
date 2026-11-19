@@ -180,8 +180,11 @@ class BookingViewModel(
 
         val departureTime = LocalDateTime.now(clock).plusMinutes(8)
         val breakdown = draft.sessionPlan?.let(SessionPlanCalculator::calculate)
+        val hub = draft.hub
         val plannedPreset = breakdown?.let { TripPreset("planned", "Planned session", it.legCount) }
-        val arrivalTime = departureTime.plusMinutes((breakdown?.totalFocusMinutes ?: draft.durationMinutes).toLong())
+            ?: hub?.let { TripPreset("hub", "Via ${it.hub.displayCode}", 2) }
+        val focusMinutes = breakdown?.totalFocusMinutes ?: hub?.let { it.totalFocusMinutes + it.layoverMinutes } ?: draft.durationMinutes
+        val arrivalTime = departureTime.plusMinutes(focusMinutes.toLong())
         val flightNumber = generateFlightNumber(draft)
         val seatOptions = defaultSeatOptions(
             seed = "$flightNumber-${draft.origin.code}-${draft.destination.code}-${departureTime.toLocalDate()}",
@@ -191,7 +194,7 @@ class BookingViewModel(
             draftAvailable = true,
             origin = draft.origin,
             destination = draft.destination,
-            durationMinutes = breakdown?.legDurationsMinutes?.firstOrNull() ?: draft.durationMinutes,
+            durationMinutes = breakdown?.legDurationsMinutes?.firstOrNull() ?: hub?.firstLegMinutes ?: draft.durationMinutes,
             distanceMiles = draft.distanceMiles,
             pointsRewardEstimate = draft.estimatedRewardPoints,
             flightNumber = flightNumber,
@@ -204,6 +207,8 @@ class BookingViewModel(
             pointsBalance = pointsBalance,
             maxFlightTimeMinutes = draft.maxFlightTimeMinutes,
             sessionPlan = draft.sessionPlan,
+            hub = hub,
+            hubChosen = draft.hubChoiceMade,
             tripPreset = plannedPreset,
             seatSelectionMessage = "Standard seats are free. Upgrade seats require enough points to select.",
         )

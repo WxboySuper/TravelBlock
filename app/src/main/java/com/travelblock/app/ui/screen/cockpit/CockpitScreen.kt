@@ -258,10 +258,15 @@ private const val NIGHT_CABIN_THRESHOLD = 0.4f
 private val DayCabin = CabinLook(Color(0xFFD9CFBD), Color(0xFFF1E9DA), Ink, WarmGray, Terracotta)
 private val NightCabin = CabinLook(Color(0xFF17151F), Color(0xFF232238), Cream, Sand, Lamp)
 
+private fun activeKicker(flight: ActiveFlight): String {
+    val leg = if (flight.isItinerary) "Leg ${flight.itineraryLegIndex + 1} of ${flight.itineraryLegCount} / " else ""
+    return "${leg}Seat ${flight.seat.label} / ${flight.flightNumber}".trim()
+}
+
 @Composable
 private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look: CabinLook, modifier: Modifier = Modifier) {
     val kicker = when (status) {
-        ActiveFlightStatus.Active -> "Seat ${flight.seat.label} / ${flight.flightNumber}"
+        ActiveFlightStatus.Active -> activeKicker(flight)
         ActiveFlightStatus.Layover -> "Layover / Leg ${flight.itineraryLegIndex + 1} of ${flight.itineraryLegCount}"
         ActiveFlightStatus.Arrived -> "Landing"
         ActiveFlightStatus.Diverted -> "Diverted"
@@ -276,38 +281,6 @@ private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look:
         )
     }
 }
-
-@Composable
-private fun LayoverDeck(
-    flight: ActiveFlight,
-    uiState: CockpitUiState,
-    onSkip: () -> Unit,
-    onBoard: () -> Unit,
-) {
-    Column(
-        Modifier.fillMaxSize().background(Cream).statusBarsPadding().navigationBarsPadding().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Kicker("${flight.itineraryLabel ?: "Long haul"} / Leg ${flight.itineraryLegIndex + 1} of ${flight.itineraryLegCount}", color = Terracotta)
-        Text("Layover in ${flight.destination.city.ifBlank { flight.destination.displayCode }}", style = MaterialTheme.typography.headlineMedium, color = Ink, textAlign = TextAlign.Center)
-        Text("Next leg in ${uiState.timeRemainingLabel}", style = MaterialTheme.typography.displaySmall, color = Ink, modifier = Modifier.padding(vertical = 20.dp))
-        Text("${flight.destination.displayCode}  to  ${nextLegLabel(flight)}", style = MaterialTheme.typography.titleMedium, color = WarmGray)
-        if (uiState.timeRemainingLabel != "00:00") {
-            Text("Skip layover", Modifier.clickable(onClick = onSkip).padding(18.dp), color = Terracotta, style = MaterialTheme.typography.labelLarge)
-        }
-        Text(
-            "Board next leg",
-            Modifier.clip(RoundedCornerShape(50)).background(if (uiState.timeRemainingLabel == "00:00") Terracotta else Sand)
-                .clickable(enabled = uiState.timeRemainingLabel == "00:00", onClick = onBoard).padding(horizontal = 28.dp, vertical = 14.dp),
-            color = Ink,
-            style = MaterialTheme.typography.labelLarge,
-        )
-    }
-}
-
-private fun nextLegLabel(flight: ActiveFlight): String =
-    flight.itineraryCodes?.split(',')?.getOrNull(flight.itineraryLegIndex + 2) ?: "next airport"
 
 @Composable
 private fun TrayTable(flight: ActiveFlight, uiState: CockpitUiState, look: CabinLook, onDivertRequested: () -> Unit) {

@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.dp
+import com.travelblock.app.ui.theme.Cream
+import com.travelblock.app.ui.theme.Sand
 import com.travelblock.app.ui.theme.Lamp
 import com.travelblock.app.ui.theme.Terracotta
 
@@ -42,14 +44,14 @@ fun CheckInDeskScene(info: CheckInGateInfo, modifier: Modifier = Modifier) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            drawRect(Brush.verticalGradient(listOf(Color(0xFFF6EBD6), Color(0xFFE6D5B8))))
+            drawRect(Brush.verticalGradient(listOf(Cream, Sand)))
             // Ceiling lights.
             for (i in 0..3) drawRoundRect(Color(0xFFFFF7E0), Offset(w * (0.08f + i * 0.24f), 10f), Size(w * 0.14f, 8f), CornerRadius(4f))
             // Back wall panel with a sign.
             drawRoundRect(Color(0xFF22212A), Offset(w * 0.1f, h * 0.08f), Size(w * 0.8f, h * 0.24f), CornerRadius(14f))
             // Counter.
-            drawRect(Brush.verticalGradient(listOf(Color(0xFF8A5B3A), Color(0xFF633F26))), Offset(0f, h * 0.62f), Size(w, h * 0.38f))
-            drawRect(Color(0xFFB98557), Offset(0f, h * 0.60f), Size(w, h * 0.045f))
+            drawRect(Brush.verticalGradient(listOf(Color(0xFF6D7A94), Color(0xFF4F5B75))), Offset(0f, h * 0.62f), Size(w, h * 0.38f))
+            drawRect(Color(0xFF8C97AE), Offset(0f, h * 0.60f), Size(w, h * 0.045f))
             // Luggage scale platform and display.
             drawRoundRect(Color(0xFF3A3944), Offset(w * 0.52f, h * 0.55f), Size(w * 0.32f, h * 0.07f), CornerRadius(6f))
             drawRoundRect(Color(0xFF1A1A20), Offset(w * 0.74f, h * 0.45f), Size(w * 0.12f, h * 0.1f), CornerRadius(5f))
@@ -57,7 +59,7 @@ fun CheckInDeskScene(info: CheckInGateInfo, modifier: Modifier = Modifier) {
             // Suitcase on the scale.
             drawRoundRect(Terracotta, Offset(w * 0.58f, h * 0.38f), Size(w * 0.14f, h * 0.20f), CornerRadius(14f))
             drawRoundRect(Color(0x33000000), Offset(w * 0.58f, h * 0.46f), Size(w * 0.14f, 4f), CornerRadius(2f))
-            drawRoundRect(Color(0xFF633F26), Offset(w * 0.625f, h * 0.32f), Size(w * 0.05f, h * 0.07f), CornerRadius(5f), style = androidx.compose.ui.graphics.drawscope.Stroke(5f))
+            drawRoundRect(Color(0xFF3F4A63), Offset(w * 0.625f, h * 0.32f), Size(w * 0.05f, h * 0.07f), CornerRadius(5f), style = androidx.compose.ui.graphics.drawscope.Stroke(5f))
             // A luggage tag hanging off the handle.
             drawLine(Color(0xFFFFE08A), Offset(w * 0.69f, h * 0.40f), Offset(w * 0.71f, h * 0.47f), strokeWidth = 3f)
             drawRoundRect(Color(0xFFFFF7E0), Offset(w * 0.685f, h * 0.46f), Size(w * 0.06f, h * 0.09f), CornerRadius(5f))
@@ -95,7 +97,7 @@ fun JetBridgeScene(modifier: Modifier = Modifier, lighting: JetBridgeLighting = 
             drawPath(left, Brush.horizontalGradient(listOf(Color(0xFF8F95A3), Color(0xFFC3C7D0)), 0f, vx))
             drawPath(right, Brush.horizontalGradient(listOf(Color(0xFFC3C7D0), Color(0xFF8F95A3)), vx, w))
             drawPath(ceiling, Brush.verticalGradient(listOf(Color(0xFFE9E6E0), Color(0xFFBDBCB8)), 0f, vy))
-            drawPath(floor, Brush.verticalGradient(listOf(Color(0xFF6C4E49), Color(0xFF8A6A5F)), vy, h))
+            drawPath(floor, Brush.verticalGradient(listOf(Color(0xFF6F7A93), Color(0xFF8C97AE)), vy, h))
             // Streaming lights and floor stripes, spaced in perspective.
             for (i in 0..5) {
                 val t = ((i + walk) / 6f)
@@ -108,7 +110,7 @@ fun JetBridgeScene(modifier: Modifier = Modifier, lighting: JetBridgeLighting = 
             }
             // The aircraft doorway glowing at the end.
             drawRoundRect(Color(0xFFFFF1CF), Offset(vx - doorW / 2, vy - doorH / 2), Size(doorW, doorH), CornerRadius(14f))
-            drawRoundRect(Color(0xFFCF6F4A), Offset(vx - doorW / 2 - 5f, vy - doorH / 2 - 5f), Size(doorW + 10f, doorH + 10f), CornerRadius(18f), style = androidx.compose.ui.graphics.drawscope.Stroke(5f))
+            drawRoundRect(Terracotta, Offset(vx - doorW / 2 - 5f, vy - doorH / 2 - 5f), Size(doorW + 10f, doorH + 10f), CornerRadius(18f), style = androidx.compose.ui.graphics.drawscope.Stroke(5f))
         }
     }
 }

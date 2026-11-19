@@ -7,8 +7,10 @@ import com.travelblock.app.domain.model.Airport
 import java.time.Instant
 import com.travelblock.app.domain.engine.SessionPlanCalculator
 
-private fun hubItinerary(pass: BoardingPass, airports: List<Airport>) =
-    HubRouting.connect(pass.origin, pass.destination, airports)?.let { HubRouting.itinerary(pass.origin, pass.destination, it) }
+private fun hubItinerary(pass: BoardingPass, hubCode: String, airports: List<Airport>) =
+    HubRouting.connections(pass.origin, pass.destination, airports)
+        .firstOrNull { it.hub.code == hubCode }
+        ?.let { HubRouting.itinerary(pass.origin, pass.destination, it) }
 
 fun createInitialFlight(
     pass: BoardingPass,
@@ -18,7 +20,7 @@ fun createInitialFlight(
     val singleFlight = pass.toActiveFlight(startedAt)
     val preset = pass.tripPreset ?: return singleFlight
     val breakdown = pass.sessionPlan?.let(SessionPlanCalculator::calculate)
-    val itinerary = (if (pass.viaHub) hubItinerary(pass, airports) else null) ?: ItineraryPlanner.plan(
+    val itinerary = (pass.viaHubCode?.let { hubItinerary(pass, it, airports) }) ?: ItineraryPlanner.plan(
         ItineraryRequest(
             origin = pass.origin,
             destination = pass.destination,

@@ -23,32 +23,41 @@ data class HubConnection(
  * nearest sensible major hub (small airport, hub, small airport) at the cost of the detour and a layover.
  */
 object HubRouting {
+    private const val MAX_OPTIONS = 3
     private const val MAX_DETOUR_FACTOR = 2.2
     private const val MAX_DETOUR_EXTRA_MILES = 250.0
     private val engine = AirportRouteEngine()
 
-    /** Null when the trip already touches a major airport, or no hub makes a sensible detour. */
-    fun connect(origin: Airport, destination: Airport, airports: List<Airport>): HubConnection? {
-        if (origin.code == destination.code) return null
-        if (origin.isMajorHub) return null
-        if (destination.isMajorHub) return null
+    /** Null when both ends are major airports, or no hub makes a sensible detour. */
+    fun connect(origin: Airport, destination: Airport, airports: List<Airport>): HubConnection? =
+        connections(origin, destination, airports).firstOrNull()
+
+    /** The sensible hubs for this trip, least detour first, so the traveller can pick one. */
+    fun connections(origin: Airport, destination: Airport, airports: List<Airport>): List<HubConnection> {
+        if (origin.code == destination.code) return emptyList()
+        // Two major airports connect directly; a small airport at either end connects through a hub first.
+        val bothMajor = origin.isMajorHub && destination.isMajorHub
+        if (bothMajor) return emptyList()
         val direct = engine.distanceMiles(origin, destination)
         val limit = direct * MAX_DETOUR_FACTOR + MAX_DETOUR_EXTRA_MILES
-        val best = airports.asSequence()
+        return airports.asSequence()
             .filter { it.isMajorHub && it.isUsableForTravelBlockRouting }
             .filter { it.code != origin.code && it.code != destination.code }
             .map { it to engine.distanceMiles(origin, it) + engine.distanceMiles(it, destination) }
             .filter { it.second <= limit }
-            .minByOrNull { it.second }
-            ?.first ?: return null
-        return HubConnection(
-            hub = best,
-            firstLegMinutes = engine.estimatedDurationMinutes(engine.distanceMiles(origin, best)),
-            secondLegMinutes = engine.estimatedDurationMinutes(engine.distanceMiles(best, destination)),
-            layoverMinutes = FlightItinerary.STANDARD_LAYOVER_MINUTES,
-            directMinutes = engine.estimatedDurationMinutes(direct),
-        )
+            .sortedBy { it.second }
+            .take(MAX_OPTIONS)
+            .map { (hub, _) -> connectionVia(origin, destination, hub, direct) }
+            .toList()
     }
+
+    private fun connectionVia(origin: Airport, destination: Airport, hub: Airport, direct: Double) = HubConnection(
+        hub = hub,
+        firstLegMinutes = engine.estimatedDurationMinutes(engine.distanceMiles(origin, hub)),
+        secondLegMinutes = engine.estimatedDurationMinutes(engine.distanceMiles(hub, destination)),
+        layoverMinutes = FlightItinerary.STANDARD_LAYOVER_MINUTES,
+        directMinutes = engine.estimatedDurationMinutes(direct),
+    )
 
     fun itinerary(origin: Airport, destination: Airport, connection: HubConnection): FlightItinerary = FlightItinerary(
         preset = TripPreset("hub", "Via ${connection.hub.displayCode}", 2),

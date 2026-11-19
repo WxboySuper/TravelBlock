@@ -51,11 +51,11 @@ data class TripPlannerState(
     val plan: SessionPlan?,
     val destination: Airport?,
     val airports: List<Airport>,
-    val hub: HubOption = HubOption(null, false),
+    val hub: HubOption = HubOption(emptyList(), null),
 )
 
 /** The hub connection a short trip could take, and whether it is switched on. */
-data class HubOption(val connection: HubConnection?, val enabled: Boolean)
+data class HubOption(val options: List<HubConnection>, val selected: HubConnection?)
 
 data class TripPlannerActions(
     val onPreset: (TripPreset?) -> Unit,
@@ -94,7 +94,7 @@ private const val LONG_BREAK_EVERY = 4
 @Composable
 fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
     // A single flight connected through a hub is still a single flight in the card; the toggle stays on screen.
-    val longHaul = (state.preset != null && !state.hub.enabled) || state.plan != null
+    val longHaul = (state.preset != null && state.hub.selected == null) || state.plan != null
     var draft by remember { mutableStateOf(PlanDraft.from(state.plan)) }
     PaperCard(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -105,7 +105,7 @@ fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
                     if (!longHaul) actions.onPlan(draft.toPlan())
                 }
             }
-            if (!longHaul) state.hub.connection?.let { HubToggle(it, state.hub.enabled, actions.onHub) }
+            if (!longHaul && state.hub.options.isNotEmpty()) HubToggle(state.hub, actions.onHub)
             if (longHaul) {
                 QuickTrips(state, draft, actions)
                 if (state.plan != null) PlanControls(draft) { draft = it; actions.onPlan(it.toPlan()) }
@@ -116,18 +116,28 @@ fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
     }
 }
 
-/** Short hops between small airports fly direct; this adds the realistic connection and shows what it costs. */
+/** Connect a trip through a major hub: the switch shows what it costs, and the chips let you pick which hub. */
 @Composable
-private fun HubToggle(connection: HubConnection, enabled: Boolean, onChange: (HubConnection?) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text("Connect through ${connection.hub.city.ifBlank { connection.hub.displayCode }} (${connection.hub.displayCode})", style = MaterialTheme.typography.bodyMedium, color = Ink)
-            Text(
-                "Adds ${connection.extraMinutes} min: ${connection.firstLegMinutes} + ${connection.secondLegMinutes} min of flying and a ${connection.layoverMinutes} min layover",
-                style = MaterialTheme.typography.bodySmall, color = WarmGray,
-            )
+private fun HubToggle(option: HubOption, onChange: (HubConnection?) -> Unit) {
+    val shown = option.selected ?: option.options.first()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Connect through ${shown.hub.city.ifBlank { shown.hub.displayCode }} (${shown.hub.displayCode})", style = MaterialTheme.typography.bodyMedium, color = Ink)
+                Text(
+                    "Adds ${shown.extraMinutes} min: ${shown.firstLegMinutes} + ${shown.secondLegMinutes} min of flying and a ${shown.layoverMinutes} min layover",
+                    style = MaterialTheme.typography.bodySmall, color = WarmGray,
+                )
+            }
+            Switch(option.selected != null, { onChange(shown.takeIf { _ -> it }) })
         }
-        Switch(enabled, { onChange(connection.takeIf { _ -> it }) })
+        if (option.selected != null && option.options.size > 1) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(option.options) { choice ->
+                    TripChip(choice.hub.displayCode, choice.hub.code == option.selected.hub.code) { onChange(choice) }
+                }
+            }
+        }
     }
 }
 

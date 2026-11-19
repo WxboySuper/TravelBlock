@@ -77,6 +77,7 @@ import com.travelblock.app.ui.components.StickyActionScaffold
 import com.travelblock.app.ui.components.StickyActionListOptions
 import com.travelblock.app.ui.components.TravelDayBackdrop
 import com.travelblock.app.ui.components.TravelMap
+import com.travelblock.app.ui.scene.CabinAisleScene
 import com.travelblock.app.ui.scene.CheckInDeskScene
 import com.travelblock.app.ui.scene.CheckInGateInfo
 import com.travelblock.app.ui.scene.JetBridgeScene
@@ -305,6 +306,8 @@ private fun CheckInSurface(
         }
         if (!uiState.showSeatSelection) {
             item { CheckInDeskScene(CheckInGateInfo(uiState.flightNumber, uiState.gate)) }
+        } else {
+            item { CabinAisleScene(longitude = origin.longitude) }
         }
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->

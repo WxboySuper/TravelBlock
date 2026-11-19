@@ -145,6 +145,10 @@ class SettingsViewModelTest {
             settingsFlow.value = settingsFlow.value.copy(announcementsEnabled = enabled.value)
         }
 
+        override suspend fun setKeepScreenAwake(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            settingsFlow.value = settingsFlow.value.copy(keepScreenAwake = enabled.value)
+        }
+
         override suspend fun setHapticsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
             settingsFlow.value = settingsFlow.value.copy(hapticsEnabled = enabled.value)
         }

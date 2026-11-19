@@ -87,6 +87,10 @@ class DataStoreSettingsRepository(
         }
     }
 
+    override suspend fun setKeepScreenAwake(enabled: SettingEnabled) {
+        dataStore.edit { preferences -> preferences[KeepScreenAwakeKey] = enabled.value }
+    }
+
     override suspend fun setEquippedAircraftIconId(id: EquippedItemId) {
         dataStore.edit { preferences ->
             preferences[EquippedAircraftIconIdKey] = id.value
@@ -109,6 +113,7 @@ class DataStoreSettingsRepository(
             soundEnabled = audioPreferences.soundEnabled,
             announcementsEnabled = audioPreferences.announcementsEnabled,
             hapticsEnabled = audioPreferences.hapticsEnabled,
+            keepScreenAwake = preferences[KeepScreenAwakeKey] ?: true,
             onboardingComplete = preferences[OnboardingCompleteKey] ?: false,
             debugShortFlightsEnabled = preferences[DebugShortFlightsEnabledKey] ?: false,
             debugFlightDurationSeconds = preferences[DebugFlightDurationSecondsKey] ?: 15,
@@ -134,6 +139,7 @@ class DataStoreSettingsRepository(
         val SoundEnabledKey = booleanPreferencesKey("soundEnabled")
         val AnnouncementsEnabledKey = booleanPreferencesKey("announcementsEnabled")
         val HapticsEnabledKey = booleanPreferencesKey("hapticsEnabled")
+        val KeepScreenAwakeKey = booleanPreferencesKey("keepScreenAwake")
         val OnboardingCompleteKey = booleanPreferencesKey("onboardingComplete")
         val DebugShortFlightsEnabledKey = booleanPreferencesKey("debugShortFlightsEnabled")
         val DebugFlightDurationSecondsKey = intPreferencesKey("debugFlightDurationSeconds")

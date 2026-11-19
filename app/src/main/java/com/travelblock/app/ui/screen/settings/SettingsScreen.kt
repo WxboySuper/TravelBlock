@@ -72,6 +72,7 @@ data class SoundSettingsActions(
     val soundChanged: (Boolean) -> Unit,
     val announcementsChanged: (Boolean) -> Unit,
     val hapticsChanged: (Boolean) -> Unit,
+    val keepAwakeChanged: (Boolean) -> Unit = {},
 )
 data class DebugSettingsActions(val shortFlightsChanged: (Boolean) -> Unit, val durationSelected: (Int) -> Unit)
 data class PreferenceActions(val sound: SoundSettingsActions, val debug: DebugSettingsActions)
@@ -103,7 +104,7 @@ fun SettingsScreen(container: TravelBlockContainer) {
                 home = HomeAirportActions(viewModel::confirmHomeAirportChange, viewModel::dismissHomeAirportConfirmation),
             ),
             preferences = PreferenceActions(
-                sound = SoundSettingsActions(viewModel::setSelectedTheme, viewModel::setSoundEnabled, viewModel::setAnnouncementsEnabled, viewModel::setHapticsEnabled),
+                sound = SoundSettingsActions(viewModel::setSelectedTheme, viewModel::setSoundEnabled, viewModel::setAnnouncementsEnabled, viewModel::setHapticsEnabled, viewModel::setKeepScreenAwake),
                 debug = DebugSettingsActions(viewModel::setDebugShortFlightsEnabled, viewModel::setDebugFlightDurationSeconds),
             ),
             reset = ResetActions(viewModel::showResetConfirmation, viewModel::dismissResetConfirmation, viewModel::resetAllLocalData),
@@ -371,6 +372,12 @@ private fun PreferenceCard(
             description = "Controls future selection and flight-event vibration cues.",
             checked = settings.hapticsEnabled,
             onCheckedChange = actions.sound.hapticsChanged,
+        )
+        ToggleRow(
+            title = "Keep screen awake",
+            description = "Stops the screen from turning off while you are in flight.",
+            checked = settings.keepScreenAwake,
+            onCheckedChange = actions.sound.keepAwakeChanged,
         )
         if (com.travelblock.app.BuildConfig.DEBUG) {
             Text("Developer tools", style = MaterialTheme.typography.labelLarge, color = MutedText)

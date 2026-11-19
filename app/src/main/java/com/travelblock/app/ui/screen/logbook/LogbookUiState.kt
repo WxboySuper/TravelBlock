@@ -28,6 +28,8 @@ data class LogbookEntryUiModel(
     val dateLabel: String,
     val originCode: String = "",
     val destinationCode: String = "",
+    val distanceMiles: Double = 0.0,
+    val focusTag: String = "",
 )
 
 data class FlightLogDetailUiState(

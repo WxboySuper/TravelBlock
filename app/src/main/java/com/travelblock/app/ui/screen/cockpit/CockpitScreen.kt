@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +76,8 @@ import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.ui.util.KeepScreenAwake
+import kotlinx.coroutines.flow.map
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.experience
 import com.travelblock.app.domain.model.position
@@ -103,6 +106,8 @@ fun CockpitScreen(
         factory = container.cockpitViewModelFactory(activeFlight, actions),
     )
 
+    val keepAwake by remember(container) { container.settingsRepository.settings.map { it.keepScreenAwake } }.collectAsState(initial = true)
+    KeepScreenAwake(keepAwake && activeFlight != null)
     FlightUpdateEffect(viewModel.uiState.activeFlight, actions.onFlightUpdated)
     ArrivalEffect(viewModel.uiState.activeFlight, viewModel.uiState.status, container, actions)
     DiversionEffect(viewModel.uiState.status, viewModel.uiState.diversionSummary, actions.onFlightDiverted)

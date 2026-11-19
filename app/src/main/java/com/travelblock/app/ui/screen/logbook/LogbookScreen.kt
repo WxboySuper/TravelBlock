@@ -106,6 +106,7 @@ private fun LazyListScope.filledLogbook(uiState: LogbookUiState, lookup: Airport
         item { SectionTitle(SectionHeading("Where you've been", "Every route you've landed, drawn on the map.")) }
     item { WhereYouveBeenCard(legsFor(uiState.entries, lookup)) }
     item { LifetimeTotalsCard(uiState.summary) }
+    item { TravelStatsCard(travelStatsFor(uiState.entries, lookup)) }
     uiState.pilot?.let { pilot ->
         item { PassportCard(pilot.airportsVisited) }
         item { TrophyCaseCard(pilot.unlockedBadges) }

@@ -7,6 +7,8 @@ data class UserSettings(
     val soundEnabled: Boolean = true,
     val announcementsEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
+    /** Keep the screen on while a flight is in progress, so the countdown stays in view. */
+    val keepScreenAwake: Boolean = true,
     val onboardingComplete: Boolean = false,
     val debugShortFlightsEnabled: Boolean = false,
     val debugFlightDurationSeconds: Int = 15,

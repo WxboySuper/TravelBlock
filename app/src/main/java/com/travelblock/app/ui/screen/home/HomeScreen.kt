@@ -33,6 +33,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +54,8 @@ import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.RouteStops
 import com.travelblock.app.ui.components.PrimaryButton
 import com.travelblock.app.ui.components.StampPill
+import com.travelblock.app.ui.components.UpdateBanner
+import com.travelblock.app.update.UpdateUiState
 import com.travelblock.app.ui.components.TravelMap
 import com.travelblock.app.ui.scene.FlapText
 import com.travelblock.app.ui.scene.TerminalWindows
@@ -76,6 +82,9 @@ fun HomeScreen(
     onBookSelectedRoute: (DraftFlightBooking) -> Unit,
     onStartQuickFlight: (DraftFlightBooking) -> Unit = onBookSelectedRoute,
 ) {
+    val updateState by container.updateManager.state.collectAsState()
+    val scope = rememberCoroutineScope()
+    val updateInfo = (updateState as? UpdateUiState.Available)?.info
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModelFactory(
             airportRepository = container.airportRepository,
@@ -87,6 +96,10 @@ fun HomeScreen(
 
     HomeScreenContent(
         uiState = viewModel.uiState,
+        updateState = updateState,
+        updateInfo = updateInfo,
+        onUpdate = { updateInfo?.let { info -> scope.launch { container.updateManager.install(info) } } },
+        onDismissUpdate = { updateInfo?.let { info -> scope.launch { container.updateManager.dismiss(info.build) } } },
         activeFlight = activeFlight,
         onDurationSelected = viewModel::onDurationSelected,
         onRouteSelected = viewModel::onRouteSelected,
@@ -105,6 +118,10 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     uiState: HomeUiState,
+    updateState: UpdateUiState = UpdateUiState.Idle,
+    updateInfo: com.travelblock.app.update.UpdateInfo? = null,
+    onUpdate: () -> Unit = {},
+    onDismissUpdate: () -> Unit = {},
     activeFlight: ActiveFlight? = null,
     onDurationSelected: (Int) -> Unit,
     onRouteSelected: (String) -> Unit,
@@ -122,6 +139,7 @@ fun HomeScreenContent(
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding()) {
             ConcourseHeader(uiState)
             Spacer(Modifier.height(150.dp))
+            UpdateBanner(updateState, updateInfo, onUpdate, onDismissUpdate)
             if (activeFlight != null) {
                 InFlightBoard(activeFlight, onReturnToCockpit)
             } else {

@@ -28,6 +28,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +46,13 @@ import com.travelblock.app.ui.theme.CabinAmber
 import com.travelblock.app.ui.theme.MutedText
 import com.travelblock.app.ui.theme.RunwayLine
 import com.travelblock.app.ui.theme.SoftSky
+import com.travelblock.app.update.UpdateUiState
+import com.travelblock.app.BuildConfig
+import com.travelblock.app.ui.components.PrimaryButton
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 data class AirportPickerActions(
     val open: (AirportPickerMode) -> Unit,
@@ -66,6 +76,9 @@ data class SettingsActions(val airports: AirportActions, val preferences: Prefer
 
 @Composable
 fun SettingsScreen(container: TravelBlockContainer) {
+    val updateState by container.updateManager.state.collectAsState()
+    val lastCheck by container.updateManager.lastCheckMillis.collectAsState()
+    val scope = rememberCoroutineScope()
     val viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModelFactory(
             airportRepository = container.airportRepository,
@@ -76,6 +89,9 @@ fun SettingsScreen(container: TravelBlockContainer) {
 
     SettingsScreenContent(
         uiState = viewModel.uiState,
+        updateState = updateState,
+        lastCheckMillis = lastCheck,
+        onCheckUpdates = { scope.launch { container.updateManager.check(manual = true) } },
         actions = SettingsActions(
             airports = AirportActions(
                 picker = AirportPickerActions(viewModel::openAirportPicker, viewModel::dismissAirportPicker, viewModel::onAirportSearchChanged, viewModel::selectAirport),
@@ -94,6 +110,9 @@ fun SettingsScreen(container: TravelBlockContainer) {
 fun SettingsScreenContent(
     uiState: SettingsUiState,
     actions: SettingsActions,
+    updateState: UpdateUiState = UpdateUiState.Idle,
+    lastCheckMillis: Long = 0L,
+    onCheckUpdates: () -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier
@@ -123,6 +142,7 @@ fun SettingsScreenContent(
         item {
             PreferenceCard(uiState.settings, actions.preferences)
         }
+        item { AppUpdatesCard(updateState, lastCheckMillis, onCheckUpdates) }
         item {
             ResetDataCard(onShowResetConfirmation = actions.reset.show)
         }
@@ -134,6 +154,27 @@ fun SettingsScreenContent(
     }
 
     SettingsOverlays(uiState, actions)
+}
+
+@Composable
+private fun AppUpdatesCard(state: UpdateUiState, lastCheckMillis: Long, onCheck: () -> Unit) {
+    SettingsCard {
+        Text("App updates", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD_NUMBER})", color = MutedText)
+        val checkedAt = lastCheckMillis.takeIf { it > 0 }?.let {
+            DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(it))
+        } ?: "Not checked yet"
+        Text("Last checked: $checkedAt", style = MaterialTheme.typography.bodySmall, color = MutedText)
+        val result = when (state) {
+            is UpdateUiState.Available -> "Update available: build ${state.info.build}"
+            UpdateUiState.UpToDate -> "You're up to date"
+            UpdateUiState.Checking -> "Checking for updates..."
+            is UpdateUiState.Error -> state.message
+            else -> ""
+        }
+        if (result.isNotBlank()) Text(result, style = MaterialTheme.typography.bodyMedium)
+        PrimaryButton("Check for updates", onCheck, enabled = state != UpdateUiState.Checking)
+    }
 }
 
 @Composable

@@ -19,6 +19,8 @@ import com.travelblock.app.data.settings.DataStoreSettingsRepository
 import com.travelblock.app.data.settings.SettingsRepository
 import com.travelblock.app.util.NotificationHelper
 import com.travelblock.app.util.LandingAlarmScheduler
+import com.travelblock.app.util.LiveFlightNotificationHelper
+import com.travelblock.app.util.LiveUpdateRefreshScheduler
 import com.travelblock.app.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -73,10 +75,20 @@ class TravelBlockContainer(
         LandingAlarmScheduler(appContext)
     }
 
+    val liveFlightNotificationHelper: LiveFlightNotificationHelper by lazy {
+        LiveFlightNotificationHelper(appContext)
+    }
+
+    val liveUpdateRefreshScheduler: LiveUpdateRefreshScheduler by lazy {
+        LiveUpdateRefreshScheduler(appContext)
+    }
+
     val updateManager: UpdateManager by lazy { UpdateManager.get(appContext) }
 
     suspend fun resetLocalData() {
         landingAlarmScheduler.cancel()
+        liveUpdateRefreshScheduler.cancel()
+        liveFlightNotificationHelper.cancel()
         notificationHelper.cancelFlightLandedNotification()
         withContext(Dispatchers.IO) {
             database.clearAllTables()

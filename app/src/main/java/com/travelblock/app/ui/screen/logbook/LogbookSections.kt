@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -247,15 +248,17 @@ private fun PassportStamp(stamp: PassportStampInfo) {
     Box(
         Modifier
             .rotate(((index * 37) % 11 - 5).toFloat())
-            .size(width = if (round) 72.dp else 80.dp, height = if (round) 72.dp else 64.dp)
+            // Grows with large text instead of clipping the words inside the ring.
+            .defaultMinSize(minWidth = if (round) 80.dp else 84.dp, minHeight = if (round) 80.dp else 66.dp)
             .border(BorderStroke(2.dp, ink.copy(alpha = 0.85f)), shape)
             .padding(4.dp)
-            .border(BorderStroke(1.dp, ink.copy(alpha = 0.45f)), shape),
+            .border(BorderStroke(1.dp, ink.copy(alpha = 0.45f)), shape)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(code, fontFamily = DisplayFamily, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
-            Text("ARRIVED", style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f))
+            Text("ARRIVED", style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f), maxLines = 1, softWrap = false)
         }
     }
 }

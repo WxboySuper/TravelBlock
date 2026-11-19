@@ -23,6 +23,20 @@ class AirportSearchEngineTest {
         assertEquals("KOUN", byName.first().code)
     }
 
+    @Test
+    fun majorAirportsListFirstWhenNothingIsTyped() {
+        val results = AirportSearchEngine.search(airports + airport("KAAA", "AAA", "Aaa Field", "Aaa", "Texas"), "")
+
+        assertEquals(listOf("KDFW", "KTUL"), results.take(2).map { it.code }.sorted())
+    }
+
+    @Test
+    fun majorAirportBeatsASmallOneThatMatchesTheSameWay() {
+        val results = AirportSearchEngine.search(airports + airport("KTXX", "TXX", "Tulsa Strip", "Tulsa", "Oklahoma"), "Tulsa")
+
+        assertEquals("KTUL", results.first().code)
+    }
+
     private val airports = listOf(
         airport("KOUN", "OUN", "University of Oklahoma Westheimer Airport", "Norman", "Oklahoma"),
         airport("KTUL", "TUL", "Tulsa International Airport", "Tulsa", "Oklahoma"),

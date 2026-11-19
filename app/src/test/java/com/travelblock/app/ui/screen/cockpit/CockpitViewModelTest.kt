@@ -67,6 +67,18 @@ class CockpitViewModelTest {
         assertEquals(false, viewModel.uiState.showDivertDialog)
     }
 
+    @Test
+    fun divertPopupSurvivesTheNextTick() {
+        val clock = MutableClock(start)
+        val viewModel = CockpitViewModel(activeFlight, clock, ZoneId.of("UTC"))
+
+        viewModel.requestDivert()
+        clock.current = start.plusSeconds(1)
+        viewModel.tick()
+
+        assertTrue(viewModel.uiState.showDivertDialog)
+    }
+
     private val start = Instant.parse("2026-05-19T20:00:00Z")
     private val activeFlight = ActiveFlight(
         origin = airport("KOUN", "Norman"),

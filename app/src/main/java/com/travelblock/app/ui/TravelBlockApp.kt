@@ -326,7 +326,8 @@ private fun NavGraphBuilder.quickBoardingRoute(
 
 private fun startQuickFlight(pass: BoardingPass, runtime: TravelBlockRuntime, navController: NavHostController) {
     playCue(runtime, FlightAudioCue.FlightStarted)
-    val flight = pass.toActiveFlight(startedAt = Instant.now()).withDebugFlightDuration(runtime.settings)
+    val flight = createInitialFlight(pass, runtime.container.airportRepository.getAllAirports(), Instant.now())
+        .withDebugFlightDuration(runtime.settings)
     runtime.state.activeFlight = flight
     runtime.coroutineScope.launch {
         runtime.container.activeFlightSessionRepository.saveActiveFlight(flight)

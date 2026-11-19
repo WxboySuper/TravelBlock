@@ -32,6 +32,7 @@ data class BookingUiState(
     val todoistProjectName: String? = null,
     val tripPreset: TripPreset? = null,
     val sessionPlan: SessionPlan? = null,
+    val viaHub: Boolean = false,
     val cabinSecured: Boolean = false,
     val materialsReady: Boolean = false,
     val distractionsStowed: Boolean = false,
@@ -68,6 +69,7 @@ data class BookingUiState(
                 todoistProjectName = todoistProjectName,
                 tripPreset = tripPreset,
                 sessionPlan = sessionPlan,
+                viaHub = viaHub,
             )
         }
 

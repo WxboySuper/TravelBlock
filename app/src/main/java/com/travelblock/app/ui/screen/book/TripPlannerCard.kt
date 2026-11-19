@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.travelblock.app.domain.engine.HubConnection
 import com.travelblock.app.domain.engine.SessionPlanCalculator
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.SessionBreakPlan
@@ -50,12 +51,17 @@ data class TripPlannerState(
     val plan: SessionPlan?,
     val destination: Airport?,
     val airports: List<Airport>,
+    val hub: HubOption = HubOption(null, false),
 )
+
+/** The hub connection a short trip could take, and whether it is switched on. */
+data class HubOption(val connection: HubConnection?, val enabled: Boolean)
 
 data class TripPlannerActions(
     val onPreset: (TripPreset?) -> Unit,
     val onPlan: (SessionPlan?) -> Unit,
     val onDestination: (Airport) -> Unit,
+    val onHub: (HubConnection?) -> Unit = {},
 )
 
 /** The editable numbers of a custom session. */
@@ -87,7 +93,8 @@ private const val LONG_BREAK_EVERY = 4
  */
 @Composable
 fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
-    val longHaul = state.preset != null || state.plan != null
+    // A single flight connected through a hub is still a single flight in the card; the toggle stays on screen.
+    val longHaul = (state.preset != null && !state.hub.enabled) || state.plan != null
     var draft by remember { mutableStateOf(PlanDraft.from(state.plan)) }
     PaperCard(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -98,6 +105,7 @@ fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
                     if (!longHaul) actions.onPlan(draft.toPlan())
                 }
             }
+            if (!longHaul) state.hub.connection?.let { HubToggle(it, state.hub.enabled, actions.onHub) }
             if (longHaul) {
                 QuickTrips(state, draft, actions)
                 if (state.plan != null) PlanControls(draft) { draft = it; actions.onPlan(it.toPlan()) }
@@ -105,6 +113,21 @@ fun TripPlannerCard(state: TripPlannerState, actions: TripPlannerActions) {
                 DestinationRow(state, actions.onDestination)
             }
         }
+    }
+}
+
+/** Short hops between small airports fly direct; this adds the realistic connection and shows what it costs. */
+@Composable
+private fun HubToggle(connection: HubConnection, enabled: Boolean, onChange: (HubConnection?) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Connect through ${connection.hub.city.ifBlank { connection.hub.displayCode }} (${connection.hub.displayCode})", style = MaterialTheme.typography.bodyMedium, color = Ink)
+            Text(
+                "Adds ${connection.extraMinutes} min: ${connection.firstLegMinutes} + ${connection.secondLegMinutes} min of flying and a ${connection.layoverMinutes} min layover",
+                style = MaterialTheme.typography.bodySmall, color = WarmGray,
+            )
+        }
+        Switch(enabled, { onChange(connection.takeIf { _ -> it }) })
     }
 }
 

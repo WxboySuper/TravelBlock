@@ -98,7 +98,9 @@ class CockpitViewModel(
             beginLayover(flight)
             return
         }
-        uiState = flight.toUiState(status = nextStatus)
+        // The tick rebuilds the whole state: keep an open "end flight early" popup open while still airborne.
+        val keepDialog = uiState.showDivertDialog && nextStatus == ActiveFlightStatus.Active
+        uiState = flight.toUiState(status = nextStatus).copy(showDivertDialog = keepDialog)
         if (nextStatus == ActiveFlightStatus.Arrived) saveCompletedArrival(flight)
     }
 

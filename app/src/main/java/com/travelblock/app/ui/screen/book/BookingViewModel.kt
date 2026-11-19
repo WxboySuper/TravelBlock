@@ -179,12 +179,8 @@ class BookingViewModel(
         if (draft == null) return BookingUiState()
 
         val departureTime = LocalDateTime.now(clock).plusMinutes(8)
-        val breakdown = draft.sessionPlan?.let(SessionPlanCalculator::calculate)
-        val hub = draft.hub
-        val plannedPreset = breakdown?.let { TripPreset("planned", "Planned session", it.legCount) }
-            ?: hub?.let { TripPreset("hub", "Via ${it.hub.displayCode}", 2) }
-        val focusMinutes = breakdown?.totalFocusMinutes ?: hub?.let { it.totalFocusMinutes + it.layoverMinutes } ?: draft.durationMinutes
-        val arrivalTime = departureTime.plusMinutes(focusMinutes.toLong())
+        val shape = TripShape.of(draft)
+        val arrivalTime = departureTime.plusMinutes(shape.totalMinutes.toLong())
         val flightNumber = generateFlightNumber(draft)
         val seatOptions = defaultSeatOptions(
             seed = "$flightNumber-${draft.origin.code}-${draft.destination.code}-${departureTime.toLocalDate()}",
@@ -194,7 +190,7 @@ class BookingViewModel(
             draftAvailable = true,
             origin = draft.origin,
             destination = draft.destination,
-            durationMinutes = breakdown?.legDurationsMinutes?.firstOrNull() ?: hub?.firstLegMinutes ?: draft.durationMinutes,
+            durationMinutes = shape.firstLegMinutes,
             distanceMiles = draft.distanceMiles,
             pointsRewardEstimate = draft.estimatedRewardPoints,
             flightNumber = flightNumber,
@@ -207,11 +203,34 @@ class BookingViewModel(
             pointsBalance = pointsBalance,
             maxFlightTimeMinutes = draft.maxFlightTimeMinutes,
             sessionPlan = draft.sessionPlan,
-            hub = hub,
+            hub = draft.hub,
             hubChosen = draft.hubChoiceMade,
-            tripPreset = plannedPreset,
+            tripPreset = shape.preset,
             seatSelectionMessage = "Standard seats are free. Upgrade seats require enough points to select.",
         )
+    }
+
+    /** How a draft is flown: the trip it makes (long haul or hub connection), its total time and its first leg. */
+    private data class TripShape(val preset: TripPreset?, val totalMinutes: Int, val firstLegMinutes: Int) {
+        companion object {
+            fun of(draft: DraftFlightBooking): TripShape {
+                val breakdown = draft.sessionPlan?.let(SessionPlanCalculator::calculate)
+                val hub = draft.hub
+                return when {
+                    breakdown != null -> TripShape(
+                        TripPreset("planned", "Planned session", breakdown.legCount),
+                        breakdown.totalFocusMinutes,
+                        breakdown.legDurationsMinutes.firstOrNull() ?: draft.durationMinutes,
+                    )
+                    hub != null -> TripShape(
+                        TripPreset("hub", "Via ${hub.hub.displayCode}", 2),
+                        hub.totalFocusMinutes + hub.layoverMinutes,
+                        hub.firstLegMinutes,
+                    )
+                    else -> TripShape(null, draft.durationMinutes, draft.durationMinutes)
+                }
+            }
+        }
     }
 
     private fun defaultSeatOptions(seed: String): List<SeatOption> {

@@ -53,7 +53,6 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.engine.HubConnection
-import com.travelblock.app.domain.engine.HubRouting
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.SessionPlan
 import com.travelblock.app.data.todoist.TodoistRepository
@@ -271,9 +270,6 @@ fun BookScreenContent(
     }
 }
 
-/** Trips shorter than this are quick hops that fly direct unless the traveller adds a hub. */
-private const val QUICK_HOP_MILES = 60.0
-
 @Composable
 private fun CheckInSurface(
     uiState: BookingUiState,
@@ -325,16 +321,10 @@ private fun CheckInSurface(
         }
         if (!uiState.showSeatSelection) {
             item {
-                val hubs = remember(origin.code, uiState.destination?.code, airports) {
-                    uiState.destination?.let { HubRouting.connections(origin, it, airports) }.orEmpty()
-                }
-                // Smart default: a trip long enough to matter connects through its nearest hub unless you say otherwise.
-                LaunchedEffect(hubs, uiState.hubChosen) {
-                    val plain = uiState.tripPreset == null && uiState.sessionPlan == null
-                    if (!uiState.hubChosen && plain && hubs.isNotEmpty() && uiState.distanceMiles > QUICK_HOP_MILES) onHubSelected(hubs.first())
-                }
-                TripPlannerCard(
-                    TripPlannerState(uiState.tripPreset, uiState.sessionPlan, uiState.destination, airports, HubOption(hubs, uiState.hub)),
+                TripPlannerSection(
+                    uiState,
+                    origin,
+                    airports,
                     TripPlannerActions(onTripPresetSelected, onSessionPlanSelected, onTripDestinationSelected, onHubSelected),
                 )
             }

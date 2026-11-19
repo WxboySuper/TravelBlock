@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    # Nightly run that refreshes the Gradle cache; releases and PRs only read it.
+    - cron: '17 6 * * *'
   workflow_dispatch:
     inputs:
       test_tag:
@@ -15,10 +18,11 @@ on:
 permissions:
   contents: write
 
-# Builds queue up behind each other instead of cancelling.
+# Publishing runs queue up behind each other so releases never overlap.
+# A newer push to a PR cancels that PR's older, now pointless build.
 concurrency:
-  group: apk-publish
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('apk-pr-{0}', github.ref) || 'apk-publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -32,6 +36,9 @@ jobs:
           java-version: 21
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          # Only the nightly run saves the cache (saving costs about 40 s); everything else just reads it.
+          cache-read-only: ${{ github.event_name != 'schedule' }}
 
       - name: Build debug APK
         run: chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon -PbuildNumber=${{ github.run_number }} -PbuildSha=${{ github.sha }}

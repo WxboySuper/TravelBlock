@@ -28,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.travelblock.app.domain.engine.AutoSessionPlan
 import com.travelblock.app.domain.engine.TripSuggestion
+import com.travelblock.app.domain.engine.TripTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import com.travelblock.app.domain.engine.TripWish
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.ui.components.Kicker
@@ -56,13 +59,16 @@ fun TripPlannerPanel(origin: Airport?, visitedCount: Int, actions: TripPlannerHo
     var minutes by remember { mutableIntStateOf(120) }
     var hubs by remember { mutableStateOf(true) }
     var major by remember { mutableStateOf(true) }
-    val options = remember(minutes, hubs, major, origin?.code, visitedCount) { actions.options(TripWish(minutes, hubs, major)) }
+    var custom by remember { mutableStateOf<CustomTrip?>(null) }
+    var askCustom by remember { mutableStateOf(false) }
+    val options = remember(minutes, hubs, major, custom, origin?.code, visitedCount) { actions.options(TripWish(minutes, hubs, major, layoversCountAgainstTime = custom?.landBy == true)) }
     PaperCard(Modifier.padding(horizontal = 14.dp).fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Kicker("Trip planner", color = DuskBlue)
             Text("How long do you want to focus?", style = MaterialTheme.typography.titleLarge, color = Ink)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PlannerMinutes.forEach { SoftChip(formatMinutes(it), selected = it == minutes, onClick = { minutes = it }) }
+                PlannerMinutes.forEach { SoftChip(formatMinutes(it), selected = custom == null && it == minutes, onClick = { minutes = it; custom = null }) }
+                SoftChip(custom?.label ?: "Custom", selected = custom != null, onClick = { askCustom = true })
             }
             PlannerCheck("Connect through hubs", "A small airport flies through its regional hub first", hubs) { hubs = it }
             PlannerCheck("Major airports only", "Pick a big-city destination", major) { major = it }
@@ -72,6 +78,7 @@ fun TripPlannerPanel(origin: Airport?, visitedCount: Int, actions: TripPlannerHo
             options.forEach { OptionCard(it) { actions.onPlan(it) } }
         }
     }
+    if (askCustom) CustomTripDialog(onDismiss = { askCustom = false }, onConfirm = { trip -> custom = trip; minutes = trip.minutes; askCustom = false })
 }
 
 @Composable
@@ -100,7 +107,15 @@ private fun OptionCard(suggestion: TripSuggestion, onChoose: () -> Unit) {
         }
         Text(suggestion.stops.joinToString("  to  ") { it.displayCode }, style = MaterialTheme.typography.labelLarge, color = DuskBlue)
         Text(planSummary(suggestion), style = MaterialTheme.typography.bodySmall, color = WarmGray)
+        Text("Lands about ${landingTime(suggestion)}", style = MaterialTheme.typography.labelMedium, color = DuskBlue)
     }
+}
+
+/** When this trip would touch down if you started now: boarding, every flight, and every break or layover. */
+private fun landingTime(suggestion: TripSuggestion): String {
+    val breaks = AutoSessionPlan.summary(suggestion.focusMinutes)?.breakMinutes ?: suggestion.hub?.layoverMinutes ?: 0
+    val total = TripTime.BOARDING_BUFFER_MINUTES + suggestion.focusMinutes + breaks
+    return LocalTime.now().plusMinutes(total.toLong()).format(DateTimeFormatter.ofPattern("h:mm a"))
 }
 
 private fun planSummary(suggestion: TripSuggestion): String {

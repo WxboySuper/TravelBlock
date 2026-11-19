@@ -35,7 +35,7 @@ jobs:
         run: cp app/build/outputs/apk/debug/app-debug.apk TravelBlock.apk
 
       - name: Publish to the "latest" release
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_NUMBER: ${{ github.run_number }}

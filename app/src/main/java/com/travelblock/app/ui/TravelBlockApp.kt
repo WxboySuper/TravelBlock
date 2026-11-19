@@ -194,6 +194,9 @@ private fun RestoreCockpitRouteEffect(
             restoreRouteHandled = state.restoreRouteHandled,
         )
         if (!shouldRoute) return@LaunchedEffect
+        // The NavHost attaches its graph during first composition; a fast restore (e.g. a layover) can get here
+        // first. The route key changes once the graph exists, which re-runs this effect.
+        if (navController.currentBackStackEntry == null) return@LaunchedEffect
         state.restoreRouteHandled = true
         navigateToCockpit(navController, popHome = true)
     }

@@ -19,7 +19,7 @@ class TravelStatsTest {
             entry("KOUN", "KOKC", 13.0, "Writing"),
             entry("KOKC", "EGLL", 4500.0, "Writing"),
             entry("EGLL", "KOKC", 4500.0, "Reading"),
-            entry("KOKC", "KOUN", 13.0, "", completed = false),
+            entry("KOKC", "KOUN", 13.0, "").copy(isCompleted = false),
         )
 
         val stats = travelStatsFor(entries, lookup)
@@ -40,9 +40,9 @@ class TravelStatsTest {
         assertNull(stats.topFocusTag)
     }
 
-    private fun entry(from: String, to: String, miles: Double, tag: String, completed: Boolean = true) = LogbookEntryUiModel(
+    private fun entry(from: String, to: String, miles: Double, tag: String) = LogbookEntryUiModel(
         id = "$from$to$miles", flightNumber = "TB1", routeLabel = "$from -> $to", durationLabel = "", distanceLabel = "",
-        statusLabel = "", isCompleted = completed, pointsLabel = "", dateLabel = "",
+        statusLabel = "", isCompleted = true, pointsLabel = "", dateLabel = "",
         originCode = from, destinationCode = to, distanceMiles = miles, focusTag = tag,
     )
 

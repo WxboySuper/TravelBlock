@@ -233,7 +233,9 @@ class CockpitViewModel(
     }
 
     private fun saveResult(result: FlightResultRequest) {
-        if (flightLogRepository == null || pointsRepository == null || settingsRepository == null) return
+        if (flightLogRepository == null) return
+        if (pointsRepository == null) return
+        if (settingsRepository == null) return
         if (resultSaved) return
         resultSaved = true
         viewModelScope.launch { persistResult(result) }

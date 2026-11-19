@@ -46,6 +46,8 @@ data class ActiveFlightSessionEntity(
     val itineraryLegIndex: Int = 0,
     val itineraryLegCount: Int = 1,
     val layoverEndsAtEpochMillis: Long? = null,
+    val itineraryPointsEarned: Int = 0,
+    val itineraryDistanceMiles: Double = 0.0,
     val status: String,
 ) {
     companion object {

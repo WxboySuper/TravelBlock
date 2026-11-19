@@ -18,15 +18,17 @@ data class ArrivalSummary(
         fun fromCompletedFlight(
             flight: ActiveFlight,
             pointsEarned: Int,
+            routeAirports: List<Airport> = emptyList(),
         ): ArrivalSummary {
+            val routeCodes = flight.itineraryCodes?.split(',').orEmpty()
             return ArrivalSummary(
-                origin = flight.origin,
-                destination = flight.destination,
+                origin = routeAirports.firstOrNull { it.code == routeCodes.firstOrNull() } ?: flight.origin,
+                destination = routeAirports.firstOrNull { it.code == routeCodes.lastOrNull() } ?: flight.destination,
                 flightNumber = flight.flightNumber,
-                durationMinutes = flight.durationMinutes,
-                distanceMiles = flight.distanceMiles,
+                durationMinutes = flight.durationMinutes * flight.itineraryLegCount,
+                distanceMiles = if (flight.isItinerary) flight.itineraryDistanceMiles else flight.distanceMiles,
                 seat = flight.seat,
-                pointsEarned = pointsEarned,
+                pointsEarned = pointsEarned + flight.itineraryPointsEarned,
                 status = ActiveFlightStatus.Arrived,
                 focusObjective = flight.focusObjective,
                 focusTag = flight.focusTag,

@@ -107,6 +107,7 @@ fun BookScreen(
     onStartFocusFlight: (BoardingPass) -> Unit,
     todoistRepository: TodoistRepository? = null,
     onOpenTodoistSettings: () -> Unit = {},
+    airports: List<Airport> = emptyList(),
 ) {
     val viewModel: BookingViewModel = viewModel(
         key = draftFlightBooking?.let {
@@ -123,6 +124,8 @@ fun BookScreen(
         onSeatSelected = viewModel::selectSeat,
         onObjectiveChanged = viewModel::updateFocusObjective,
         onFocusTagSelected = viewModel::selectFocusTag,
+        onTripPresetSelected = viewModel::selectTripPreset,
+        onTripDestinationSelected = viewModel::selectTripDestination,
         onTodoistTaskSelected = viewModel::selectTodoistTask,
         onPreflightCheckChanged = viewModel::setPreflightCheck,
         onContinueToSeatSelection = viewModel::continueToSeatSelection,
@@ -135,6 +138,7 @@ fun BookScreen(
         onStartFocusFlight = onStartFocusFlight,
         todoistRepository = todoistRepository,
         onOpenTodoistSettings = onOpenTodoistSettings,
+        airports = airports,
     )
 }
 
@@ -159,6 +163,9 @@ fun BookScreenContent(
     onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit = {},
     todoistRepository: TodoistRepository? = null,
     onOpenTodoistSettings: () -> Unit = {},
+    onTripPresetSelected: (com.travelblock.app.domain.model.TripPreset?) -> Unit = {},
+    onTripDestinationSelected: (Airport) -> Unit = {},
+    airports: List<Airport> = emptyList(),
 ) {
     if (!uiState.draftAvailable) {
         EmptyBookingState()
@@ -198,6 +205,9 @@ fun BookScreenContent(
                     },
                     onObjectiveChanged = onObjectiveChanged,
                     onFocusTagSelected = onFocusTagSelected,
+                    onTripPresetSelected = onTripPresetSelected,
+                    onTripDestinationSelected = onTripDestinationSelected,
+                    airports = airports,
                     todoistRepository = todoistRepository,
                     onTodoistTaskSelected = onTodoistTaskSelected,
                     onOpenTodoistSettings = onOpenTodoistSettings,
@@ -260,6 +270,9 @@ private fun CheckInSurface(
     onSeatSelected: (String) -> Unit,
     onObjectiveChanged: (String) -> Unit,
     onFocusTagSelected: (String) -> Unit,
+    onTripPresetSelected: (com.travelblock.app.domain.model.TripPreset?) -> Unit,
+    onTripDestinationSelected: (Airport) -> Unit,
+    airports: List<Airport>,
     todoistRepository: TodoistRepository?,
     onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
     onOpenTodoistSettings: () -> Unit,
@@ -295,6 +308,15 @@ private fun CheckInSurface(
                     boardingGroup = uiState.boardingGroup,
                 ),
             )
+        }
+        if (!uiState.showSeatSelection) {
+            item {
+                TripPresetPicker(uiState.tripPreset, onTripPresetSelected)
+                LongHaulDestinationPicker(
+                    TripPresetSelection(uiState.tripPreset, uiState.destination, airports),
+                    onTripDestinationSelected,
+                )
+            }
         }
         stepSceneItem(uiState, origin.longitude)
         item {

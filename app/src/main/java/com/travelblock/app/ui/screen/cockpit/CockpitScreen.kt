@@ -112,14 +112,10 @@ fun CockpitScreen(
 
     LaunchedEffect(viewModel.uiState.status, viewModel.uiState.activeFlight) {
         val flight = viewModel.uiState.activeFlight
+        if (flight != null) actions.onFlightUpdated(flight)
         if (!arrivalHandled && flight != null && viewModel.uiState.status == ActiveFlightStatus.Arrived) {
             arrivalHandled = true
-            actions.onFlightArrived(
-                ArrivalSummary.fromCompletedFlight(
-                    flight = flight,
-                    pointsEarned = FlightRewardCalculator.completedReward(flight),
-                ),
-            )
+            actions.onFlightArrived(flight.toArrivalSummary(container.airportRepository.getAllAirports()))
         }
     }
     LaunchedEffect(viewModel.uiState.status, viewModel.uiState.diversionSummary) {
@@ -135,6 +131,8 @@ fun CockpitScreen(
         onDivertRequested = viewModel::requestDivert,
         onDismissDivert = viewModel::dismissDivertDialog,
         onConfirmDivert = viewModel::confirmDivert,
+        onSkipLayover = viewModel::skipLayover,
+        onBoardNextLeg = viewModel::boardNextLeg,
     )
 }
 
@@ -142,7 +140,14 @@ data class CockpitActions(
     val onFlightArrived: (ArrivalSummary) -> Unit,
     val onFlightDiverted: (DiversionSummary) -> Unit,
     val onPrepareForLanding: () -> Unit = {},
+    val onFlightUpdated: (ActiveFlight) -> Unit = {},
 )
+
+private fun ActiveFlight.toArrivalSummary(airports: List<Airport>): ArrivalSummary {
+    val legReward = FlightRewardCalculator.completedReward(this)
+    val completionBonus = if (isItinerary) com.travelblock.app.domain.engine.ItineraryRewards.COMPLETION_BONUS else 0
+    return ArrivalSummary.fromCompletedFlight(this, legReward + completionBonus, airports)
+}
 
 /**
  * The view from a window seat. Outside the window the sky follows the real local time over the plane's
@@ -154,6 +159,8 @@ fun CockpitScreenContent(
     onDivertRequested: () -> Unit,
     onDismissDivert: () -> Unit,
     onConfirmDivert: () -> Unit,
+    onSkipLayover: () -> Unit = {},
+    onBoardNextLeg: () -> Unit = {},
 ) {
     TravelBlockTheme(darkTheme = true) {
         val flight = uiState.activeFlight
@@ -164,7 +171,11 @@ fun CockpitScreenContent(
             if (uiState.showDivertDialog) {
                 DivertDialog(flight, uiState, onDismissDivert, onConfirmDivert)
             }
-            ActiveCockpit(flight, uiState, onDivertRequested)
+            if (uiState.status == ActiveFlightStatus.Layover) {
+                LayoverDeck(flight, uiState, onSkipLayover, onBoardNextLeg)
+            } else {
+                ActiveCockpit(flight, uiState, onDivertRequested)
+            }
         }
     }
 }
@@ -217,6 +228,7 @@ private val NightCabin = CabinLook(Color(0xFF17151F), Color(0xFF232238), Cream, 
 private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look: CabinLook, modifier: Modifier = Modifier) {
     val kicker = when (status) {
         ActiveFlightStatus.Active -> "Seat ${flight.seat.label} / ${flight.flightNumber}"
+        ActiveFlightStatus.Layover -> "Layover / Leg ${flight.itineraryLegIndex + 1} of ${flight.itineraryLegCount}"
         ActiveFlightStatus.Arrived -> "Landing"
         ActiveFlightStatus.Diverted -> "Diverted"
     }
@@ -230,6 +242,38 @@ private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look:
         )
     }
 }
+
+@Composable
+private fun LayoverDeck(
+    flight: ActiveFlight,
+    uiState: CockpitUiState,
+    onSkip: () -> Unit,
+    onBoard: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize().background(Cream).statusBarsPadding().navigationBarsPadding().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Kicker("${flight.itineraryLabel ?: "Long haul"} / Leg ${flight.itineraryLegIndex + 1} of ${flight.itineraryLegCount}", color = Terracotta)
+        Text("Layover in ${flight.destination.city.ifBlank { flight.destination.displayCode }}", style = MaterialTheme.typography.headlineMedium, color = Ink, textAlign = TextAlign.Center)
+        Text("Next leg in ${uiState.timeRemainingLabel}", style = MaterialTheme.typography.displaySmall, color = Ink, modifier = Modifier.padding(vertical = 20.dp))
+        Text("${flight.destination.displayCode}  to  ${nextLegLabel(flight)}", style = MaterialTheme.typography.titleMedium, color = WarmGray)
+        if (uiState.timeRemainingLabel != "00:00") {
+            Text("Skip layover", Modifier.clickable(onClick = onSkip).padding(18.dp), color = Terracotta, style = MaterialTheme.typography.labelLarge)
+        }
+        Text(
+            "Board next leg",
+            Modifier.clip(RoundedCornerShape(50)).background(if (uiState.timeRemainingLabel == "00:00") Terracotta else Sand)
+                .clickable(enabled = uiState.timeRemainingLabel == "00:00", onClick = onBoard).padding(horizontal = 28.dp, vertical = 14.dp),
+            color = Ink,
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+private fun nextLegLabel(flight: ActiveFlight): String =
+    flight.itineraryCodes?.split(',')?.getOrNull(flight.itineraryLegIndex + 2) ?: "next airport"
 
 @Composable
 private fun TrayTable(flight: ActiveFlight, uiState: CockpitUiState, look: CabinLook, onDivertRequested: () -> Unit) {

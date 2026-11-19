@@ -4,8 +4,10 @@ import com.travelblock.app.data.database.FlightLogEntity
 import com.travelblock.app.data.database.FlightLogStatus
 import com.travelblock.app.data.database.PointsTransactionEntity
 import com.travelblock.app.data.repository.FlightLogRepository
+import com.travelblock.app.data.repository.ActiveFlightSessionRepository
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.domain.model.ActiveFlight
+import com.travelblock.app.domain.model.ActiveFlightStatus
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
@@ -24,6 +26,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -75,6 +79,50 @@ class CockpitPersistenceTest {
         assertEquals(1, flightLogs.logs.size)
         assertEquals(1, points.transactions.size)
         assertEquals("KOKC", settings.currentAirportCode)
+    }
+
+    @Test
+    fun itineraryLogsEachLegAndAwardsBonusOnlyAfterFinalArrival() = runTest(dispatcher) {
+        val clock = MutableClock(start.plusSeconds(30 * 60))
+        val flightLogs = FakeFlightLogRepository()
+        val points = FakePointsRepository()
+        val settings = FakeSettingsRepository()
+        val sessions = FakeActiveFlightSessionRepository()
+        val airports = listOf(activeFlight.origin, activeFlight.destination, TestAirports.tulsa)
+        val tripFlight = activeFlight.copy(
+            itineraryCodes = "KOUN,KOKC,KTUL",
+            itineraryLabel = "Domestic",
+            itineraryLegCount = 2,
+            itineraryDistanceMiles = 120.0,
+            todoistTaskId = "task-1",
+            todoistTaskContent = "Write report",
+        )
+        val viewModel = CockpitViewModel(
+            tripFlight, clock, ZoneId.of("UTC"), flightLogs, points, settings.repository, sessions, airports,
+        )
+
+        viewModel.tick()
+        advanceUntilIdle()
+        assertEquals(ActiveFlightStatus.Layover, viewModel.uiState.status)
+        assertEquals("task-1", flightLogs.logs.single().todoistTaskId)
+        assertEquals(1, viewModel.uiState.activeFlight?.itineraryLegIndex?.plus(1))
+
+        viewModel.skipLayover()
+        advanceUntilIdle()
+        viewModel.boardNextLeg()
+        advanceUntilIdle()
+        assertEquals(ActiveFlightStatus.Active, viewModel.uiState.status)
+        assertEquals("KOKC", viewModel.uiState.activeFlight?.origin?.code)
+        assertEquals("KTUL", viewModel.uiState.activeFlight?.destination?.code)
+
+        clock.current = clock.instant().plusSeconds(31 * 60)
+        viewModel.tick()
+        advanceUntilIdle()
+
+        assertEquals(2, flightLogs.logs.size)
+        assertEquals(3, points.transactions.size)
+        assertTrue(points.transactions.any { it.reason == "Completed long-haul trip" && it.amount == 100 })
+        assertNull(sessions.flight)
     }
 
     @Test
@@ -205,6 +253,13 @@ class CockpitPersistenceTest {
             transactionFlow.value = transactions
             balanceFlow.value = transactions.sumOf { it.amount }
         }
+    }
+
+    private class FakeActiveFlightSessionRepository : ActiveFlightSessionRepository {
+        var flight: ActiveFlight? = null
+        override suspend fun getActiveFlight(): ActiveFlight? = flight
+        override suspend fun saveActiveFlight(activeFlight: ActiveFlight) { flight = activeFlight }
+        override suspend fun clearActiveFlight() { flight = null }
     }
 
     private class MutableClock(

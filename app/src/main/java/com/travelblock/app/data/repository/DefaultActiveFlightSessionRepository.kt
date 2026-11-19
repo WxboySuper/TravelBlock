@@ -73,6 +73,8 @@ private fun ActiveFlightSessionEntity.toDomainModel(): ActiveFlight {
         itineraryLegIndex = itineraryLegIndex,
         itineraryLegCount = itineraryLegCount,
         layoverEndsAtEpochMillis = layoverEndsAtEpochMillis,
+        itineraryPointsEarned = itineraryPointsEarned,
+        itineraryDistanceMiles = itineraryDistanceMiles,
         status = ActiveFlightStatus.valueOf(status),
     )
 }
@@ -119,6 +121,8 @@ private fun ActiveFlight.toEntity(): ActiveFlightSessionEntity {
         itineraryLegIndex = itineraryLegIndex,
         itineraryLegCount = itineraryLegCount,
         layoverEndsAtEpochMillis = layoverEndsAtEpochMillis,
+        itineraryPointsEarned = itineraryPointsEarned,
+        itineraryDistanceMiles = itineraryDistanceMiles,
         status = status.name,
     )
 }

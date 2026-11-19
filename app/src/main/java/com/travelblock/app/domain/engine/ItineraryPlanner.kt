@@ -30,6 +30,7 @@ object ItineraryPlanner {
         context: RouteContext,
     ): Airport? {
         return airports.asSequence()
+            .filter(Airport::isUsableForTravelBlockRouting)
             .filterNot { it.code == context.origin.code || it.code == context.destination.code || it.code in excludedCodes }
             .minByOrNull { airport -> stopScore(airport, target, context) }
     }
@@ -55,11 +56,12 @@ object ItineraryPlanner {
                 context.destination.latitude, context.destination.longitude,
             ) < 5_000
         ) return 0.0
-        return if (airport.code in preferredHubCodes(context.origin, context.destination)) -1_500.0 else 0.0
+        val hubCode = airport.iata?.uppercase().orEmpty()
+        return if (hubCode in preferredHubCodes(context.origin, context.destination)) -1_500.0 else 0.0
     }
 
     private fun preferredHubCodes(origin: Airport, destination: Airport): Set<String> =
-        if (origin.country == "United States" && destination.country != "United States") {
+        if (origin.country.equals("US", ignoreCase = true) && !destination.country.equals("US", ignoreCase = true)) {
             setOf("KEF", "LHR", "NRT", "HNL", "ANC", "DOH", "DXB")
         } else {
             setOf("LHR", "CDG", "FRA", "DOH", "DXB", "HKG", "NRT", "SIN", "HNL", "ANC")

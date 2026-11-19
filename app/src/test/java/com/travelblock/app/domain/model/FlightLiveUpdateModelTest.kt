@@ -49,6 +49,24 @@ class FlightLiveUpdateModelTest {
         assertEquals(FlightLivePhase.ARRIVED, atArrival.phase)
     }
 
+    @Test
+    fun layoverLiveUpdateNamesAirportAndNextLegCountdown() {
+        val layover = flight.copy(
+            status = ActiveFlightStatus.Layover,
+            itineraryCodes = "KOUN,KOKC,KTUL",
+            itineraryLegIndex = 0,
+            itineraryLegCount = 2,
+            layoverEndsAtEpochMillis = start.plusSeconds(125).toEpochMilli(),
+        )
+
+        val model = FlightLiveUpdateModel.create(layover, start)
+
+        assertEquals("Layover in TUL", model.title)
+        assertEquals("Next leg in 02:05", model.statusText)
+        assertEquals("02:05", model.shortChipText)
+        assertEquals(FlightLivePhase.LAYOVER, model.phase)
+    }
+
     private fun modelAt(elapsedSeconds: Long) = FlightLiveUpdateModel.create(flight, start.plusSeconds(elapsedSeconds))
 
     private val start = Instant.parse("2026-05-19T20:00:00Z")

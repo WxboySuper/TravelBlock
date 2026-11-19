@@ -25,9 +25,11 @@ class FlightChimeGeneratorTest {
 
     @Test
     fun announcementTextMatchesFlightStages() {
-        assertEquals("Now boarding flight TB443 to Tulsa at gate L4", FlightAnnouncements.text(FlightAudioCue.GateCleared))
+        assertEquals("Now boarding", FlightAnnouncements.text(FlightAudioCue.GateCleared))
+        assertEquals("Now boarding your flight to Oklahoma City", FlightAnnouncements.text(FlightAudioCue.GateCleared, AnnouncementDetails("Oklahoma City")))
         assertEquals("Cabin crew, prepare for takeoff", FlightAnnouncements.text(FlightAudioCue.FlightStarted))
         assertEquals("Cabin crew, prepare for landing", FlightAnnouncements.text(FlightAudioCue.PrepareForLanding))
-        assertEquals("Welcome to Tulsa. Local time is 4:53 PM.", FlightAnnouncements.text(FlightAudioCue.FlightArrived))
+        assertEquals("Welcome. We have arrived.", FlightAnnouncements.text(FlightAudioCue.FlightArrived))
+        assertEquals("Welcome to Oklahoma City. Local time is 4:53 PM.", FlightAnnouncements.text(FlightAudioCue.FlightArrived, AnnouncementDetails("Oklahoma City", "4:53 PM")))
     }
 }

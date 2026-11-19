@@ -56,6 +56,8 @@ import com.travelblock.app.ui.screen.onboarding.OnboardingScreen
 import com.travelblock.app.ui.screen.store.StoreScreen
 import com.travelblock.app.ui.util.FlightAudioCue
 import com.travelblock.app.ui.util.FlightAudioCuePlayer
+import com.travelblock.app.ui.util.AnnouncementDetails
+import com.travelblock.app.ui.util.announcement
 import com.travelblock.app.ui.util.AudioPlaybackSettings
 import java.time.Instant
 import java.util.UUID
@@ -347,7 +349,10 @@ private fun NavGraphBuilder.bookingRoute(
             todoistRepository = runtime.container.todoistRepository,
             airports = runtime.container.airportRepository.getAllAirports(),
             onOpenTodoistSettings = { navController.navigate(TravelBlockDestination.Settings.route) },
-            onGateCleared = { playCue(runtime, FlightAudioCue.GateCleared) },
+            onGateCleared = {
+                val destination = runtime.state.draftFlightBooking?.destination
+                playCue(runtime, FlightAudioCue.GateCleared, destination?.announcement(withTime = false))
+            },
             onCancelBooking = { navController.popBackStack(TravelBlockDestination.Home.route, false) },
             onStartFocusFlight = { pass -> startFocusFlight(pass, runtime, navController) },
         )
@@ -410,7 +415,7 @@ private fun completeFlight(
     runtime: TravelBlockRuntime,
     navController: NavHostController,
 ) {
-    playCue(runtime, FlightAudioCue.FlightArrived)
+    playCue(runtime, FlightAudioCue.FlightArrived, summary.destination.announcement(withTime = true))
     runtime.container.notificationHelper.showFlightLandedNotification(
         flightNumber = summary.flightNumber,
         destinationCode = summary.destination.displayCode,
@@ -508,13 +513,14 @@ private fun NavGraphBuilder.logbookDetailRoute(
     }
 }
 
-private fun playCue(runtime: TravelBlockRuntime, cue: FlightAudioCue) {
+private fun playCue(runtime: TravelBlockRuntime, cue: FlightAudioCue, details: AnnouncementDetails? = null) {
     runtime.audioCuePlayer.play(
         cue,
         settings = AudioPlaybackSettings(
             soundEnabled = runtime.settings.soundEnabled,
             announcementsEnabled = runtime.settings.announcementsEnabled,
         ),
+        details = details,
     )
 }
 

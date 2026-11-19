@@ -72,15 +72,22 @@ object FlightChimeGenerator {
     }
 }
 
-data class AnnouncementDetails(val destination: String, val localTime: String)
+data class AnnouncementDetails(val destination: String, val localTime: String? = null)
 
 object FlightAnnouncements {
-    fun text(cue: FlightAudioCue, details: AnnouncementDetails = AnnouncementDetails("Tulsa", "4:53 PM")): String? = when (cue) {
-        FlightAudioCue.GateCleared -> "Now boarding flight TB443 to Tulsa at gate L4"
+    /** Spoken text for a cue. Nothing about a specific flight is ever invented: without details the lines stay generic. */
+    fun text(cue: FlightAudioCue, details: AnnouncementDetails? = null): String? = when (cue) {
+        FlightAudioCue.GateCleared -> details?.let { "Now boarding your flight to ${it.destination}" } ?: "Now boarding"
         FlightAudioCue.FlightStarted -> "Cabin crew, prepare for takeoff"
-        FlightAudioCue.FlightArrived -> "Welcome to ${details.destination}. Local time is ${details.localTime}."
+        FlightAudioCue.FlightArrived -> arrivedText(details)
         FlightAudioCue.PrepareForLanding -> "Cabin crew, prepare for landing"
         else -> null
+    }
+
+    private fun arrivedText(details: AnnouncementDetails?): String {
+        if (details == null) return "Welcome. We have arrived."
+        val time = details.localTime?.let { " Local time is $it." }.orEmpty()
+        return "Welcome to ${details.destination}.$time"
     }
 }
 
@@ -90,15 +97,15 @@ class FlightAudioCuePlayer(context: Context) {
     private var ttsReady = false
     private var pendingSpeech: AnnouncementText? = null
 
-    fun play(cue: FlightAudioCue, settings: AudioPlaybackSettings) {
+    fun play(cue: FlightAudioCue, settings: AudioPlaybackSettings, details: AnnouncementDetails? = null) {
         if (!settings.soundEnabled) return
         playRawOrGenerated(cue)
-        announce(cue, settings)
+        announce(cue, settings, details)
     }
 
-    fun announce(cue: FlightAudioCue, settings: AudioPlaybackSettings) {
+    fun announce(cue: FlightAudioCue, settings: AudioPlaybackSettings, details: AnnouncementDetails? = null) {
         if (!settings.soundEnabled || !settings.announcementsEnabled) return
-        val announcement = FlightAnnouncements.text(cue)
+        val announcement = FlightAnnouncements.text(cue, details)
         if (announcement != null) speak(AnnouncementText(announcement))
     }
 
@@ -167,4 +174,14 @@ class FlightAudioCuePlayer(context: Context) {
         ttsReady = false
         pendingSpeech = null
     }
+}
+
+/** What the PA says about an airport: its city and, on arrival, the local (solar) time there. */
+fun com.travelblock.app.domain.model.Airport.announcement(withTime: Boolean): AnnouncementDetails {
+    val city = city.ifBlank { displayCode }
+    if (!withTime) return AnnouncementDetails(city)
+    val hour = com.travelblock.app.ui.scene.localSolarHour(java.time.Instant.now(), longitude)
+    val minutes = (hour * 60).toInt() % (24 * 60)
+    val time = java.time.LocalTime.of(minutes / 60, minutes % 60)
+    return AnnouncementDetails(city, time.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.US)))
 }

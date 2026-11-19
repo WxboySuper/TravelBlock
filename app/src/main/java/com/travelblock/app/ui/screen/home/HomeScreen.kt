@@ -36,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +68,7 @@ import com.travelblock.app.ui.theme.Sand
 import com.travelblock.app.ui.theme.WarmGray
 import java.time.Instant
 import java.time.LocalTime
+import kotlinx.coroutines.launch
 
 private val BoardBackground = Color(0xFF1C1B22)
 private val BoardLine = Color(0xFF34323C)
@@ -98,7 +98,7 @@ fun HomeScreen(
         uiState = viewModel.uiState,
         updateState = updateState,
         updateInfo = updateInfo,
-        onUpdate = { updateInfo?.let { info -> scope.launch { container.updateManager.install(info) } } },
+        onUpdate = container.updateManager::openDownload,
         onDismissUpdate = { updateInfo?.let { info -> scope.launch { container.updateManager.dismiss(info.build) } } },
         activeFlight = activeFlight,
         onDurationSelected = viewModel::onDurationSelected,

@@ -11,7 +11,6 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import com.travelblock.app.TravelBlockContainer
-import com.travelblock.app.update.UpdateManager
 import kotlinx.coroutines.launch
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
@@ -62,7 +61,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         lifecycleScope.launch {
             if (firstResume) firstResume = false else updates.checkOnForeground()
-            if (Build.VERSION.SDK_INT < 26 || packageManager.canRequestPackageInstalls()) updates.resumePendingInstall()
         }
     }
 }

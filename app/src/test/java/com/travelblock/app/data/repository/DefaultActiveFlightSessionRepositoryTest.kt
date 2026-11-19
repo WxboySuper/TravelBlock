@@ -36,6 +36,26 @@ class DefaultActiveFlightSessionRepositoryTest {
         assertNull(repository.getActiveFlight())
     }
 
+    @Test
+    fun saveAndRestoreKeepsTripProgressDuringLayover() = runTest {
+        val dao = FakeActiveFlightSessionDao()
+        val repository = DefaultActiveFlightSessionRepository(dao)
+        val layover = activeFlight.copy(
+            itineraryCodes = "KOUN,KOKC,KTUL,KDAL",
+            itineraryLabel = "Domestic",
+            itineraryLegIndex = 1,
+            itineraryLegCount = 3,
+            layoverEndsAtEpochMillis = 1_779_394_000_000,
+            itineraryPointsEarned = 151,
+            itineraryDistanceMiles = 422.0,
+            status = ActiveFlightStatus.Layover,
+        )
+
+        repository.saveActiveFlight(layover)
+
+        assertEquals(layover, repository.getActiveFlight())
+    }
+
     private class FakeActiveFlightSessionDao : ActiveFlightSessionDao {
         private var session: ActiveFlightSessionEntity? = null
 

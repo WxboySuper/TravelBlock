@@ -55,16 +55,16 @@ class LiveFlightNotificationHelper(private val context: Context) {
             .setSmallIcon(R.drawable.ic_plane)
             .setContentTitle(model.title)
             .setContentText(model.statusText)
-            .setSubText("Seat ${flight.seat.label}")
+            .setSubText(flight.liveLegLabel())
             .setOngoing(true)
-            .setWhen(flight.plannedArrivalAt.toEpochMilli())
+            .setWhen(flight.nextTransitionAtEpochMillis)
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
             .setContentIntent(contentIntent())
             .setOnlyAlertOnce(true)
             .setShortCriticalText(model.shortChipText)
         if (isPromotionAvailable()) builder.setStyle(progressStyle(model)).setRequestPromotedOngoing(true)
-        else builder.setProgress(model.segments.total, model.progressValue, false)
+        else if (model.phase != FlightLivePhase.LAYOVER) builder.setProgress(model.segments.total, model.progressValue, false)
         return builder.build()
     }
 
@@ -91,6 +91,12 @@ class LiveFlightNotificationHelper(private val context: Context) {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         return PendingIntent.getActivity(context, NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private fun ActiveFlight.liveLegLabel(): String {
+        if (!isItinerary) return "Seat ${seat.label}"
+        val leg = itineraryLegIndex + if (status == com.travelblock.app.domain.model.ActiveFlightStatus.Layover) 2 else 1
+        return "Leg $leg of $itineraryLegCount · Seat ${seat.label}"
     }
 
     companion object {

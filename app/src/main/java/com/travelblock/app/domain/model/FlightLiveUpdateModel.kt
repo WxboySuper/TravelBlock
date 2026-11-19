@@ -4,7 +4,7 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.math.ceil
 
-enum class FlightLivePhase { TAKEOFF, CRUISE, DESCENT, ARRIVED }
+enum class FlightLivePhase { TAKEOFF, CRUISE, DESCENT, LAYOVER, ARRIVED }
 
 data class FlightLiveSegments(
     val takeoff: Int = 5,
@@ -32,6 +32,7 @@ object FlightLiveUpdateModel {
     private const val DESCENT_START = 0.95
 
     fun create(flight: ActiveFlight, now: Instant): FlightLiveUpdate {
+        if (flight.status == ActiveFlightStatus.Layover) return layoverUpdate(flight, now)
         val totalMillis = Duration.between(flight.startedAt, flight.plannedArrivalAt).toMillis().coerceAtLeast(1L)
         val elapsedMillis = Duration.between(flight.startedAt, now).toMillis()
         val remainingMillis = Duration.between(now, flight.plannedArrivalAt).toMillis().coerceAtLeast(0L)
@@ -45,6 +46,22 @@ object FlightLiveUpdateModel {
             statusText = if (phase == FlightLivePhase.DESCENT) "Descending" else "In flight",
             minutesRemaining = minutes,
             shortChipText = "${minutes}m",
+            segments = FlightLiveSegments(),
+        )
+    }
+
+    private fun layoverUpdate(flight: ActiveFlight, now: Instant): FlightLiveUpdate {
+        val endAt = Instant.ofEpochMilli(flight.nextTransitionAtEpochMillis)
+        val seconds = Duration.between(now, endAt).seconds.coerceAtLeast(0)
+        val clock = "%02d:%02d".format(seconds / 60, seconds % 60)
+        val minutes = ceil(seconds / 60.0).toInt()
+        return FlightLiveUpdate(
+            title = "Layover in ${flight.destination.displayCode}",
+            progressFraction = 0f,
+            phase = FlightLivePhase.LAYOVER,
+            statusText = "Next leg in $clock",
+            minutesRemaining = minutes,
+            shortChipText = clock,
             segments = FlightLiveSegments(),
         )
     }

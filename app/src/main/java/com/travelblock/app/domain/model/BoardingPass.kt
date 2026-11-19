@@ -20,6 +20,7 @@ data class BoardingPass(
     val todoistTaskId: String? = null,
     val todoistTaskContent: String? = null,
     val todoistProjectName: String? = null,
+    val tripPreset: TripPreset? = null,
 ) {
     fun toActiveFlight(
         startedAt: java.time.Instant,

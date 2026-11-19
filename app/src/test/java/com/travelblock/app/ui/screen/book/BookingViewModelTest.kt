@@ -2,6 +2,7 @@ package com.travelblock.app.ui.screen.book
 
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.DraftFlightBooking
+import com.travelblock.app.domain.model.TripPreset
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -69,6 +70,21 @@ class BookingViewModelTest {
         assertEquals(25, boardingPass?.focusDurationMinutes)
         assertEquals(targetSeat.label, boardingPass?.seat?.label)
         assertTrue(viewModel.uiState.showBoardingPass)
+    }
+
+    @Test
+    fun longHaulCheckInCarriesPresetAndSelectedFinalDestination() {
+        val viewModel = BookingViewModel(draftFlightBooking = draft, clock = fixedClock)
+        val finalDestination = Airport("EGLL", "EGLL", "LHR", "Heathrow Airport", "London", null, "GB", 51.47, -0.45, 83)
+        val preset = TripPreset.presets.first { it.id == "transatlantic" }
+
+        viewModel.selectTripPreset(preset)
+        viewModel.selectTripDestination(finalDestination)
+
+        assertEquals(preset, viewModel.uiState.boardingPass?.tripPreset)
+        assertEquals("EGLL", viewModel.uiState.boardingPass?.destination?.code)
+        assertEquals(25, viewModel.uiState.boardingPass?.focusDurationMinutes)
+        assertTrue(viewModel.uiState.distanceMiles > 4_000)
     }
 
     @Test

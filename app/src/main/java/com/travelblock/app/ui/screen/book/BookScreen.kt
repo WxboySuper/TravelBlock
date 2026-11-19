@@ -318,16 +318,6 @@ private fun CheckInSurface(
     }
 }
 
-private data class BookingManifestActions(
-    val objectiveChanged: (String) -> Unit,
-    val focusTagSelected: (String) -> Unit,
-    val todoistRepository: TodoistRepository?,
-    val todoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
-    val openTodoistSettings: () -> Unit,
-    val preflightCheckChanged: (String, Boolean) -> Unit,
-    val skipToSeats: () -> Unit,
-)
-
 @Composable
 private fun BookingStickyActions(
     uiState: BookingUiState,
@@ -363,16 +353,7 @@ private fun BookingStepContent(
     actions: BookingManifestActions,
 ) {
     when (step) {
-        BookingFlowStep.Manifest -> ManifestCard(
-            uiState = uiState,
-            onObjectiveChanged = actions.objectiveChanged,
-            onFocusTagSelected = actions.focusTagSelected,
-            todoistRepository = actions.todoistRepository,
-            onTodoistTaskSelected = actions.todoistTaskSelected,
-            onOpenTodoistSettings = actions.openTodoistSettings,
-            onPreflightCheckChanged = actions.preflightCheckChanged,
-            onSkipToSeats = actions.skipToSeats,
-        )
+        BookingFlowStep.Manifest -> ManifestCard(uiState, actions)
         BookingFlowStep.SeatSelection -> CabinSeatMap(
             seats = uiState.seatOptions,
             selectedSeatId = uiState.selectedSeatId,
@@ -398,133 +379,6 @@ private fun EmptyBookingState() {
                 message = "Choose a departure from Home to start your check-in.",
             ),
         )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ManifestCard(
-    uiState: BookingUiState,
-    onObjectiveChanged: (String) -> Unit,
-    onFocusTagSelected: (String) -> Unit,
-    onPreflightCheckChanged: (String, Boolean) -> Unit,
-    onSkipToSeats: () -> Unit,
-    todoistRepository: TodoistRepository?,
-    onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
-    onOpenTodoistSettings: () -> Unit,
-) {
-    PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(18.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Trip manifest", style = MaterialTheme.typography.titleLarge, color = Ink)
-                    Text(
-                        "What are you studying on this flight?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = WarmGray,
-                    )
-                }
-                StampPill(text = uiState.flightNumber)
-            }
-            FocusCargoField(
-                value = uiState.focusObjective,
-                onValueChange = onObjectiveChanged,
-            )
-            TodoistTaskPicker(
-                repository = todoistRepository,
-                selectedId = uiState.todoistTaskId,
-                onTaskSelected = onTodoistTaskSelected,
-                onOpenSettings = onOpenTodoistSettings,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Kicker("Cabin tag")
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    BookingViewModel.FocusTags.forEach { tag ->
-                        SoftChip(
-                            label = tag,
-                            selected = uiState.focusTag == tag,
-                            onClick = { onFocusTagSelected(tag) },
-                        )
-                    }
-                }
-            }
-            SecurityCheckList(
-                cabinSecured = uiState.cabinSecured,
-                materialsReady = uiState.materialsReady,
-                distractionsStowed = uiState.distractionsStowed,
-                onPreflightCheckChanged = onPreflightCheckChanged,
-            )
-            SecondaryButton(text = "Skip manifest and choose seat", onClick = onSkipToSeats)
-        }
-    }
-}
-
-@Composable
-private fun SecurityCheckList(
-    cabinSecured: Boolean,
-    materialsReady: Boolean,
-    distractionsStowed: Boolean,
-    onPreflightCheckChanged: (String, Boolean) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Kicker("Before we push back")
-        SecurityRow("cabin", "Desk cleared", "A tidy space makes for a calmer flight", cabinSecured, onPreflightCheckChanged)
-        SecurityRow("materials", "Materials within reach", "Notes, charger, water", materialsReady, onPreflightCheckChanged)
-        SecurityRow("distractions", "Phone stowed", "Face down, out of sight", distractionsStowed, onPreflightCheckChanged)
-    }
-}
-
-@Composable
-private fun SecurityRow(
-    key: String,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChanged: (String, Boolean) -> Unit,
-) {
-    val shape = RoundedCornerShape(16.dp)
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .toggleable(
-                value = checked,
-                role = Role.Checkbox,
-                onValueChange = { onCheckedChanged(key, it) },
-            ),
-        color = if (checked) Sage.copy(alpha = 0.12f) else Cream,
-        shape = shape,
-        border = BorderStroke(1.dp, if (checked) Sage.copy(alpha = 0.55f) else Sand),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = Modifier.size(26.dp),
-                shape = CircleShape,
-                color = if (checked) Sage else Paper,
-                border = BorderStroke(1.5.dp, if (checked) Sage else Sand),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (checked) {
-                        Icon(Icons.Rounded.Check, contentDescription = null, tint = Paper, modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = Ink)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = WarmGray)
-            }
-        }
     }
 }
 
@@ -865,75 +719,3 @@ private fun GateCallScreen(
 }
 
 /** A lined-notepad style field for the one thing you are here to do. */
-@Composable
-private fun FocusCargoField(
-    value: String,
-    onValueChange: (String) -> Unit,
-) {
-    val shape = RoundedCornerShape(18.dp)
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Cream,
-        shape = shape,
-        border = BorderStroke(1.dp, Sand),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Kicker("Focus cargo", color = DuskBlue)
-                Text(
-                    text = "${value.length}/120",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = WarmGray,
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(76.dp),
-            ) {
-                if (value.isBlank()) {
-                    Text(
-                        text = "e.g. Finish chapter 4 notes",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = WarmGray.copy(alpha = 0.7f),
-                    )
-                }
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    modifier = Modifier.fillMaxSize(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Ink),
-                    cursorBrush = SolidColor(DuskBlue),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PhaseHeader(
-    eyebrow: String,
-    title: String,
-    detail: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Kicker(eyebrow, color = DuskBlue)
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            color = Ink,
-        )
-        Text(
-            text = detail,
-            style = MaterialTheme.typography.bodyMedium,
-            color = WarmGray,
-        )
-    }
-}

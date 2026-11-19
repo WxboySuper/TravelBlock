@@ -369,10 +369,11 @@ fun BoardingPassCard(
         if (showClearedStamp) {
             BoardingPassStatusStamp(
                 text = "Ready to board",
+                // Rides the perforation at the right edge, clear of both airport names above it.
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 112.dp)
-                    .rotate(-8f),
+                    .align(Alignment.TopEnd)
+                    .padding(top = 142.dp, end = 18.dp)
+                    .rotate(-6f),
             )
         }
     }

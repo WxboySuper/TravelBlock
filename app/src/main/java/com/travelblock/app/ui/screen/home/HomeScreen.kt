@@ -269,11 +269,11 @@ private fun BoardRow(route: HomeRouteCardUiModel, selected: Boolean, onClick: ()
     ) {
         FlapText(route.destinationCode, length = 3, width = 24.dp, height = 36.dp, fontSize = 20, color = tint)
         Column(Modifier.weight(1f)) {
+            Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.92f), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.92f), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (route.isNew) NewPlaceTag()
+                Text(route.boardStatus(), style = MaterialTheme.typography.labelSmall, color = if (selected) Lamp else BoardDim, maxLines = 1)
             }
-            Text(route.boardStatus(), style = MaterialTheme.typography.labelSmall, color = if (selected) Lamp else BoardDim)
         }
         val time = route.durationMinutes.boardTime()
         FlapText(time.digits, length = time.digits.length, width = 22.dp, height = 34.dp, fontSize = 18, color = tint)

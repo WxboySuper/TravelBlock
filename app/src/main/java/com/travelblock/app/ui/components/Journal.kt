@@ -43,7 +43,7 @@ fun PaperCard(
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(14.dp)
     val base = modifier
     Surface(
         modifier = if (onClick != null) base.clip(shape).clickable(onClick = onClick) else base,
@@ -114,10 +114,10 @@ fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modi
     }
 }
 
-/** Small uppercase kicker above a heading, e.g. "DEPARTING FROM". */
+/** A short quiet line above a heading, set in the condensed face and left in sentence case. */
 @Composable
 fun Kicker(text: String, modifier: Modifier = Modifier, color: Color = WarmGray) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, color = color, modifier = modifier)
+    Text(text, style = MaterialTheme.typography.labelMedium, color = color, modifier = modifier)
 }
 
 @Composable

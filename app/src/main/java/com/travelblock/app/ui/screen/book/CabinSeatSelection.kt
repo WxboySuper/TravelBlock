@@ -52,6 +52,7 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.domain.model.experience
 import com.travelblock.app.domain.model.SessionPlan
 import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.ui.components.BoardingPassCard
@@ -131,6 +132,7 @@ fun CabinSeatMap(
                     )
                 }
             }
+            seats.firstOrNull { it.id == selectedSeatId }?.let { SeatPerksCard(it) }
             Fuselage {
                 CabinColumnLabels()
                 seats.groupBy { it.label.dropLast(1).toInt() }
@@ -265,10 +267,10 @@ private fun SeatButton(
     Surface(
         color = containerColor,
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 8.dp, bottomEnd = 8.dp),
-        border = BorderStroke(1.dp, if (selected) DuskBlue else Sand),
+        border = BorderStroke(if (selected) 1.dp else seatBorderWidth(seat.ticketClass), if (selected) DuskBlue else seatBorder(seat.ticketClass)),
         modifier = modifier
             .padding(horizontal = 2.dp, vertical = 1.dp)
-            .height(40.dp)
+            .height(seatHeight(seat.ticketClass))
             .semantics {
                 contentDescription = if (seat.isAvailable) seat.label else "${seat.label} unavailable"
             }
@@ -289,6 +291,33 @@ private fun SeatButton(
                     color = textColor,
                 )
             }
+        }
+    }
+}
+
+/** Better seats are visibly bigger and edged in their tier colour, so a tier reads at a glance. */
+private fun seatHeight(ticketClass: TicketClass) = when (ticketClass) {
+    TicketClass.Premium -> 52.dp
+    TicketClass.ExtraLegroom -> 46.dp
+    else -> 40.dp
+}
+
+private fun seatBorderWidth(ticketClass: TicketClass) = if (ticketClass == TicketClass.Premium || ticketClass == TicketClass.ExtraLegroom) 1.8.dp else 1.dp
+
+private fun seatBorder(ticketClass: TicketClass): Color = when (ticketClass) {
+    TicketClass.Premium -> Color(0xFFC9A24B)
+    TicketClass.ExtraLegroom -> Sage
+    else -> Sand
+}
+
+/** What the highlighted seat gives you in the air: its tier, where it sits across the row, and the perks. */
+@Composable
+private fun SeatPerksCard(seat: SeatOption) {
+    val experience = seat.experience
+    Surface(color = seatTint(seat.ticketClass), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, seatBorder(seat.ticketClass))) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Seat ${seat.label} / ${experience.tierName} / ${experience.position.label}", style = MaterialTheme.typography.titleMedium, color = Ink)
+            experience.perks.forEach { Text("- $it", style = MaterialTheme.typography.bodySmall, color = Ink) }
         }
     }
 }

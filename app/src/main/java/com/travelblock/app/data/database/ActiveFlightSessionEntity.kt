@@ -1,5 +1,6 @@
 package com.travelblock.app.data.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -48,6 +49,7 @@ data class ActiveFlightSessionEntity(
     val itineraryLongBreakEvery: Int? = null,
     val itineraryLabel: String? = null,
     val itineraryLegIndex: Int = 0,
+    @ColumnInfo(defaultValue = "0") val itineraryTaskPerLeg: Boolean = false,
     val itineraryLegCount: Int = 1,
     val layoverEndsAtEpochMillis: Long? = null,
     val itineraryPointsEarned: Int = 0,

@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.travelblock.app.domain.model.DraftFlightBooking
+import com.travelblock.app.domain.model.TaskRef
+import com.travelblock.app.domain.model.TaskRefs
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.TripPreset
@@ -129,6 +131,35 @@ class BookingViewModel(
         )
     }
 
+    /** A trip planned ahead opens on its overview; a later leg opens on its seat, or on its tasks when each leg has its own. */
+    private fun startingStage(draft: DraftFlightBooking): BookingStage = when {
+        draft.continuation != null && draft.continuation.itineraryTaskPerLeg -> BookingStage.Manifest
+        draft.continuation != null -> BookingStage.SeatSelection
+        draft.tripLocked && draft.stops.size > 2 -> BookingStage.TripOverview
+        else -> BookingStage.Manifest
+    }
+
+    fun setTaskPerLeg(perLeg: Boolean) {
+        uiState = uiState.copy(taskPerLeg = perLeg)
+    }
+
+    fun continueFromOverview() {
+        transition(BookingFlowAction.ContinueFromOverview)
+    }
+
+    /** Add the task to the ones this flight is flown for, or take it off if it is already there. */
+    fun toggleTodoistTask(task: TodoistTask?) {
+        if (task == null) return selectTodoistTask(null)
+        val current = TaskRefs.decode(uiState.todoistTaskId, uiState.todoistTaskContent)
+        val tasks = if (current.any { it.id == task.id }) current.filterNot { it.id == task.id } else current + TaskRef(task.id, task.content)
+        uiState = uiState.copy(
+            focusObjective = tasks.joinToString(" + ") { it.content }.take(MaxObjectiveLength),
+            todoistTaskId = TaskRefs.encodeIds(tasks),
+            todoistTaskContent = TaskRefs.encodeContents(tasks),
+            todoistProjectName = task.projectName.takeIf { tasks.isNotEmpty() },
+        )
+    }
+
     fun selectTodoistTask(task: TodoistTask?) {
         uiState = uiState.copy(
             focusObjective = task?.content?.take(MaxObjectiveLength).orEmpty(),
@@ -212,7 +243,8 @@ class BookingViewModel(
             hubChosen = draft.hubChoiceMade,
             stops = draft.stops,
             tripLocked = draft.tripLocked,
-            bookingStage = if (draft.continuation != null) BookingStage.SeatSelection else BookingStage.Manifest,
+            bookingStage = startingStage(draft),
+            taskPerLeg = draft.continuation?.itineraryTaskPerLeg ?: false,
             tripPreset = shape.preset,
             seatSelectionMessage = "Standard seats are free. Upgrade seats require enough points to select.",
         )

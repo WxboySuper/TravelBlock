@@ -5,6 +5,7 @@ import com.travelblock.app.domain.model.ActiveFlightStatus
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.DraftFlightBooking
+import com.travelblock.app.domain.model.TaskRefs
 import java.time.Instant
 
 /**
@@ -29,6 +30,7 @@ object ItineraryLegs {
             maxFlightTimeMinutes = minutes,
             hubChoiceMade = true,
             continuation = flight,
+            tripLocked = true,
         )
     }
 
@@ -36,7 +38,8 @@ object ItineraryLegs {
     fun startNextLeg(flight: ActiveFlight, pass: BoardingPass, startedAt: Instant): ActiveFlight {
         val index = flight.itineraryLegIndex + 1
         val minutes = flight.durationForLeg(index)
-        return flight.copy(
+        val flown = if (flight.itineraryTaskPerLeg) tasksFlown(flight, pass) else flight
+        return flown.copy(
             origin = pass.origin,
             destination = pass.destination,
             distanceMiles = pass.distanceMiles,
@@ -48,6 +51,24 @@ object ItineraryLegs {
             durationMinutes = minutes,
             layoverEndsAtEpochMillis = null,
             status = ActiveFlightStatus.Active,
+        )
+    }
+
+    /**
+     * When each flight has its own tasks, the new leg is flown for the tasks picked for it. Earlier legs' tasks
+     * stay on the trip so arrival can still offer to complete them all.
+     */
+    private fun tasksFlown(flight: ActiveFlight, pass: BoardingPass): ActiveFlight {
+        val tasks = TaskRefs.merge(
+            TaskRefs.decode(flight.todoistTaskId, flight.todoistTaskContent),
+            TaskRefs.decode(pass.todoistTaskId, pass.todoistTaskContent),
+        )
+        return flight.copy(
+            focusObjective = pass.focusObjective,
+            focusTag = pass.focusTag,
+            todoistTaskId = TaskRefs.encodeIds(tasks),
+            todoistTaskContent = TaskRefs.encodeContents(tasks),
+            todoistProjectName = pass.todoistProjectName ?: flight.todoistProjectName,
         )
     }
 

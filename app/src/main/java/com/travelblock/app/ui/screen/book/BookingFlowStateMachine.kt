@@ -1,6 +1,7 @@
 package com.travelblock.app.ui.screen.book
 
 enum class BookingStage {
+    TripOverview,
     Manifest,
     SeatSelection,
     BoardingPass,
@@ -8,6 +9,7 @@ enum class BookingStage {
 }
 
 enum class BookingFlowAction {
+    ContinueFromOverview,
     ContinueToSeatSelection,
     ReturnToManifest,
     ContinueToBoardingPass,
@@ -22,6 +24,10 @@ object BookingFlowStateMachine {
         hasBoardingPass: Boolean,
     ): BookingStage {
         return when (action) {
+            BookingFlowAction.ContinueFromOverview -> {
+                if (current == BookingStage.TripOverview) BookingStage.Manifest else current
+            }
+
             BookingFlowAction.ContinueToSeatSelection -> {
                 if (current == BookingStage.Manifest) BookingStage.SeatSelection else current
             }

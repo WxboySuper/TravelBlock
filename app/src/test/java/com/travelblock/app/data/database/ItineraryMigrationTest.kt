@@ -29,6 +29,24 @@ class ItineraryMigrationTest {
     }
 
     @Test
+    fun `version eight migration adds the per leg task flag`() {
+        val sql = mutableListOf<String>()
+        val database = Proxy.newProxyInstance(
+            SupportSQLiteDatabase::class.java.classLoader,
+            arrayOf(SupportSQLiteDatabase::class.java),
+        ) { _, method, args ->
+            if (method.name == "execSQL") sql += args?.first() as String
+            null
+        } as SupportSQLiteDatabase
+
+        MIGRATION_7_8.migrate(database)
+
+        assertEquals(7, MIGRATION_7_8.startVersion)
+        assertEquals(8, MIGRATION_7_8.endVersion)
+        assertTrue(sql.single().contains("ADD COLUMN `itineraryTaskPerLeg` INTEGER NOT NULL DEFAULT 0"))
+    }
+
+    @Test
     fun `version seven migration adds custom leg and break schedules`() {
         val sql = mutableListOf<String>()
         val database = Proxy.newProxyInstance(

@@ -35,17 +35,17 @@ import kotlinx.coroutines.launch
 @Composable
 fun TodoistTaskPicker(
     repository: TodoistRepository?,
-    selectedId: String?,
+    selectedIds: Set<String>,
     onTaskSelected: (TodoistTask?) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    repository?.let { ConnectedTodoistTaskPicker(it, selectedId, onTaskSelected, onOpenSettings) }
+    repository?.let { ConnectedTodoistTaskPicker(it, selectedIds, onTaskSelected, onOpenSettings) }
 }
 
 @Composable
 private fun ConnectedTodoistTaskPicker(
     repository: TodoistRepository,
-    selectedId: String?,
+    selectedIds: Set<String>,
     onTaskSelected: (TodoistTask?) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -56,7 +56,7 @@ private fun ConnectedTodoistTaskPicker(
             if (!connected) {
                 TodoistDisconnectedRow(onOpenSettings)
             } else {
-                ConnectedTaskList(repository, selectedId, onTaskSelected)
+                ConnectedTaskList(repository, selectedIds, onTaskSelected)
             }
         }
     }
@@ -71,7 +71,7 @@ private fun TodoistDisconnectedRow(onOpenSettings: () -> Unit) {
 @Composable
 private fun ConnectedTaskList(
     repository: TodoistRepository,
-    selectedId: String?,
+    selectedIds: Set<String>,
     onTaskSelected: (TodoistTask?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -79,7 +79,7 @@ private fun ConnectedTaskList(
     var tasks by remember { mutableStateOf(emptyList<TodoistTask>()) }
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    Text(tasks.firstOrNull { it.id == selectedId }?.content ?: "No task selected", color = WarmGray)
+    Text(selectedSummary(tasks, selectedIds), color = WarmGray)
     SecondaryButton(
         if (expanded) "Close task list" else "Fly on a Todoist task",
         onClick = {
@@ -94,9 +94,20 @@ private fun ConnectedTaskList(
     )
     if (expanded) {
         TaskSearchResults(
-            state = TaskSearchState(tasks, query, selectedId, message),
+            state = TaskSearchState(tasks, query, selectedIds, message),
             actions = TaskSearchActions({ query = it }, onTaskSelected),
         )
+    }
+}
+
+/** What is picked so far: the titles, or a count once several are chosen, so the card stays short. */
+private fun selectedSummary(tasks: List<TodoistTask>, selectedIds: Set<String>): String {
+    val titles = tasks.filter { it.id in selectedIds }.map { it.content }
+    return when {
+        selectedIds.isEmpty() -> "No task selected. Tap more than one to fly on several."
+        titles.size == 1 -> titles.single()
+        titles.isEmpty() -> "${selectedIds.size} tasks selected"
+        else -> "${titles.size} tasks: ${titles.joinToString(", ")}"
     }
 }
 
@@ -108,7 +119,7 @@ private fun TaskSearchResults(
     OutlinedTextField(state.query, actions.queryChanged, label = { Text("Search tasks") }, modifier = Modifier.fillMaxWidth())
     Text("No task", Modifier.fillMaxWidth().clickable { actions.taskSelected(null) }.padding(10.dp))
     state.tasks.filter { it.content.contains(state.query, ignoreCase = true) }.forEach { task ->
-        TaskRow(task, state.selectedId == task.id) { actions.taskSelected(task) }
+        TaskRow(task, task.id in state.selectedIds) { actions.taskSelected(task) }
     }
     state.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 }
@@ -116,7 +127,7 @@ private fun TaskSearchResults(
 private data class TaskSearchState(
     val tasks: List<TodoistTask>,
     val query: String,
-    val selectedId: String?,
+    val selectedIds: Set<String>,
     val message: String?,
 )
 
@@ -137,6 +148,6 @@ private fun TaskRow(task: TodoistTask, selected: Boolean, onClick: () -> Unit) {
             Text(task.content, color = Ink, style = MaterialTheme.typography.bodyMedium)
             Text(listOfNotNull(task.projectName, task.dueLabel).joinToString(" · "), color = WarmGray, style = MaterialTheme.typography.bodySmall)
         }
-        if (selected) Text("Selected", color = Sage, style = MaterialTheme.typography.labelSmall)
+        if (selected) Text("Added", color = Sage, style = MaterialTheme.typography.labelSmall)
     }
 }

@@ -29,6 +29,7 @@ import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.data.todoist.TodoistRepository
+import com.travelblock.app.domain.model.TaskRefs
 import com.travelblock.app.ui.screen.arrival.TodoistArrivalCard
 import com.travelblock.app.ui.screen.arrival.TodoistArrivalTask
 import com.travelblock.app.ui.components.Kicker
@@ -77,7 +78,7 @@ fun DiversionScreen(
             DiversionMapCard(diversionSummary)
             KeptRow(diversionSummary)
             TodoistArrivalCard(
-                task = diversionSummary.todoistTaskId?.let { id -> diversionSummary.todoistTaskContent?.let { TodoistArrivalTask(id, it) } },
+                tasks = TaskRefs.decode(diversionSummary.todoistTaskId, diversionSummary.todoistTaskContent).map { TodoistArrivalTask(it.id, it.content) },
                 repository = actions.todoistRepository,
             )
             Text(

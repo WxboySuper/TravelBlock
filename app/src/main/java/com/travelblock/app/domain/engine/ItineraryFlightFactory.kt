@@ -52,6 +52,7 @@ fun createInitialFlight(
         ),
         itineraryLegIndex = 0,
         itineraryLegCount = itinerary.legDurationsMinutes.size,
+        itineraryTaskPerLeg = pass.taskPerLeg,
         itineraryDistanceMiles = totalDistance,
     )
 }

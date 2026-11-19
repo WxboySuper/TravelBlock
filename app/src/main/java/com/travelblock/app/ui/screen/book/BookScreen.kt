@@ -130,11 +130,12 @@ fun BookScreen(
         onSessionPlanSelected = viewModel::selectSessionPlan,
         onTripDestinationSelected = viewModel::selectTripDestination,
         onHubSelected = viewModel::selectHubConnection,
-        onTodoistTaskSelected = viewModel::selectTodoistTask,
+        onTodoistTaskSelected = viewModel::toggleTodoistTask,
+        overview = TripOverviewActions(viewModel::setTaskPerLeg, viewModel::continueFromOverview, onCancelBooking),
         onPreflightCheckChanged = viewModel::setPreflightCheck,
         onContinueToSeatSelection = viewModel::continueToSeatSelection,
         // Check-in only happens once per trip: from a later leg's seat map, back means back to the layover.
-        onBackToManifest = if (draftFlightBooking?.continuation != null) onCancelBooking else viewModel::returnToManifest,
+        onBackToManifest = if (draftFlightBooking?.continuation?.itineraryTaskPerLeg == false) onCancelBooking else viewModel::returnToManifest,
         onContinue = viewModel::continueToBoardingPass,
         onBoardFlight = viewModel::boardFlight,
         onBackToReview = viewModel::returnToReview,
@@ -173,9 +174,14 @@ fun BookScreenContent(
     onTripDestinationSelected: (Airport) -> Unit = {},
     onHubSelected: (HubConnection?) -> Unit = {},
     airports: List<Airport> = emptyList(),
+    overview: TripOverviewActions = TripOverviewActions(),
 ) {
     if (!uiState.draftAvailable) {
         EmptyBookingState()
+        return
+    }
+    if (uiState.showTripOverview) {
+        TripOverviewScreen(uiState, overview)
         return
     }
 

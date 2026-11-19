@@ -26,6 +26,8 @@ data class BoardingPass(
     val viaHubCode: String? = null,
     /** Every airport on the trip when it has stops, so the pass can say where this first flight lands. */
     val stops: List<Airport> = emptyList(),
+    /** True when every flight of the trip is flown for its own tasks. */
+    val taskPerLeg: Boolean = false,
 ) {
     /** Where this flight lands: the first stop of a trip with stops, else the destination. */
     val legDestination: Airport get() = stops.getOrNull(1) ?: destination

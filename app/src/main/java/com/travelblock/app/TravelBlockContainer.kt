@@ -20,6 +20,7 @@ import com.travelblock.app.data.settings.SettingsRepository
 import com.travelblock.app.data.database.MIGRATION_4_5
 import com.travelblock.app.data.database.MIGRATION_5_6
 import com.travelblock.app.data.database.MIGRATION_6_7
+import com.travelblock.app.data.database.MIGRATION_7_8
 import com.travelblock.app.data.todoist.AndroidKeystoreTodoistTokenStore
 import com.travelblock.app.data.todoist.DefaultTodoistRepository
 import com.travelblock.app.data.todoist.TodoistApi
@@ -48,6 +49,7 @@ class TravelBlockContainer(
             MIGRATION_4_5,
             MIGRATION_5_6,
             MIGRATION_6_7,
+            MIGRATION_7_8,
         ).build()
     }
 

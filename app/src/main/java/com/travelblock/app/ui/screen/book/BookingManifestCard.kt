@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.data.todoist.TodoistTask
+import com.travelblock.app.domain.model.TaskRefs
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.components.SecondaryButton
@@ -91,7 +92,7 @@ private fun ManifestFocus(uiState: BookingUiState, actions: BookingManifestActio
     FocusCargoField(uiState.focusObjective, actions.objectiveChanged)
     TodoistTaskPicker(
         repository = actions.todoistRepository,
-        selectedId = uiState.todoistTaskId,
+        selectedIds = TaskRefs.decode(uiState.todoistTaskId, uiState.todoistTaskContent).map { it.id }.toSet(),
         onTaskSelected = actions.todoistTaskSelected,
         onOpenSettings = actions.openTodoistSettings,
     )

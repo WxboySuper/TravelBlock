@@ -24,4 +24,16 @@ class BookingFlowStateMachineTest {
 
         assertEquals(BookingStage.Manifest, stage)
     }
+
+    @Test
+    fun `the overview continues to the manifest and nowhere else`() {
+        assertEquals(
+            BookingStage.Manifest,
+            BookingFlowStateMachine.transition(BookingStage.TripOverview, BookingFlowAction.ContinueFromOverview, hasBoardingPass = false),
+        )
+        assertEquals(
+            BookingStage.SeatSelection,
+            BookingFlowStateMachine.transition(BookingStage.SeatSelection, BookingFlowAction.ContinueFromOverview, hasBoardingPass = false),
+        )
+    }
 }

@@ -37,6 +37,8 @@ data class BookingUiState(
     val hubChosen: Boolean = false,
     val stops: List<Airport> = emptyList(),
     val tripLocked: Boolean = false,
+    /** True when each flight of the trip is flown for its own tasks. */
+    val taskPerLeg: Boolean = false,
     val cabinSecured: Boolean = false,
     val materialsReady: Boolean = false,
     val distractionsStowed: Boolean = false,
@@ -86,8 +88,12 @@ data class BookingUiState(
                 sessionPlan = sessionPlan,
                 viaHubCode = hub?.hub?.code,
                 stops = tripStops,
+                taskPerLeg = taskPerLeg,
             )
         }
+
+    val showTripOverview: Boolean
+        get() = bookingStage == BookingStage.TripOverview
 
     val showSeatSelection: Boolean
         get() = bookingStage == BookingStage.SeatSelection

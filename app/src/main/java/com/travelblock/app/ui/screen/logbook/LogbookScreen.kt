@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.travelblock.app.domain.model.TaskRefs
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -248,7 +249,7 @@ private fun FlightTicket(flight: FlightLogDetailUiModel) {
                 MetricColumn("Points", flight.pointsLabel)
             }
             FocusNote(flight)
-            flight.todoistTaskContent?.let { Text("Task: $it", style = MaterialTheme.typography.bodyMedium, color = WarmGray) }
+            TaskRefs.display(flight.todoistTaskContent)?.let { Text("Task: $it", style = MaterialTheme.typography.bodyMedium, color = WarmGray) }
             Text(flight.detailMessage, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
         }
     }

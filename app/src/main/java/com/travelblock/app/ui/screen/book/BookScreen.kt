@@ -53,6 +53,7 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.ui.components.BoardingPassCard
 import com.travelblock.app.ui.components.BoardingPassReveal
 import com.travelblock.app.ui.components.BookingFlowStep
@@ -104,6 +105,8 @@ fun BookScreen(
     onGateCleared: () -> Unit = {},
     onCancelBooking: () -> Unit,
     onStartFocusFlight: (BoardingPass) -> Unit,
+    todoistRepository: TodoistRepository? = null,
+    onOpenTodoistSettings: () -> Unit = {},
 ) {
     val viewModel: BookingViewModel = viewModel(
         key = draftFlightBooking?.let {
@@ -120,6 +123,7 @@ fun BookScreen(
         onSeatSelected = viewModel::selectSeat,
         onObjectiveChanged = viewModel::updateFocusObjective,
         onFocusTagSelected = viewModel::selectFocusTag,
+        onTodoistTaskSelected = viewModel::selectTodoistTask,
         onPreflightCheckChanged = viewModel::setPreflightCheck,
         onContinueToSeatSelection = viewModel::continueToSeatSelection,
         onBackToManifest = viewModel::returnToManifest,
@@ -129,6 +133,8 @@ fun BookScreen(
         boardingPassThemeId = boardingPassThemeId,
         onGateCleared = onGateCleared,
         onStartFocusFlight = onStartFocusFlight,
+        todoistRepository = todoistRepository,
+        onOpenTodoistSettings = onOpenTodoistSettings,
     )
 }
 
@@ -150,6 +156,9 @@ fun BookScreenContent(
     boardingPassThemeId: String = "",
     onGateCleared: () -> Unit = {},
     onStartFocusFlight: (BoardingPass) -> Unit,
+    onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit = {},
+    todoistRepository: TodoistRepository? = null,
+    onOpenTodoistSettings: () -> Unit = {},
 ) {
     if (!uiState.draftAvailable) {
         EmptyBookingState()
@@ -189,6 +198,9 @@ fun BookScreenContent(
                     },
                     onObjectiveChanged = onObjectiveChanged,
                     onFocusTagSelected = onFocusTagSelected,
+                    todoistRepository = todoistRepository,
+                    onTodoistTaskSelected = onTodoistTaskSelected,
+                    onOpenTodoistSettings = onOpenTodoistSettings,
                     onPreflightCheckChanged = onPreflightCheckChanged,
                     onContinueToSeatSelection = {
                         ritualForward = true
@@ -248,50 +260,29 @@ private fun CheckInSurface(
     onSeatSelected: (String) -> Unit,
     onObjectiveChanged: (String) -> Unit,
     onFocusTagSelected: (String) -> Unit,
+    todoistRepository: TodoistRepository?,
+    onTodoistTaskSelected: (com.travelblock.app.data.todoist.TodoistTask?) -> Unit,
+    onOpenTodoistSettings: () -> Unit,
     onPreflightCheckChanged: (String, Boolean) -> Unit,
     onContinueToSeatSelection: () -> Unit,
     onBackToManifest: () -> Unit,
     onContinue: () -> Unit,
 ) {
-    val flowStep = if (uiState.showSeatSelection) {
-        BookingFlowStep.SeatSelection
-    } else {
-        BookingFlowStep.Manifest
-    }
+    val flowStep = if (uiState.showSeatSelection) BookingFlowStep.SeatSelection else BookingFlowStep.Manifest
     val origin = requireNotNull(uiState.origin)
     val destination = requireNotNull(uiState.destination)
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
         options = StickyActionListOptions(horizontalPadding = 20.dp),
-        stickyAction = {
-            if (!uiState.showSeatSelection) {
-                PrimaryButton(text = "Check-in complete", onClick = onContinueToSeatSelection)
-                SecondaryButton(text = "Back to departures", onClick = onCancelBooking)
-            } else {
-                PrimaryButton(
-                    text = "Generate boarding pass",
-                    onClick = onContinue,
-                    enabled = uiState.selectedSeat != null,
-                )
-                SecondaryButton(text = "Back to trip manifest", onClick = onBackToManifest)
-            }
-        },
+        stickyAction = { BookingStickyActions(uiState, onContinueToSeatSelection, onCancelBooking, onContinue, onBackToManifest) },
     ) {
         item {
             Spacer(modifier = Modifier.height(12.dp))
             BookingProgressRail(currentStep = flowStep)
         }
         item {
-            PhaseHeader(
-                eyebrow = if (uiState.showSeatSelection) "Cabin" else "Check-in desk",
-                title = if (uiState.showSeatSelection) "Choose your seat" else "Pack your focus",
-                detail = if (uiState.showSeatSelection) {
-                    "Pick the spot you will carry into Focus Mode."
-                } else {
-                    "Tell us what you are working on, so this flight has a purpose."
-                },
-            )
+            CheckInPhaseHeader(uiState)
         }
         item {
             CompactRouteDocket(
@@ -308,24 +299,68 @@ private fun CheckInSurface(
         stepSceneItem(uiState, origin.longitude)
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->
-                when (step) {
-                    BookingFlowStep.Manifest -> ManifestCard(
-                        uiState = uiState,
-                        onObjectiveChanged = onObjectiveChanged,
-                        onFocusTagSelected = onFocusTagSelected,
-                        onPreflightCheckChanged = onPreflightCheckChanged,
-                        onSkipToSeats = onContinueToSeatSelection,
-                    )
-                    BookingFlowStep.SeatSelection -> CabinSeatMap(
-                        seats = uiState.seatOptions,
-                        selectedSeatId = uiState.selectedSeatId,
-                        seatSelectionMessage = uiState.seatSelectionMessage,
-                        onSeatSelected = onSeatSelected,
-                    )
-                    else -> Unit
-                }
+                BookingStepContent(
+                    step,
+                    uiState,
+                    onSeatSelected,
+                    BookingManifestActions(
+                        onObjectiveChanged,
+                        onFocusTagSelected,
+                        todoistRepository,
+                        onTodoistTaskSelected,
+                        onOpenTodoistSettings,
+                        onPreflightCheckChanged,
+                        onContinueToSeatSelection,
+                    ),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun BookingStickyActions(
+    uiState: BookingUiState,
+    onCheckIn: () -> Unit,
+    onCancel: () -> Unit,
+    onContinue: () -> Unit,
+    onBack: () -> Unit,
+) {
+    if (!uiState.showSeatSelection) {
+        PrimaryButton(text = "Check-in complete", onClick = onCheckIn)
+        SecondaryButton(text = "Back to departures", onClick = onCancel)
+        return
+    }
+    PrimaryButton(text = "Generate boarding pass", onClick = onContinue, enabled = uiState.selectedSeat != null)
+    SecondaryButton(text = "Back to trip manifest", onClick = onBack)
+}
+
+@Composable
+private fun CheckInPhaseHeader(uiState: BookingUiState) {
+    val seatStep = uiState.showSeatSelection
+    PhaseHeader(
+        eyebrow = if (seatStep) "Cabin" else "Check-in desk",
+        title = if (seatStep) "Choose your seat" else "Pack your focus",
+        detail = if (seatStep) "Pick the spot you will carry into Focus Mode." else "Tell us what you are working on, so this flight has a purpose.",
+    )
+}
+
+@Composable
+private fun BookingStepContent(
+    step: BookingFlowStep,
+    uiState: BookingUiState,
+    onSeatSelected: (String) -> Unit,
+    actions: BookingManifestActions,
+) {
+    when (step) {
+        BookingFlowStep.Manifest -> ManifestCard(uiState, actions)
+        BookingFlowStep.SeatSelection -> CabinSeatMap(
+            seats = uiState.seatOptions,
+            selectedSeatId = uiState.selectedSeatId,
+            seatSelectionMessage = uiState.seatSelectionMessage,
+            onSeatSelected = onSeatSelected,
+        )
+        else -> Unit
     }
 }
 
@@ -344,124 +379,6 @@ private fun EmptyBookingState() {
                 message = "Choose a departure from Home to start your check-in.",
             ),
         )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ManifestCard(
-    uiState: BookingUiState,
-    onObjectiveChanged: (String) -> Unit,
-    onFocusTagSelected: (String) -> Unit,
-    onPreflightCheckChanged: (String, Boolean) -> Unit,
-    onSkipToSeats: () -> Unit,
-) {
-    PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(18.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Trip manifest", style = MaterialTheme.typography.titleLarge, color = Ink)
-                    Text(
-                        "What are you studying on this flight?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = WarmGray,
-                    )
-                }
-                StampPill(text = uiState.flightNumber)
-            }
-            FocusCargoField(
-                value = uiState.focusObjective,
-                onValueChange = onObjectiveChanged,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Kicker("Cabin tag")
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    BookingViewModel.FocusTags.forEach { tag ->
-                        SoftChip(
-                            label = tag,
-                            selected = uiState.focusTag == tag,
-                            onClick = { onFocusTagSelected(tag) },
-                        )
-                    }
-                }
-            }
-            SecurityCheckList(
-                cabinSecured = uiState.cabinSecured,
-                materialsReady = uiState.materialsReady,
-                distractionsStowed = uiState.distractionsStowed,
-                onPreflightCheckChanged = onPreflightCheckChanged,
-            )
-            SecondaryButton(text = "Skip manifest and choose seat", onClick = onSkipToSeats)
-        }
-    }
-}
-
-@Composable
-private fun SecurityCheckList(
-    cabinSecured: Boolean,
-    materialsReady: Boolean,
-    distractionsStowed: Boolean,
-    onPreflightCheckChanged: (String, Boolean) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Kicker("Before we push back")
-        SecurityRow("cabin", "Desk cleared", "A tidy space makes for a calmer flight", cabinSecured, onPreflightCheckChanged)
-        SecurityRow("materials", "Materials within reach", "Notes, charger, water", materialsReady, onPreflightCheckChanged)
-        SecurityRow("distractions", "Phone stowed", "Face down, out of sight", distractionsStowed, onPreflightCheckChanged)
-    }
-}
-
-@Composable
-private fun SecurityRow(
-    key: String,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChanged: (String, Boolean) -> Unit,
-) {
-    val shape = RoundedCornerShape(16.dp)
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .toggleable(
-                value = checked,
-                role = Role.Checkbox,
-                onValueChange = { onCheckedChanged(key, it) },
-            ),
-        color = if (checked) Sage.copy(alpha = 0.12f) else Cream,
-        shape = shape,
-        border = BorderStroke(1.dp, if (checked) Sage.copy(alpha = 0.55f) else Sand),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = Modifier.size(26.dp),
-                shape = CircleShape,
-                color = if (checked) Sage else Paper,
-                border = BorderStroke(1.5.dp, if (checked) Sage else Sand),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (checked) {
-                        Icon(Icons.Rounded.Check, contentDescription = null, tint = Paper, modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = Ink)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = WarmGray)
-            }
-        }
     }
 }
 
@@ -802,78 +719,6 @@ private fun GateCallScreen(
 }
 
 /** A lined-notepad style field for the one thing you are here to do. */
-@Composable
-private fun FocusCargoField(
-    value: String,
-    onValueChange: (String) -> Unit,
-) {
-    val shape = RoundedCornerShape(18.dp)
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Cream,
-        shape = shape,
-        border = BorderStroke(1.dp, Sand),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Kicker("Focus cargo", color = DuskBlue)
-                Text(
-                    text = "${value.length}/120",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = WarmGray,
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(76.dp),
-            ) {
-                if (value.isBlank()) {
-                    Text(
-                        text = "e.g. Finish chapter 4 notes",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = WarmGray.copy(alpha = 0.7f),
-                    )
-                }
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    modifier = Modifier.fillMaxSize(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Ink),
-                    cursorBrush = SolidColor(DuskBlue),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PhaseHeader(
-    eyebrow: String,
-    title: String,
-    detail: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Kicker(eyebrow, color = DuskBlue)
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            color = Ink,
-        )
-        Text(
-            text = detail,
-            style = MaterialTheme.typography.bodyMedium,
-            color = WarmGray,
-        )
-    }
-}
 
 /** The illustration that opens each check-in step: the check-in desk, then the cabin you will sit in. */
 private fun LazyListScope.stepSceneItem(uiState: BookingUiState, departureLongitude: Double) {

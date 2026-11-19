@@ -18,4 +18,6 @@ data class FlightLogEntity(
     val pointsEarned: Int,
     val focusObjective: String = "",
     val focusTag: String = "",
+    val todoistTaskId: String? = null,
+    val todoistTaskContent: String? = null,
 )

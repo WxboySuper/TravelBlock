@@ -66,6 +66,8 @@ private fun ActiveFlightSessionEntity.toDomainModel(): ActiveFlight {
         plannedArrivalAt = Instant.ofEpochMilli(plannedArrivalAt),
         focusObjective = focusObjective,
         focusTag = focusTag,
+        todoistTaskId = todoistTaskId,
+        todoistTaskContent = todoistTaskContent,
         status = ActiveFlightStatus.valueOf(status),
     )
 }
@@ -105,6 +107,8 @@ private fun ActiveFlight.toEntity(): ActiveFlightSessionEntity {
         plannedArrivalAt = plannedArrivalAt.toEpochMilli(),
         focusObjective = focusObjective,
         focusTag = focusTag,
+        todoistTaskId = todoistTaskId,
+        todoistTaskContent = todoistTaskContent,
         status = status.name,
     )
 }

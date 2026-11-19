@@ -13,5 +13,8 @@ data class ActiveFlight(
     val plannedArrivalAt: Instant,
     val focusObjective: String = "",
     val focusTag: String = "",
+    val todoistTaskId: String? = null,
+    val todoistTaskContent: String? = null,
+    val todoistProjectName: String? = null,
     val status: ActiveFlightStatus = ActiveFlightStatus.Active,
 )

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.RouteStops
@@ -55,17 +56,22 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
+data class ArrivalScreenActions(
+    val continueJourney: () -> Unit,
+    val viewLogbook: () -> Unit,
+    val todoistRepository: TodoistRepository?,
+)
+
 @Composable
 fun ArrivalScreen(
     arrivalSummary: ArrivalSummary?,
     homeAirportCode: String,
-    onContinueJourney: () -> Unit,
-    onViewLogbook: () -> Unit,
+    actions: ArrivalScreenActions,
 ) {
     var showReturnHomePlaceholder by remember { mutableStateOf(false) }
 
     if (arrivalSummary == null) {
-        EmptyArrivalState(onContinueJourney)
+        EmptyArrivalState(actions.continueJourney)
         return
     }
 
@@ -82,6 +88,10 @@ fun ArrivalScreen(
             ArrivalScene(ArrivalLocation(arrivalSummary.destination.displayCode, arrivalSummary.destination.longitude))
             WelcomeHeader(arrivalSummary.destination)
             RoutePostcard(arrivalSummary)
+            TodoistArrivalCard(
+                task = arrivalSummary.todoistTaskId?.let { id -> arrivalSummary.todoistTaskContent?.let { TodoistArrivalTask(id, it) } },
+                repository = actions.todoistRepository,
+            )
             MetricsRow(arrivalSummary)
             if (arrivalSummary.focusObjective.isNotBlank() || arrivalSummary.focusTag.isNotBlank()) {
                 FocusRecap(arrivalSummary.focusTag, arrivalSummary.focusObjective)
@@ -97,8 +107,8 @@ fun ArrivalScreen(
             }
         }
         ArrivalActions(
-            onContinueJourney = onContinueJourney,
-            onViewLogbook = onViewLogbook,
+            onContinueJourney = actions.continueJourney,
+            onViewLogbook = actions.viewLogbook,
             onReturnHome = { showReturnHomePlaceholder = true },
             modifier = Modifier.align(Alignment.BottomCenter),
         )

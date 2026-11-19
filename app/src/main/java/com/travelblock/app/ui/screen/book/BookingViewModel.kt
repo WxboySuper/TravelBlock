@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.data.todoist.TodoistTask
 import java.time.Clock
 import java.time.LocalDateTime
 import kotlin.math.roundToInt
@@ -45,7 +46,21 @@ class BookingViewModel(
     }
 
     fun updateFocusObjective(objective: String) {
-        uiState = uiState.copy(focusObjective = objective.take(MaxObjectiveLength))
+        uiState = uiState.copy(
+            focusObjective = objective.take(MaxObjectiveLength),
+            todoistTaskId = null,
+            todoistTaskContent = null,
+            todoistProjectName = null,
+        )
+    }
+
+    fun selectTodoistTask(task: TodoistTask?) {
+        uiState = uiState.copy(
+            focusObjective = task?.content?.take(MaxObjectiveLength).orEmpty(),
+            todoistTaskId = task?.id,
+            todoistTaskContent = task?.content,
+            todoistProjectName = task?.projectName,
+        )
     }
 
     fun selectFocusTag(tag: String) {

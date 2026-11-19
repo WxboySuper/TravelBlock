@@ -17,6 +17,11 @@ import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.repository.StoreRepository
 import com.travelblock.app.data.settings.DataStoreSettingsRepository
 import com.travelblock.app.data.settings.SettingsRepository
+import com.travelblock.app.data.database.MIGRATION_4_5
+import com.travelblock.app.data.todoist.AndroidKeystoreTodoistTokenStore
+import com.travelblock.app.data.todoist.DefaultTodoistRepository
+import com.travelblock.app.data.todoist.TodoistApi
+import com.travelblock.app.data.todoist.TodoistRepository
 import com.travelblock.app.util.NotificationHelper
 import com.travelblock.app.util.LandingAlarmScheduler
 import com.travelblock.app.util.LiveFlightNotificationHelper
@@ -38,11 +43,16 @@ class TravelBlockContainer(
         ).addMigrations(
             MIGRATION_2_3,
             MIGRATION_3_4,
+            MIGRATION_4_5,
         ).build()
     }
 
     val settingsRepository: SettingsRepository by lazy {
         DataStoreSettingsRepository(appContext)
+    }
+
+    val todoistRepository: TodoistRepository by lazy {
+        DefaultTodoistRepository(AndroidKeystoreTodoistTokenStore(appContext), TodoistApi())
     }
 
     val airportRepository: DefaultAirportRepository by lazy {

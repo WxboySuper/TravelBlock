@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.dp
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.data.todoist.TodoistRepository
+import com.travelblock.app.ui.screen.arrival.TodoistArrivalCard
+import com.travelblock.app.ui.screen.arrival.TodoistArrivalTask
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.RouteStops
@@ -43,15 +46,20 @@ import com.travelblock.app.ui.theme.Marigold
 import com.travelblock.app.ui.theme.WarmGray
 import kotlin.math.roundToInt
 
+data class DiversionScreenActions(
+    val returnHome: () -> Unit,
+    val tryAgain: () -> Unit,
+    val viewLogbook: () -> Unit,
+    val todoistRepository: TodoistRepository?,
+)
+
 @Composable
 fun DiversionScreen(
     diversionSummary: DiversionSummary?,
-    onReturnHome: () -> Unit,
-    onTryAgain: () -> Unit,
-    onViewLogbook: () -> Unit,
+    actions: DiversionScreenActions,
 ) {
     if (diversionSummary == null) {
-        EmptyDiversionState(onReturnHome)
+        EmptyDiversionState(actions.returnHome)
         return
     }
 
@@ -68,6 +76,10 @@ fun DiversionScreen(
             LandedEarlyHeader(diversionSummary)
             DiversionMapCard(diversionSummary)
             KeptRow(diversionSummary)
+            TodoistArrivalCard(
+                task = diversionSummary.todoistTaskId?.let { id -> diversionSummary.todoistTaskContent?.let { TodoistArrivalTask(id, it) } },
+                repository = actions.todoistRepository,
+            )
             Text(
                 "${diversionSummary.percentComplete}% of the way to ${diversionSummary.intendedDestination.displayCode} is still yours. " +
                     "The flight is saved in your logbook, and you are now at ${diversionSummary.diversionAirport.displayCode}. " +
@@ -76,7 +88,7 @@ fun DiversionScreen(
                 color = WarmGray,
             )
         }
-        DiversionActions(onReturnHome, onTryAgain, onViewLogbook, Modifier.align(Alignment.BottomCenter))
+        DiversionActions(actions.returnHome, actions.tryAgain, actions.viewLogbook, Modifier.align(Alignment.BottomCenter))
     }
 }
 

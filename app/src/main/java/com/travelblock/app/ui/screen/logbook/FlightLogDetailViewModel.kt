@@ -67,6 +67,7 @@ class FlightLogDetailViewModel(
             },
             focusObjective = focusObjective,
             focusTag = focusTag,
+            todoistTaskContent = todoistTaskContent,
         )
     }
 }

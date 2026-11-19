@@ -3,6 +3,7 @@ package com.travelblock.app.ui.screen.book
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.SeatOption
+import com.travelblock.app.data.todoist.TodoistTask
 import java.time.LocalDateTime
 
 data class BookingUiState(
@@ -24,6 +25,9 @@ data class BookingUiState(
     val maxFlightTimeMinutes: Int = 0,
     val focusObjective: String = "",
     val focusTag: String = "",
+    val todoistTaskId: String? = null,
+    val todoistTaskContent: String? = null,
+    val todoistProjectName: String? = null,
     val cabinSecured: Boolean = false,
     val materialsReady: Boolean = false,
     val distractionsStowed: Boolean = false,
@@ -55,6 +59,9 @@ data class BookingUiState(
                 estimatedRewardPoints = pointsRewardEstimate,
                 focusObjective = focusObjective,
                 focusTag = focusTag,
+                todoistTaskId = todoistTaskId,
+                todoistTaskContent = todoistTaskContent,
+                todoistProjectName = todoistProjectName,
             )
         }
 

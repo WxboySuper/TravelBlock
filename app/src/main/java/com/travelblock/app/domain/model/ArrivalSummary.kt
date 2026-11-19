@@ -11,6 +11,8 @@ data class ArrivalSummary(
     val status: ActiveFlightStatus,
     val focusObjective: String = "",
     val focusTag: String = "",
+    val todoistTaskId: String? = null,
+    val todoistTaskContent: String? = null,
 ) {
     companion object {
         fun fromCompletedFlight(
@@ -28,6 +30,8 @@ data class ArrivalSummary(
                 status = ActiveFlightStatus.Arrived,
                 focusObjective = flight.focusObjective,
                 focusTag = flight.focusTag,
+                todoistTaskId = flight.todoistTaskId,
+                todoistTaskContent = flight.todoistTaskContent,
             )
         }
     }

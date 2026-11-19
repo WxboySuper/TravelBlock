@@ -39,6 +39,8 @@ data class ActiveFlightSessionEntity(
     val plannedArrivalAt: Long,
     val focusObjective: String,
     val focusTag: String,
+    val todoistTaskId: String? = null,
+    val todoistTaskContent: String? = null,
     val status: String,
 ) {
     companion object {

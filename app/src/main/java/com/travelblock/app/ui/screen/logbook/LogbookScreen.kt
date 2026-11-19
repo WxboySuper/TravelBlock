@@ -247,6 +247,7 @@ private fun FlightTicket(flight: FlightLogDetailUiModel) {
                 MetricColumn("Points", flight.pointsLabel)
             }
             FocusNote(flight)
+            flight.todoistTaskContent?.let { Text("Task: $it", style = MaterialTheme.typography.bodyMedium, color = WarmGray) }
             Text(flight.detailMessage, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
         }
     }

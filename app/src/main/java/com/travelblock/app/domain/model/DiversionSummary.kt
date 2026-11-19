@@ -16,6 +16,8 @@ data class DiversionSummary(
     val pointsEarned: Int,
     val focusObjective: String = "",
     val focusTag: String = "",
+    val todoistTaskId: String? = null,
+    val todoistTaskContent: String? = null,
     val status: ActiveFlightStatus = ActiveFlightStatus.Diverted,
 ) {
     companion object {
@@ -39,6 +41,8 @@ data class DiversionSummary(
                 pointsEarned = pointsEarned,
                 focusObjective = flight.focusObjective,
                 focusTag = flight.focusTag,
+                todoistTaskId = flight.todoistTaskId,
+                todoistTaskContent = flight.todoistTaskContent,
             )
         }
     }

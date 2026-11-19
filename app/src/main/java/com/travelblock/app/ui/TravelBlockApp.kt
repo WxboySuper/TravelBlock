@@ -39,6 +39,8 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.ui.navigation.TravelBlockBottomBar
 import com.travelblock.app.ui.navigation.TravelBlockDestination
 import com.travelblock.app.ui.screen.arrival.ArrivalScreen
+import com.travelblock.app.ui.screen.arrival.ArrivalScreenActions
+import com.travelblock.app.ui.screen.diversion.DiversionScreenActions
 import com.travelblock.app.ui.screen.book.BookScreen
 import com.travelblock.app.ui.screen.book.QuickBoardingScreen
 import com.travelblock.app.ui.screen.book.createQuickBoardingPass
@@ -338,6 +340,8 @@ private fun NavGraphBuilder.bookingRoute(
             hapticsEnabled = runtime.settings.hapticsEnabled,
             soundEnabled = runtime.settings.soundEnabled,
             boardingPassThemeId = runtime.settings.equippedBoardingPassThemeId,
+            todoistRepository = runtime.container.todoistRepository,
+            onOpenTodoistSettings = { navController.navigate(TravelBlockDestination.Settings.route) },
             onGateCleared = { playCue(runtime, FlightAudioCue.GateCleared) },
             onCancelBooking = { navController.popBackStack(TravelBlockDestination.Home.route, false) },
             onStartFocusFlight = { pass -> startFocusFlight(pass, runtime, navController) },
@@ -429,8 +433,11 @@ private fun NavGraphBuilder.arrivalRoute(
         ArrivalScreen(
             arrivalSummary = runtime.state.arrivalSummary,
             homeAirportCode = runtime.settings.homeAirportCode,
-            onContinueJourney = { navigateToHome(navController) },
-            onViewLogbook = { navigateToLogbook(navController) },
+            actions = ArrivalScreenActions(
+                continueJourney = { navigateToHome(navController) },
+                viewLogbook = { navigateToLogbook(navController) },
+                todoistRepository = runtime.container.todoistRepository,
+            ),
         )
     }
 }
@@ -442,9 +449,12 @@ private fun NavGraphBuilder.diversionRoute(
     composable(TravelBlockDestination.Diversion.route) {
         DiversionScreen(
             diversionSummary = runtime.state.diversionSummary,
-            onReturnHome = { navigateToHome(navController) },
-            onTryAgain = { navigateToHome(navController) },
-            onViewLogbook = { navigateToLogbook(navController) },
+            actions = DiversionScreenActions(
+                returnHome = { navigateToHome(navController) },
+                tryAgain = { navigateToHome(navController) },
+                viewLogbook = { navigateToLogbook(navController) },
+                todoistRepository = runtime.container.todoistRepository,
+            ),
         )
     }
 }
@@ -595,6 +605,8 @@ private suspend fun recordRestoredArrival(
             pointsEarned = pointsEarned,
             focusObjective = flight.focusObjective,
             focusTag = flight.focusTag,
+            todoistTaskId = flight.todoistTaskId,
+            todoistTaskContent = flight.todoistTaskContent,
         ),
     )
     container.pointsRepository.insertTransaction(

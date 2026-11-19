@@ -85,6 +85,19 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+internal val MIGRATION_4_5_SQL = listOf(
+    "ALTER TABLE `active_flight_session` ADD COLUMN `todoistTaskId` TEXT",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `todoistTaskContent` TEXT",
+    "ALTER TABLE `flight_logs` ADD COLUMN `todoistTaskId` TEXT",
+    "ALTER TABLE `flight_logs` ADD COLUMN `todoistTaskContent` TEXT",
+)
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        MIGRATION_4_5_SQL.forEach(db::execSQL)
+    }
+}
+
 private fun SupportSQLiteDatabase.hasColumn(
     tableName: String,
     columnName: String,

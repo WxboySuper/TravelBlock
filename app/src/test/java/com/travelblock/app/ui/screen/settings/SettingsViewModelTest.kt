@@ -141,6 +141,10 @@ class SettingsViewModelTest {
             settingsFlow.value = settingsFlow.value.copy(soundEnabled = enabled)
         }
 
+        override suspend fun setAnnouncementsEnabled(enabled: Boolean) {
+            settingsFlow.value = settingsFlow.value.copy(announcementsEnabled = enabled)
+        }
+
         override suspend fun setHapticsEnabled(enabled: Boolean) {
             settingsFlow.value = settingsFlow.value.copy(hapticsEnabled = enabled)
         }

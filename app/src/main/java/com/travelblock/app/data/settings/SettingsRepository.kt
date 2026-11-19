@@ -9,6 +9,7 @@ interface SettingsRepository {
     suspend fun setCurrentAirportCode(code: String)
     suspend fun setSelectedTheme(theme: String)
     suspend fun setSoundEnabled(enabled: Boolean)
+    suspend fun setAnnouncementsEnabled(enabled: Boolean)
     suspend fun setHapticsEnabled(enabled: Boolean)
     suspend fun setOnboardingComplete(complete: Boolean)
     suspend fun setDebugShortFlightsEnabled(enabled: Boolean)

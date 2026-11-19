@@ -95,6 +95,7 @@ fun CockpitScreen(
     activeFlight: ActiveFlight?,
     onFlightArrived: (ArrivalSummary) -> Unit,
     onFlightDiverted: (DiversionSummary) -> Unit,
+    onPrepareForLanding: () -> Unit = {},
 ) {
     val viewModel: CockpitViewModel = viewModel(
         key = activeFlight?.let { "${it.flightNumber}-${it.startedAt}" } ?: "empty-cockpit",
@@ -105,6 +106,7 @@ fun CockpitScreen(
             settingsRepository = container.settingsRepository,
             activeFlightSessionRepository = container.activeFlightSessionRepository,
             airports = container.airportRepository.getAllAirports(),
+            onPrepareForLanding = onPrepareForLanding,
         ),
     )
 

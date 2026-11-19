@@ -196,6 +196,10 @@ class HomeViewModelTest {
             state.value = state.value.copy(soundEnabled = enabled)
         }
 
+        override suspend fun setAnnouncementsEnabled(enabled: Boolean) {
+            state.value = state.value.copy(announcementsEnabled = enabled)
+        }
+
         override suspend fun setHapticsEnabled(enabled: Boolean) {
             state.value = state.value.copy(hapticsEnabled = enabled)
         }

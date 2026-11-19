@@ -26,6 +26,7 @@ class FakeSettingsRepository(initialSettings: UserSettings = UserSettings()) {
                 }
                 "setSelectedTheme" -> state.value = state.value.copy(selectedTheme = value as String)
                 "setSoundEnabled" -> state.value = state.value.copy(soundEnabled = value as Boolean)
+                "setAnnouncementsEnabled" -> state.value = state.value.copy(announcementsEnabled = value as Boolean)
                 "setHapticsEnabled" -> state.value = state.value.copy(hapticsEnabled = value as Boolean)
                 "setOnboardingComplete" -> state.value = state.value.copy(onboardingComplete = value as Boolean)
                 "setDebugShortFlightsEnabled" -> state.value = state.value.copy(debugShortFlightsEnabled = value as Boolean)

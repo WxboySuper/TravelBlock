@@ -63,6 +63,7 @@ fun SettingsScreen(container: TravelBlockContainer) {
         onDismissHomeAirportConfirmation = viewModel::dismissHomeAirportConfirmation,
         onThemeSelected = viewModel::setSelectedTheme,
         onSoundEnabledChanged = viewModel::setSoundEnabled,
+        onAnnouncementsEnabledChanged = viewModel::setAnnouncementsEnabled,
         onHapticsEnabledChanged = viewModel::setHapticsEnabled,
         onDebugShortFlightsChanged = viewModel::setDebugShortFlightsEnabled,
         onDebugDurationSelected = viewModel::setDebugFlightDurationSeconds,
@@ -83,6 +84,7 @@ fun SettingsScreenContent(
     onDismissHomeAirportConfirmation: () -> Unit,
     onThemeSelected: (String) -> Unit,
     onSoundEnabledChanged: (Boolean) -> Unit,
+    onAnnouncementsEnabledChanged: (Boolean) -> Unit,
     onHapticsEnabledChanged: (Boolean) -> Unit,
     onDebugShortFlightsChanged: (Boolean) -> Unit = {},
     onDebugDurationSelected: (Int) -> Unit = {},
@@ -119,11 +121,13 @@ fun SettingsScreenContent(
             PreferenceCard(
                 selectedTheme = uiState.settings.selectedTheme,
                 soundEnabled = uiState.settings.soundEnabled,
+                announcementsEnabled = uiState.settings.announcementsEnabled,
                 hapticsEnabled = uiState.settings.hapticsEnabled,
                 debugShortFlightsEnabled = uiState.settings.debugShortFlightsEnabled,
                 debugFlightDurationSeconds = uiState.settings.debugFlightDurationSeconds,
                 onThemeSelected = onThemeSelected,
                 onSoundEnabledChanged = onSoundEnabledChanged,
+                onAnnouncementsEnabledChanged = onAnnouncementsEnabledChanged,
                 onHapticsEnabledChanged = onHapticsEnabledChanged,
                 onDebugShortFlightsChanged = onDebugShortFlightsChanged,
                 onDebugDurationSelected = onDebugDurationSelected,
@@ -264,11 +268,13 @@ private fun AirportPreferenceRow(
 private fun PreferenceCard(
     selectedTheme: String,
     soundEnabled: Boolean,
+    announcementsEnabled: Boolean,
     hapticsEnabled: Boolean,
     debugShortFlightsEnabled: Boolean,
     debugFlightDurationSeconds: Int,
     onThemeSelected: (String) -> Unit,
     onSoundEnabledChanged: (Boolean) -> Unit,
+    onAnnouncementsEnabledChanged: (Boolean) -> Unit,
     onHapticsEnabledChanged: (Boolean) -> Unit,
     onDebugShortFlightsChanged: (Boolean) -> Unit,
     onDebugDurationSelected: (Int) -> Unit,
@@ -286,6 +292,12 @@ private fun PreferenceCard(
             description = "Controls future cabin and flight event sounds.",
             checked = soundEnabled,
             onCheckedChange = onSoundEnabledChanged,
+        )
+        ToggleRow(
+            title = "PA announcements",
+            description = "Speak boarding and flight updates.",
+            checked = announcementsEnabled,
+            onCheckedChange = onAnnouncementsEnabledChanged,
         )
         ToggleRow(
             title = "Haptics",

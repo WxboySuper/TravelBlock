@@ -5,6 +5,7 @@ data class UserSettings(
     val currentAirportCode: String = DefaultAirportCode,
     val selectedTheme: String = "system",
     val soundEnabled: Boolean = true,
+    val announcementsEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val onboardingComplete: Boolean = false,
     val debugShortFlightsEnabled: Boolean = false,

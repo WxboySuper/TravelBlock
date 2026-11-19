@@ -115,6 +115,10 @@ class SettingsViewModel(
         }
     }
 
+    fun setAnnouncementsEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAnnouncementsEnabled(enabled) }
+    }
+
     fun setHapticsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setHapticsEnabled(enabled)

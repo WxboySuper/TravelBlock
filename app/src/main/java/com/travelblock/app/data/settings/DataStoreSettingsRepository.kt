@@ -24,6 +24,7 @@ class DataStoreSettingsRepository(
             currentAirportCode = preferences[CurrentAirportCodeKey] ?: homeAirportCode,
             selectedTheme = preferences[SelectedThemeKey] ?: "system",
             soundEnabled = preferences[SoundEnabledKey] ?: true,
+            announcementsEnabled = preferences[AnnouncementsEnabledKey] ?: true,
             hapticsEnabled = preferences[HapticsEnabledKey] ?: true,
             onboardingComplete = preferences[OnboardingCompleteKey] ?: false,
             debugShortFlightsEnabled = preferences[DebugShortFlightsEnabledKey] ?: false,
@@ -64,6 +65,10 @@ class DataStoreSettingsRepository(
         dataStore.edit { preferences ->
             preferences[SoundEnabledKey] = enabled
         }
+    }
+
+    override suspend fun setAnnouncementsEnabled(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[AnnouncementsEnabledKey] = enabled }
     }
 
     override suspend fun setHapticsEnabled(enabled: Boolean) {
@@ -107,6 +112,7 @@ class DataStoreSettingsRepository(
         val CurrentAirportCodeKey = stringPreferencesKey("currentAirportCode")
         val SelectedThemeKey = stringPreferencesKey("selectedTheme")
         val SoundEnabledKey = booleanPreferencesKey("soundEnabled")
+        val AnnouncementsEnabledKey = booleanPreferencesKey("announcementsEnabled")
         val HapticsEnabledKey = booleanPreferencesKey("hapticsEnabled")
         val OnboardingCompleteKey = booleanPreferencesKey("onboardingComplete")
         val DebugShortFlightsEnabledKey = booleanPreferencesKey("debugShortFlightsEnabled")

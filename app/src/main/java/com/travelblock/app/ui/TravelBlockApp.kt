@@ -77,12 +77,13 @@ private fun TravelBlockAppContent(
     openArrivalRequested: Boolean,
 ) {
     val activity = LocalContext.current as? MainActivity
+    val context = LocalContext.current.applicationContext
     val state = remember { TravelBlockAppState() }
     val navController = rememberNavController()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val pointsBalance by container.pointsRepository.observePointsBalance().collectAsState(initial = 0)
     val coroutineScope = rememberCoroutineScope()
-    val audioCuePlayer = remember { FlightAudioCuePlayer() }
+    val audioCuePlayer = remember(context) { FlightAudioCuePlayer(context) }
     val runtime = TravelBlockRuntime(container, state, settings, pointsBalance, coroutineScope, audioCuePlayer)
 
     TravelBlockEffects(runtime, navController, currentRoute, openArrivalRequested)
@@ -357,6 +358,13 @@ private fun NavGraphBuilder.cockpitRoute(
             activeFlight = runtime.state.activeFlight,
             onFlightArrived = { summary -> completeFlight(summary, runtime, navController) },
             onFlightDiverted = { summary -> divertFlight(summary, runtime, navController) },
+            onPrepareForLanding = {
+                runtime.audioCuePlayer.announce(
+                    FlightAudioCue.PrepareForLanding,
+                    enabled = runtime.settings.soundEnabled,
+                    announcementsEnabled = runtime.settings.announcementsEnabled,
+                )
+            },
         )
     }
 }
@@ -455,7 +463,11 @@ private fun NavGraphBuilder.logbookDetailRoute(
 }
 
 private fun playCue(runtime: TravelBlockRuntime, cue: FlightAudioCue) {
-    runtime.audioCuePlayer.play(cue, enabled = runtime.settings.soundEnabled)
+    runtime.audioCuePlayer.play(
+        cue,
+        enabled = runtime.settings.soundEnabled,
+        announcementsEnabled = runtime.settings.announcementsEnabled,
+    )
 }
 
 private fun navigateToBooking(navController: NavHostController) {

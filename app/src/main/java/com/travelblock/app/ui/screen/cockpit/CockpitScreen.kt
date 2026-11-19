@@ -28,6 +28,7 @@ import com.travelblock.app.ui.theme.WarmGray
 import kotlinx.coroutines.delay
 import java.time.Instant
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,6 +75,9 @@ import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.ArrivalSummary
 import com.travelblock.app.domain.model.DiversionSummary
 import com.travelblock.app.domain.model.GeoPoint
+import com.travelblock.app.domain.model.TicketClass
+import com.travelblock.app.domain.model.experience
+import com.travelblock.app.domain.model.position
 import com.travelblock.app.ui.components.Kicker
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.StampPill
@@ -242,25 +246,50 @@ private fun ActiveCockpit(flight: ActiveFlight, uiState: CockpitUiState, onDiver
     // A clean switch between a bright day cabin and a dim night cabin keeps text high-contrast at dusk,
     // where a smooth blend would leave mid-grey surfaces behind mid-grey text.
     val night = cabinDimFor(hour) > NIGHT_CABIN_THRESHOLD
-    val look = if (night) NightCabin else DayCabin
-    LightStatusIcons(dark = night)
+    val look = cabinLook(night, flight.seat.ticketClass)
+    LightStatusIcons(dark = night || flight.seat.ticketClass == TicketClass.Premium)
 
     Column(Modifier.fillMaxSize().background(look.wall)) {
         WindowHeader(flight, uiState.status, look, Modifier.statusBarsPadding())
-        AirplaneWindow(hour, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 26.dp, vertical = 6.dp))
+        // Your seat decides the view: a window seat gets the whole window, the middle seat the smallest.
+        val inset = 26.dp + 90.dp * (1f - flight.seat.position.windowShare)
+        AirplaneWindow(hour, Modifier.weight(1f).fillMaxWidth().padding(horizontal = inset, vertical = 6.dp))
         TrayTable(flight, uiState, look, onDivertRequested)
     }
 }
 
-private class CabinLook(val wall: Color, val tray: Color, val ink: Color, val quiet: Color, val accent: Color)
+private class CabinLook(
+    val wall: Color,
+    val tray: Color,
+    val ink: Color,
+    val quiet: Color,
+    val accent: Color,
+    val wallInk: Color = ink,
+    val wallQuiet: Color = quiet,
+)
 
 private const val NIGHT_CABIN_THRESHOLD = 0.4f
-private val DayCabin = CabinLook(Color(0xFFD9CFBD), Color(0xFFF1E9DA), Ink, WarmGray, Terracotta)
-private val NightCabin = CabinLook(Color(0xFF17151F), Color(0xFF232238), Cream, Sand, Lamp)
+
+/** Each tier has its own cabin: standard is the plain beige one, extra legroom is calm green, premium dark and gold. */
+private fun cabinLook(night: Boolean, tier: TicketClass): CabinLook = when {
+    tier == TicketClass.Premium && night -> CabinLook(Color(0xFF14100F), Color(0xFF2B2230), Cream, Sand, Color(0xFFE8C26A))
+    tier == TicketClass.Premium -> CabinLook(Color(0xFF4A2F36), Color(0xFFF6EBD0), Ink, WarmGray, Color(0xFFA8741A), Cream, Sand)
+    tier == TicketClass.ExtraLegroom && night -> CabinLook(Color(0xFF111C17), Color(0xFF1F2E26), Cream, Sand, Color(0xFF9BD3A8))
+    tier == TicketClass.ExtraLegroom -> CabinLook(Color(0xFFC6D6C4), Color(0xFFE9F0E5), Ink, WarmGray, Color(0xFF3F6B4A))
+    night -> CabinLook(Color(0xFF17151F), Color(0xFF232238), Cream, Sand, Lamp)
+    else -> CabinLook(Color(0xFFD9CFBD), Color(0xFFF1E9DA), Ink, WarmGray, Terracotta)
+}
+
+private fun seatBackHeight(tier: TicketClass) = when (tier) {
+    TicketClass.Premium -> 150.dp
+    TicketClass.ExtraLegroom -> 130.dp
+    else -> 104.dp
+}
 
 private fun activeKicker(flight: ActiveFlight): String {
     val leg = if (flight.isItinerary) "Leg ${flight.itineraryLegIndex + 1} of ${flight.itineraryLegCount} / " else ""
-    return "${leg}Seat ${flight.seat.label} / ${flight.flightNumber}".trim()
+    val experience = flight.seat.experience
+    return "${leg}Seat ${flight.seat.label} / ${experience.tierName} / ${flight.flightNumber}".trim()
 }
 
 @Composable
@@ -272,11 +301,11 @@ private fun WindowHeader(flight: ActiveFlight, status: ActiveFlightStatus, look:
         ActiveFlightStatus.Diverted -> "Diverted"
     }
     Column(modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
-        Kicker(kicker, color = look.quiet)
+        Kicker(kicker, color = look.wallQuiet)
         Text(
             "Flying to ${flight.destination.city.ifBlank { flight.destination.displayCode }}",
             style = MaterialTheme.typography.headlineSmall,
-            color = look.ink,
+            color = look.wallInk,
             maxLines = 1,
         )
     }
@@ -291,6 +320,7 @@ private fun TrayTable(flight: ActiveFlight, uiState: CockpitUiState, look: Cabin
             .fillMaxWidth()
             .shadow(18.dp, shape, clip = false)
             .background(look.tray, shape)
+            .then(if (flight.seat.ticketClass == TicketClass.Standard || flight.seat.ticketClass == TicketClass.Window) Modifier else Modifier.border(2.dp, look.accent.copy(alpha = 0.7f), shape))
             .navigationBarsPadding()
             .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -305,9 +335,21 @@ private fun TrayTable(flight: ActiveFlight, uiState: CockpitUiState, look: Cabin
         }
         Text("${flight.origin.displayCode}  to  ${flight.destination.displayCode}   /   arrive $arrive", style = MaterialTheme.typography.bodyMedium, color = look.accent)
         PlaneTrack(uiState.progress, look)
+        TierPerks(flight, look)
         SeatBackScreen(flight, uiState)
         TrayFooter(uiState.status, look, onDivertRequested, Modifier.align(Alignment.CenterHorizontally))
     }
+}
+
+/** The one-line reminder of what your seat gave you: a welcome drink up front, extra room in the exit rows. */
+@Composable
+private fun TierPerks(flight: ActiveFlight, look: CabinLook) {
+    val line = when (flight.seat.ticketClass) {
+        TicketClass.Premium -> "Premium cabin / welcome drink served / ${flight.seat.position.label.lowercase()} seat"
+        TicketClass.ExtraLegroom -> "Extra legroom / ${flight.seat.position.label.lowercase()} seat"
+        else -> return
+    }
+    Text(line, style = MaterialTheme.typography.labelMedium, color = look.accent)
 }
 
 @Composable
@@ -368,7 +410,7 @@ private fun SeatBackScreen(flight: ActiveFlight, uiState: CockpitUiState) {
     Box(
         Modifier
             .fillMaxWidth()
-            .height(118.dp)
+            .height(seatBackHeight(flight.seat.ticketClass))
             .clip(RoundedCornerShape(18.dp))
             .background(Color(0xFF05070E))
             .padding(3.dp)

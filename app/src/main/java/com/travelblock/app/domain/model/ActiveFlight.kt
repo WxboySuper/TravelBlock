@@ -16,5 +16,13 @@ data class ActiveFlight(
     val todoistTaskId: String? = null,
     val todoistTaskContent: String? = null,
     val todoistProjectName: String? = null,
+    val itineraryCodes: String? = null,
+    val itineraryLabel: String? = null,
+    val itineraryLegIndex: Int = 0,
+    val itineraryLegCount: Int = 1,
+    val layoverEndsAtEpochMillis: Long? = null,
     val status: ActiveFlightStatus = ActiveFlightStatus.Active,
-)
+) {
+    val isItinerary: Boolean get() = itineraryCodes != null && itineraryLegCount > 1
+    val isLastItineraryLeg: Boolean get() = !isItinerary || itineraryLegIndex >= itineraryLegCount - 1
+}

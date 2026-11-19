@@ -98,6 +98,20 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+internal val MIGRATION_5_6_SQL = listOf(
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryCodes` TEXT",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryLabel` TEXT",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryLegIndex` INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `itineraryLegCount` INTEGER NOT NULL DEFAULT 1",
+    "ALTER TABLE `active_flight_session` ADD COLUMN `layoverEndsAtEpochMillis` INTEGER",
+)
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        MIGRATION_5_6_SQL.forEach(db::execSQL)
+    }
+}
+
 private fun SupportSQLiteDatabase.hasColumn(
     tableName: String,
     columnName: String,

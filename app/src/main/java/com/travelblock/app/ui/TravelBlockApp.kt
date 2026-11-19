@@ -55,6 +55,7 @@ import com.travelblock.app.ui.screen.onboarding.OnboardingScreen
 import com.travelblock.app.ui.screen.store.StoreScreen
 import com.travelblock.app.ui.util.FlightAudioCue
 import com.travelblock.app.ui.util.FlightAudioCuePlayer
+import com.travelblock.app.ui.util.AnnouncementDetails
 import com.travelblock.app.ui.util.AudioPlaybackSettings
 import java.time.Instant
 import java.util.UUID
@@ -342,7 +343,10 @@ private fun NavGraphBuilder.bookingRoute(
             boardingPassThemeId = runtime.settings.equippedBoardingPassThemeId,
             todoistRepository = runtime.container.todoistRepository,
             onOpenTodoistSettings = { navController.navigate(TravelBlockDestination.Settings.route) },
-            onGateCleared = { playCue(runtime, FlightAudioCue.GateCleared) },
+            onGateCleared = {
+                val destination = runtime.state.draftFlightBooking?.destination
+                playCue(runtime, FlightAudioCue.GateCleared, destination?.let { announcementFor(it, withTime = false) })
+            },
             onCancelBooking = { navController.popBackStack(TravelBlockDestination.Home.route, false) },
             onStartFocusFlight = { pass -> startFocusFlight(pass, runtime, navController) },
         )
@@ -396,7 +400,7 @@ private fun completeFlight(
     runtime: TravelBlockRuntime,
     navController: NavHostController,
 ) {
-    playCue(runtime, FlightAudioCue.FlightArrived)
+    playCue(runtime, FlightAudioCue.FlightArrived, announcementFor(summary.destination, withTime = true))
     runtime.container.notificationHelper.showFlightLandedNotification(
         flightNumber = summary.flightNumber,
         destinationCode = summary.destination.displayCode,
@@ -494,14 +498,25 @@ private fun NavGraphBuilder.logbookDetailRoute(
     }
 }
 
-private fun playCue(runtime: TravelBlockRuntime, cue: FlightAudioCue) {
+private fun playCue(runtime: TravelBlockRuntime, cue: FlightAudioCue, details: AnnouncementDetails? = null) {
     runtime.audioCuePlayer.play(
         cue,
         settings = AudioPlaybackSettings(
             soundEnabled = runtime.settings.soundEnabled,
             announcementsEnabled = runtime.settings.announcementsEnabled,
         ),
+        details = details,
     )
+}
+
+/** What the PA says about an airport: its city and, on arrival, the local (solar) time there. */
+private fun announcementFor(airport: com.travelblock.app.domain.model.Airport, withTime: Boolean): AnnouncementDetails {
+    val city = airport.city.ifBlank { airport.displayCode }
+    if (!withTime) return AnnouncementDetails(city)
+    val hour = com.travelblock.app.ui.scene.localSolarHour(Instant.now(), airport.longitude)
+    val minutes = (hour * 60).toInt() % (24 * 60)
+    val time = java.time.LocalTime.of(minutes / 60, minutes % 60)
+    return AnnouncementDetails(city, time.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.US)))
 }
 
 private fun navigateToBooking(navController: NavHostController) {

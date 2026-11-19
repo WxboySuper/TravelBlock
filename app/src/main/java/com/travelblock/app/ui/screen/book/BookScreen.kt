@@ -133,7 +133,8 @@ fun BookScreen(
         onTodoistTaskSelected = viewModel::selectTodoistTask,
         onPreflightCheckChanged = viewModel::setPreflightCheck,
         onContinueToSeatSelection = viewModel::continueToSeatSelection,
-        onBackToManifest = viewModel::returnToManifest,
+        // Check-in only happens once per trip: from a later leg's seat map, back means back to the layover.
+        onBackToManifest = if (draftFlightBooking?.continuation != null) onCancelBooking else viewModel::returnToManifest,
         onContinue = viewModel::continueToBoardingPass,
         onBoardFlight = viewModel::boardFlight,
         onBackToReview = viewModel::returnToReview,

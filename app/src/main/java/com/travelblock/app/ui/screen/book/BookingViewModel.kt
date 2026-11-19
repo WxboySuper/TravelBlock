@@ -205,6 +205,7 @@ class BookingViewModel(
             sessionPlan = draft.sessionPlan,
             hub = draft.hub,
             hubChosen = draft.hubChoiceMade,
+            bookingStage = if (draft.continuation != null) BookingStage.SeatSelection else BookingStage.Manifest,
             tripPreset = shape.preset,
             seatSelectionMessage = "Standard seats are free. Upgrade seats require enough points to select.",
         )

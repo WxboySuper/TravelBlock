@@ -149,6 +149,13 @@ class CockpitViewModel(
         viewModelScope.launch { activeFlightSessionRepository?.saveActiveFlight(skipped) }
     }
 
+    /** The flight whose next leg can be boarded now (its layover is over), or null while it is still running. */
+    fun nextLegReady(): ActiveFlight? {
+        val flight = uiState.activeFlight ?: return null
+        val endsAt = flight.layoverEndsAtEpochMillis ?: return null
+        return flight.takeIf { uiState.status == ActiveFlightStatus.Layover && clock.millis() >= endsAt }
+    }
+
     fun boardNextLeg() {
         val flight = uiState.activeFlight ?: return
         val endsAt = flight.layoverEndsAtEpochMillis ?: return

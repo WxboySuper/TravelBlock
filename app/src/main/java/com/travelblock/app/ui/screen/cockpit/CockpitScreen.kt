@@ -119,7 +119,7 @@ fun CockpitScreen(
             onDismissDivert = viewModel::dismissDivertDialog,
             onConfirmDivert = viewModel::confirmDivert,
             onSkipLayover = viewModel::skipLayover,
-            onBoardNextLeg = viewModel::boardNextLeg,
+            onBoardNextLeg = { viewModel.nextLegReady()?.let(actions.onBoardNextLeg) },
         ),
     )
 }
@@ -180,6 +180,7 @@ data class CockpitActions(
     val onFlightDiverted: (DiversionSummary) -> Unit,
     val onPrepareForLanding: () -> Unit = {},
     val onFlightUpdated: (ActiveFlight) -> Unit = {},
+    val onBoardNextLeg: (ActiveFlight) -> Unit = {},
 )
 
 data class CockpitContentCallbacks(

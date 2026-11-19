@@ -354,7 +354,7 @@ private fun NavGraphBuilder.bookingRoute(
                 val destination = runtime.state.draftFlightBooking?.destination
                 playCue(runtime, FlightAudioCue.GateCleared, destination?.announcement(withTime = false))
             },
-            onCancelBooking = { navController.popBackStack(TravelBlockDestination.Home.route, false) },
+            onCancelBooking = { cancelBooking(runtime, navController) },
             onStartFocusFlight = { pass -> startFocusFlight(pass, runtime, navController) },
         )
     }
@@ -365,6 +365,7 @@ private fun startFocusFlight(
     runtime: TravelBlockRuntime,
     navController: NavHostController,
 ) {
+    if (runtime.isBoardingNextLeg()) return finishLegBoarding(pass, runtime, navController)
     playCue(runtime, FlightAudioCue.FlightStarted)
     val activeFlight = createInitialFlight(pass, runtime.container.airportRepository.getAllAirports(), Instant.now())
         .withDebugFlightDuration(runtime.settings)
@@ -390,6 +391,7 @@ private fun NavGraphBuilder.cockpitRoute(
                 onFlightArrived = { summary -> completeFlight(summary, runtime, navController) },
                 onFlightDiverted = { summary -> divertFlight(summary, runtime, navController) },
                 onFlightUpdated = { flight -> updateActiveFlight(flight, runtime) },
+                onBoardNextLeg = { flight -> beginLegBoarding(flight, runtime, navController) },
                 onPrepareForLanding = {
                     runtime.audioCuePlayer.announce(
                         FlightAudioCue.PrepareForLanding,

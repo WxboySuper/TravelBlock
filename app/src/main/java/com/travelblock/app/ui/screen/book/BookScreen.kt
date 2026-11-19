@@ -53,7 +53,6 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.engine.HubConnection
-import com.travelblock.app.domain.engine.HubRouting
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.SessionPlan
 import com.travelblock.app.data.todoist.TodoistRepository
@@ -322,11 +321,10 @@ private fun CheckInSurface(
         }
         if (!uiState.showSeatSelection) {
             item {
-                val hub = remember(origin.code, uiState.destination?.code, airports) {
-                    uiState.destination?.let { HubRouting.connect(origin, it, airports) }
-                }
-                TripPlannerCard(
-                    TripPlannerState(uiState.tripPreset, uiState.sessionPlan, uiState.destination, airports, HubOption(hub, uiState.viaHub)),
+                TripPlannerSection(
+                    uiState,
+                    origin,
+                    airports,
                     TripPlannerActions(onTripPresetSelected, onSessionPlanSelected, onTripDestinationSelected, onHubSelected),
                 )
             }

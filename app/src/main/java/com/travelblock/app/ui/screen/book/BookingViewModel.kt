@@ -57,7 +57,8 @@ class BookingViewModel(
         uiState = uiState.copy(
             tripPreset = preset,
             sessionPlan = null,
-            viaHub = false,
+            hub = null,
+            hubChosen = false,
             durationMinutes = originalDurationMinutes,
             arrivalTime = uiState.departureTime?.plusMinutes(originalDurationMinutes.toLong()),
         )
@@ -66,7 +67,8 @@ class BookingViewModel(
     fun selectSessionPlan(plan: SessionPlan?) {
         val breakdown = plan?.let(SessionPlanCalculator::calculate)
         uiState = uiState.copy(
-            viaHub = false,
+            hub = null,
+            hubChosen = false,
             tripPreset = if (breakdown != null) {
                 TripPreset("planned", "Planned session", breakdown.legCount)
             } else null,
@@ -78,12 +80,13 @@ class BookingViewModel(
         )
     }
 
-    /** Connect a short trip through a major hub (or go back to the direct hop with null). */
+    /** Connect a trip through a major hub (or go back to the direct flight with null). */
     fun selectHubConnection(connection: HubConnection?) {
         val departure = uiState.departureTime
         if (connection == null) {
             uiState = uiState.copy(
-                viaHub = false,
+                hub = null,
+                hubChosen = true,
                 tripPreset = null,
                 durationMinutes = originalDurationMinutes,
                 arrivalTime = departure?.plusMinutes(originalDurationMinutes.toLong()),
@@ -91,7 +94,8 @@ class BookingViewModel(
             return
         }
         uiState = uiState.copy(
-            viaHub = true,
+            hub = connection,
+            hubChosen = true,
             tripPreset = TripPreset("hub", "Via ${connection.hub.displayCode}", 2),
             sessionPlan = null,
             durationMinutes = connection.firstLegMinutes,
@@ -103,7 +107,8 @@ class BookingViewModel(
         val origin = uiState.origin ?: return
         val distance = AirportRouteEngine().distanceMiles(origin, destination)
         uiState = uiState.copy(
-            viaHub = false,
+            hub = null,
+            hubChosen = false,
             destination = destination,
             distanceMiles = distance,
             pointsRewardEstimate = FlightRewardCalculator.completedReward(uiState.durationMinutes, distance),

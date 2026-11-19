@@ -23,7 +23,26 @@ class HubRoutingTest {
     }
 
     @Test
-    fun `no connection is offered when an end of the trip is already a major airport`() {
+    fun `a small origin connects through its regional hub even when the destination is a major airport`() {
+        val dfw = airport("KDFW", "DFW", 32.9, -97.0)
+
+        val connections = HubRouting.connections(small1, dfw, listOf(small1, dfw, okc))
+
+        assertEquals(listOf("KOKC"), connections.map { it.hub.code })
+    }
+
+    @Test
+    fun `several hubs are offered least detour first`() {
+        val tul = airport("KTUL", "TUL", 36.2, -95.9)
+
+        val connections = HubRouting.connections(small1, small2, listOf(small1, small2, okc, tul))
+
+        assertEquals(2, connections.size)
+        assertTrue(connections[0].extraMinutes <= connections[1].extraMinutes)
+    }
+
+    @Test
+    fun `no connection is offered when the only possible hub is an end of the trip`() {
         assertNull(HubRouting.connect(okc, small2, listOf(small1, small2, okc)))
         assertNull(HubRouting.connect(small1, okc, listOf(small1, small2, okc)))
     }

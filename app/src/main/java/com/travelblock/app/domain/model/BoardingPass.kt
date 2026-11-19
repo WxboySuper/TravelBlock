@@ -22,7 +22,8 @@ data class BoardingPass(
     val todoistProjectName: String? = null,
     val tripPreset: TripPreset? = null,
     val sessionPlan: SessionPlan? = null,
-    val viaHub: Boolean = false,
+    /** The hub this trip connects through, when the traveller chose to connect a short trip. */
+    val viaHubCode: String? = null,
 ) {
     fun toActiveFlight(
         startedAt: java.time.Instant,

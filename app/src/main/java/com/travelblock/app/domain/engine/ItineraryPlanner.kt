@@ -9,6 +9,9 @@ import com.travelblock.app.domain.model.isMajorHub
 import kotlin.math.abs
 
 object ItineraryPlanner {
+    private const val MIN_LEGS_FOR_ORIGIN_HUB = 3
+    private const val MIN_LEGS_FOR_DESTINATION_HUB = 4
+
     fun plan(request: ItineraryRequest): FlightItinerary? {
         val (origin, destination, airports, trip) = request
         val preset = trip.preset
@@ -16,11 +19,10 @@ object ItineraryPlanner {
         val route = mutableListOf<Airport>()
         val context = RouteContext(origin, destination)
         for (index in 1 until preset.legCount) {
-            val target = FlightRouteInterpolation.interpolate(
-                origin.toPoint(), destination.toPoint(), index.toDouble() / preset.legCount,
-            )
+            val target = stopTarget(index, preset.legCount, context)
             val excluded = route.mapTo(mutableSetOf()) { it.code }
-            val stop = chooseStop(target, airports, excluded, context)
+            val stop = (if (preset.legCount == 2) HubRouting.connect(origin, destination, airports)?.hub else null)
+                ?: chooseStop(target, airports, excluded, context)
                 ?: chooseRepeatedStop(target, airports, context)
                 ?: return null
             route += stop
@@ -34,6 +36,21 @@ object ItineraryPlanner {
                 breakDurationsMinutes = trip.breakDurationsMinutes,
             ),
         )
+    }
+
+    /**
+     * Where the next stop should be near. Evenly spaced along the route, except that a small airport first
+     * connects through its own regional hub: the first stop sits by a small origin, the last by a small destination.
+     */
+    private fun stopTarget(index: Int, legCount: Int, context: RouteContext): GeoPoint {
+        val (origin, destination) = context
+        val nearOrigin = index == 1 && legCount >= MIN_LEGS_FOR_ORIGIN_HUB && !origin.isMajorHub
+        val nearDestination = index == legCount - 1 && legCount >= MIN_LEGS_FOR_DESTINATION_HUB && !destination.isMajorHub
+        return when {
+            nearOrigin -> origin.toPoint()
+            nearDestination -> destination.toPoint()
+            else -> FlightRouteInterpolation.interpolate(origin.toPoint(), destination.toPoint(), index.toDouble() / legCount)
+        }
     }
 
     private fun chooseRepeatedStop(target: GeoPoint, airports: List<Airport>, context: RouteContext): Airport? =

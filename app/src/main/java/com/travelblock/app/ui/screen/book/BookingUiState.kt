@@ -1,5 +1,6 @@
 package com.travelblock.app.ui.screen.book
 
+import com.travelblock.app.domain.engine.HubConnection
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.BoardingPass
 import com.travelblock.app.domain.model.SeatOption
@@ -32,12 +33,15 @@ data class BookingUiState(
     val todoistProjectName: String? = null,
     val tripPreset: TripPreset? = null,
     val sessionPlan: SessionPlan? = null,
-    val viaHub: Boolean = false,
+    val hub: HubConnection? = null,
+    val hubChosen: Boolean = false,
     val cabinSecured: Boolean = false,
     val materialsReady: Boolean = false,
     val distractionsStowed: Boolean = false,
     val bookingStage: BookingStage = BookingStage.Manifest,
 ) {
+    val viaHub: Boolean get() = hub != null
+
     val selectedSeat: SeatOption?
         get() = seatOptions.firstOrNull { it.id == selectedSeatId }
 
@@ -69,7 +73,7 @@ data class BookingUiState(
                 todoistProjectName = todoistProjectName,
                 tripPreset = tripPreset,
                 sessionPlan = sessionPlan,
-                viaHub = viaHub,
+                viaHubCode = hub?.hub?.code,
             )
         }
 

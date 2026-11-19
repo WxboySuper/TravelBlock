@@ -5,6 +5,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
+import java.io.IOException
 import java.net.URL
 
 data class UpdateInfo(
@@ -15,6 +16,8 @@ data class UpdateInfo(
     val pageUrl: String,
     val publishedAt: String,
 )
+
+class MissingApkAssetException(val pageUrl: String) : IOException("TravelBlock.apk is missing from the latest release")
 
 object UpdateChecker {
     const val ReleaseApi = "https://api.github.com/repos/WxboySuper/TravelBlock/releases/tags/latest"
@@ -48,9 +51,24 @@ object UpdateChecker {
             connection.readTimeout = 5_000
             connection.setRequestProperty("User-Agent", "TravelBlock-Android-Updater")
             connection.setRequestProperty("Accept", "application/vnd.github+json")
-            connection.inputStream.bufferedReader().use { parse(it.readText(), installedBuild) }
+            connection.inputStream.bufferedReader().use { reader ->
+                val body = reader.readText()
+                val info = parse(body, installedBuild)
+                if (info != null) return@use info
+                val root = json.parseToJsonElement(body).jsonObject
+                val releaseBody = root["body"]?.jsonPrimitive?.content.orEmpty()
+                val build = releaseBody.lineSequence().firstOrNull()?.let(::buildFromLine) ?: return@use null
+                if (build > installedBuild) {
+                    val page = root["html_url"]?.jsonPrimitive?.content ?: return@use null
+                    throw MissingApkAssetException(page)
+                }
+                null
+            }
         } finally {
             connection.disconnect()
         }
     }
+
+    private fun buildFromLine(line: String): Int? = Regex("^build=(\\d+) sha=([^ ]+) published=(\\S+)$")
+        .matchEntire(line)?.groupValues?.get(1)?.toIntOrNull()
 }

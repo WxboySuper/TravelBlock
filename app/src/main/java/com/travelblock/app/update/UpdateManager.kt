@@ -80,7 +80,10 @@ class UpdateManager private constructor(context: Context) {
             }
             .onFailure { error ->
                 Log.w("TravelBlockUpdate", "Update check failed", error)
-                if (manual) mutableState.value = UpdateUiState.Error("Couldn't check for updates")
+                if (manual && error is MissingApkAssetException) {
+                    openReleasePage(error.pageUrl)
+                    mutableState.value = UpdateUiState.Error("Release APK is missing. Opening release page.")
+                } else if (manual) mutableState.value = UpdateUiState.Error("Couldn't check for updates")
                 else mutableState.value = UpdateUiState.Idle
             }
     }
@@ -156,7 +159,11 @@ class UpdateManager private constructor(context: Context) {
     }
 
     private fun openReleasePage(info: UpdateInfo) {
-        app.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        openReleasePage(info.pageUrl)
+    }
+
+    private fun openReleasePage(url: String) {
+        app.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
 }

@@ -29,7 +29,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
-        run: chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
+        run: chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon -PbuildNumber=${{ github.run_number }} -PbuildSha=${{ github.sha }}
 
       - name: Name the APK
         run: cp app/build/outputs/apk/debug/app-debug.apk TravelBlock.apk
@@ -40,8 +40,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           SHORT=$(git rev-parse --short HEAD)
+          PUBLISHED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest TravelBlock.apk \
             --title "TravelBlock latest build" \
-            --notes "Build of commit $SHORT. Open this page on your phone and tap TravelBlock.apk to install." \
+            --notes "build=${{ github.run_number }} sha=$SHORT published=$PUBLISHED
+Build of commit $SHORT. Open this page on your phone and tap TravelBlock.apk to install." \
             --prerelease --target "$GITHUB_SHA"

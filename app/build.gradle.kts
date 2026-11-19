@@ -16,8 +16,11 @@ android {
         applicationId = "com.travelblock.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1260
-        versionName = "0.14.0-quick-start"
+        val buildNumber = providers.gradleProperty("buildNumber").orNull?.toIntOrNull() ?: 0
+        versionCode = 20000 + buildNumber
+        versionName = "0.14.0"
+        buildConfigField("int", "BUILD_NUMBER", buildNumber.toString())
+        buildConfigField("String", "BUILD_SHA", "\"${providers.gradleProperty("buildSha").orNull ?: "local"}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

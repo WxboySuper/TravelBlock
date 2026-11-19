@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -94,7 +95,7 @@ fun SkyScene(localHour: Float, modifier: Modifier = Modifier.fillMaxSize(), spee
     val drift by transition.animateFloat(0f, 1f, infiniteRepeatable(tween((60_000 / speed).toInt(), easing = LinearEasing), RepeatMode.Restart), label = "drift")
     val twinkle by transition.animateFloat(0.4f, 1f, infiniteRepeatable(tween(2600), RepeatMode.Reverse), label = "twinkle")
 
-    Canvas(modifier) {
+    Canvas(modifier.clipToBounds()) {
         drawRect(Brush.verticalGradient(listOf(palette.top, palette.middle, palette.horizon)))
         if (palette.night > 0.35f) drawStars(palette.night, twinkle)
         drawCelestial(localHour, palette)
@@ -120,8 +121,7 @@ private fun DrawScope.drawCelestial(hour: Float, palette: SkyPalette) {
         drawCircle(warm, radius = size.width * 0.07f, center = Offset(x, y))
     } else {
         drawCircle(Brush.radialGradient(listOf(Color(0x55DDE6FF), Color.Transparent), center = Offset(x, y), radius = size.width * 0.3f), radius = size.width * 0.3f, center = Offset(x, y))
-        drawCircle(Color(0xFFEFF2FF), radius = size.width * 0.05f, center = Offset(x, y))
-        drawCircle(palette.top, radius = size.width * 0.043f, center = Offset(x + size.width * 0.02f, y - size.width * 0.01f))
+        drawCrescent(Offset(x, y), size.width * 0.05f)
     }
 }
 
@@ -145,3 +145,12 @@ private fun DrawScope.drawCloud(cloud: Cloud, drift: Float, palette: SkyPalette)
 
 /** How dark the cabin should be, 0..1, derived from the same sky. */
 fun cabinDimFor(localHour: Float): Float = max(0.0f, skyPaletteFor(localHour).night)
+
+/** A crescent moon: a pale disc with a second disc cut out of it, so the sky shows through the bite. */
+private fun DrawScope.drawCrescent(center: Offset, radius: Float) {
+    val bounds = androidx.compose.ui.geometry.Rect(center.x - radius * 2, center.y - radius * 2, center.x + radius * 2, center.y + radius * 2)
+    drawContext.canvas.saveLayer(bounds, androidx.compose.ui.graphics.Paint())
+    drawCircle(Color(0xFFEFF2FF), radius = radius, center = center)
+    drawCircle(Color.Black, radius = radius * 0.86f, center = Offset(center.x + radius * 0.45f, center.y - radius * 0.2f), blendMode = androidx.compose.ui.graphics.BlendMode.Clear)
+    drawContext.canvas.restore()
+}

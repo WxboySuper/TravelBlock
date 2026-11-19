@@ -132,13 +132,10 @@ fun ArrivalScene(location: ArrivalLocation, modifier: Modifier = Modifier) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            // Landing plane gliding in from the left.
-            val px = w * (-0.1f + 1.2f * glide)
-            val py = h * (0.18f + 0.22f * glide)
-            val body = Color(0xFFF4F1EA)
-            drawRoundRect(body, Offset(px, py), Size(w * 0.13f, h * 0.045f), CornerRadius(14f))
-            drawRect(Color(0xFFCF6F4A), Offset(px + w * 0.015f, py - h * 0.04f), Size(w * 0.02f, h * 0.045f))
-            drawLine(Color(0xFFB5B2AC), Offset(px + w * 0.05f, py + h * 0.02f), Offset(px + w * 0.09f, py + h * 0.07f), strokeWidth = 6f)
+            // Landing plane gliding in from the left, nose slightly down, gear coming out on final.
+            val plane = AirlinerStyle(Color(0xFFF4F1EA), Color(0xFFB5B2AC), Color(0xFFCF6F4A), Color(0xFF2A2630))
+            val position = Offset(w * (-0.1f + 1.2f * glide), h * (0.2f + 0.22f * glide))
+            drawAirliner(position, w * 0.22f, plane, AirlinerPose(facingRight = true, pitchDegrees = 5f, gearDown = glide > 0.55f))
             val base = h * 0.84f
             drawArrivalSkyline(ArrivalSkylineStyle(location.cityCode, night))
             drawRect(Color(0xFF1B1D2A), Offset(0f, base), Size(w, h - base))

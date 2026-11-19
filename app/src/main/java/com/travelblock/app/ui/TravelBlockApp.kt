@@ -1,7 +1,9 @@
 package com.travelblock.app.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -198,6 +200,7 @@ private fun TravelBlockShell(
     runtime: TravelBlockRuntime,
 ) {
     Scaffold(
+        contentWindowInsets = if (isImmersiveRoute(currentRoute)) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
         bottomBar = { TravelBlockBottomBarHost(navController, currentRoute, runtime.state.activeFlight != null) },
     ) { innerPadding ->
         TravelBlockNavGraph(navController, runtime, Modifier.padding(innerPadding))
@@ -224,6 +227,14 @@ private fun TravelBlockBottomBarHost(
         )
     }
 }
+
+/** Screens whose scenery runs behind the status bar and which pad their own content for system bars. */
+private fun isImmersiveRoute(currentRoute: String?): Boolean =
+    currentRoute in setOf(
+        TravelBlockDestination.Home.route,
+        TravelBlockDestination.Cockpit.route,
+        TravelBlockDestination.Arrival.route,
+    )
 
 private fun shouldShowBottomBar(currentRoute: String?): Boolean =
     currentRoute !in setOf(

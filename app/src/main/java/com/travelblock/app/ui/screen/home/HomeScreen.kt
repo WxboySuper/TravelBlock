@@ -45,6 +45,7 @@ import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.ui.components.Kicker
+import com.travelblock.app.ui.components.LightStatusBarIcons
 import com.travelblock.app.ui.components.MapStop
 import com.travelblock.app.ui.components.RouteStops
 import com.travelblock.app.ui.components.PrimaryButton
@@ -114,6 +115,7 @@ fun HomeScreenContent(
     onLoadMoreRoutes: () -> Unit = {},
 ) {
     val hour = remember(uiState.currentAirport) { localSolarHour(Instant.now(), uiState.currentAirport?.longitude ?: -97.0) }
+    LightStatusBarIcons()
     Box(Modifier.fillMaxSize().background(Cream)) {
         TerminalWindows(hour, Modifier.fillMaxWidth().height(330.dp))
         Box(Modifier.fillMaxWidth().height(330.dp).background(Brush.verticalGradient(listOf(Color(0x66000000), Color.Transparent))))

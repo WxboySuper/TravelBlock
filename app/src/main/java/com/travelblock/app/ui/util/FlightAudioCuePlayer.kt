@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
 enum class FlightAudioCue { GateCleared, FlightStarted, FlightArrived, FlightDiverted, CheckIn, PrepareForLanding }
@@ -96,6 +97,7 @@ class FlightAudioCuePlayer(context: Context) {
     private var textToSpeech: TextToSpeech? = null
     private var ttsReady = false
     private var pendingSpeech: AnnouncementText? = null
+    private val ducking = AnnouncementDucking(appContext)
 
     fun play(cue: FlightAudioCue, settings: AudioPlaybackSettings, details: AnnouncementDetails? = null) {
         if (!settings.soundEnabled) return
@@ -163,12 +165,22 @@ class FlightAudioCuePlayer(context: Context) {
             val wanted = AnnouncerVoices.pick(engine, AnnouncerVoiceStore.saved(appContext))
             if (wanted != null && engine.voice?.name != wanted.name) engine.voice = wanted
         }
-        textToSpeech?.speak(text.value, TextToSpeech.QUEUE_ADD, null, text.value.hashCode().toString())
+        ducking.begin()
+        val result = textToSpeech?.speak(text.value, TextToSpeech.QUEUE_ADD, null, text.value.hashCode().toString())
+        if (result != TextToSpeech.SUCCESS) ducking.end()
     }
 
     private fun configureSpeech() {
         val engine = textToSpeech ?: return
         engine.language = Locale.US
+        engine.setAudioAttributes(AnnouncementDucking.ATTRIBUTES)
+        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) = Unit
+            override fun onDone(utteranceId: String?) = ducking.end()
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) = ducking.end()
+            override fun onStop(utteranceId: String?, interrupted: Boolean) = ducking.end()
+        })
         // Natural speech: the engine's own pace and pitch, with the most natural installed voice (or the one picked in Settings).
         engine.setSpeechRate(0.95f)
         engine.setPitch(1.0f)
@@ -177,6 +189,7 @@ class FlightAudioCuePlayer(context: Context) {
 
     fun release() {
         textToSpeech?.shutdown()
+        ducking.abandon()
         textToSpeech = null
         ttsReady = false
         pendingSpeech = null

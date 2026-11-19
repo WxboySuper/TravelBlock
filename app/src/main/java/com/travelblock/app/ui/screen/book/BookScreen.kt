@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -304,11 +305,7 @@ private fun CheckInSurface(
                 ),
             )
         }
-        if (!uiState.showSeatSelection) {
-            item { CheckInDeskScene(CheckInGateInfo(uiState.flightNumber, uiState.gate)) }
-        } else {
-            item { CabinAisleScene(longitude = origin.longitude) }
-        }
+        stepSceneItem(uiState, origin.longitude)
         item {
             BookingFlowTransition(step = flowStep, forward = ritualForward) { step ->
                 when (step) {
@@ -875,5 +872,16 @@ private fun PhaseHeader(
             style = MaterialTheme.typography.bodyMedium,
             color = WarmGray,
         )
+    }
+}
+
+/** The illustration that opens each check-in step: the check-in desk, then the cabin you will sit in. */
+private fun LazyListScope.stepSceneItem(uiState: BookingUiState, departureLongitude: Double) {
+    item {
+        if (uiState.showSeatSelection) {
+            CabinAisleScene(longitude = departureLongitude)
+        } else {
+            CheckInDeskScene(CheckInGateInfo(uiState.flightNumber, uiState.gate))
+        }
     }
 }

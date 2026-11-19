@@ -39,6 +39,8 @@ import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.ui.navigation.TravelBlockBottomBar
 import com.travelblock.app.ui.navigation.TravelBlockDestination
 import com.travelblock.app.ui.screen.arrival.ArrivalScreen
+import com.travelblock.app.ui.screen.arrival.ArrivalScreenActions
+import com.travelblock.app.ui.screen.diversion.DiversionScreenActions
 import com.travelblock.app.ui.screen.book.BookScreen
 import com.travelblock.app.ui.screen.book.QuickBoardingScreen
 import com.travelblock.app.ui.screen.book.createQuickBoardingPass
@@ -431,9 +433,11 @@ private fun NavGraphBuilder.arrivalRoute(
         ArrivalScreen(
             arrivalSummary = runtime.state.arrivalSummary,
             homeAirportCode = runtime.settings.homeAirportCode,
-            onContinueJourney = { navigateToHome(navController) },
-            onViewLogbook = { navigateToLogbook(navController) },
-            todoistRepository = runtime.container.todoistRepository,
+            actions = ArrivalScreenActions(
+                continueJourney = { navigateToHome(navController) },
+                viewLogbook = { navigateToLogbook(navController) },
+                todoistRepository = runtime.container.todoistRepository,
+            ),
         )
     }
 }
@@ -445,10 +449,12 @@ private fun NavGraphBuilder.diversionRoute(
     composable(TravelBlockDestination.Diversion.route) {
         DiversionScreen(
             diversionSummary = runtime.state.diversionSummary,
-            onReturnHome = { navigateToHome(navController) },
-            onTryAgain = { navigateToHome(navController) },
-            onViewLogbook = { navigateToLogbook(navController) },
-            todoistRepository = runtime.container.todoistRepository,
+            actions = DiversionScreenActions(
+                returnHome = { navigateToHome(navController) },
+                tryAgain = { navigateToHome(navController) },
+                viewLogbook = { navigateToLogbook(navController) },
+                todoistRepository = runtime.container.todoistRepository,
+            ),
         )
     }
 }

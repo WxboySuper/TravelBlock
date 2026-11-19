@@ -39,48 +39,91 @@ fun TodoistTaskPicker(
     onTaskSelected: (TodoistTask?) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    if (repository == null) return
+    repository?.let { ConnectedTodoistTaskPicker(it, selectedId, onTaskSelected, onOpenSettings) }
+}
+
+@Composable
+private fun ConnectedTodoistTaskPicker(
+    repository: TodoistRepository,
+    selectedId: String?,
+    onTaskSelected: (TodoistTask?) -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val connected by repository.isConnected.collectAsState(initial = false)
+    PaperCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Focus task", style = MaterialTheme.typography.titleMedium, color = Ink)
+            if (!connected) {
+                TodoistDisconnectedRow(onOpenSettings)
+            } else {
+                ConnectedTaskList(repository, selectedId, onTaskSelected)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodoistDisconnectedRow(onOpenSettings: () -> Unit) {
+    Text("Todoist isn't connected yet.", color = WarmGray)
+    SecondaryButton("Connect Todoist in Settings", onClick = onOpenSettings)
+}
+
+@Composable
+private fun ConnectedTaskList(
+    repository: TodoistRepository,
+    selectedId: String?,
+    onTaskSelected: (TodoistTask?) -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var tasks by remember { mutableStateOf(emptyList<TodoistTask>()) }
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    PaperCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Focus task", style = MaterialTheme.typography.titleMedium, color = Ink)
-            if (!connected) {
-                Text("Todoist isn't connected yet.", color = WarmGray)
-                SecondaryButton("Connect Todoist in Settings", onClick = onOpenSettings)
-            } else {
-                Text(
-                    tasks.firstOrNull { it.id == selectedId }?.content ?: "No task selected",
-                    color = WarmGray,
-                )
-                SecondaryButton(
-                    if (expanded) "Close task list" else "Fly on a Todoist task",
-                    onClick = {
-                        expanded = !expanded
-                        if (expanded) scope.launch {
-                            when (val result = repository.loadTasks()) {
-                                is TodoistResult.Success -> tasks = result.value
-                                is TodoistResult.Failure -> message = result.message
-                            }
-                        }
-                    },
-                )
-                if (expanded) {
-                    OutlinedTextField(query, { query = it }, label = { Text("Search tasks") }, modifier = Modifier.fillMaxWidth())
-                    Text("No task", Modifier.fillMaxWidth().clickable { onTaskSelected(null) }.padding(10.dp))
-                    tasks.filter { it.content.contains(query, ignoreCase = true) }.forEach { task ->
-                        TaskRow(task, selectedId == task.id) { onTaskSelected(task) }
-                    }
-                    message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    Text(tasks.firstOrNull { it.id == selectedId }?.content ?: "No task selected", color = WarmGray)
+    SecondaryButton(
+        if (expanded) "Close task list" else "Fly on a Todoist task",
+        onClick = {
+            expanded = !expanded
+            if (expanded) scope.launch {
+                when (val result = repository.loadTasks()) {
+                    is TodoistResult.Success -> tasks = result.value
+                    is TodoistResult.Failure -> message = result.message
                 }
             }
-        }
+        },
+    )
+    if (expanded) {
+        TaskSearchResults(
+            state = TaskSearchState(tasks, query, selectedId, message),
+            actions = TaskSearchActions({ query = it }, onTaskSelected),
+        )
     }
 }
+
+@Composable
+private fun TaskSearchResults(
+    state: TaskSearchState,
+    actions: TaskSearchActions,
+) {
+    OutlinedTextField(state.query, actions.queryChanged, label = { Text("Search tasks") }, modifier = Modifier.fillMaxWidth())
+    Text("No task", Modifier.fillMaxWidth().clickable { actions.taskSelected(null) }.padding(10.dp))
+    state.tasks.filter { it.content.contains(state.query, ignoreCase = true) }.forEach { task ->
+        TaskRow(task, state.selectedId == task.id) { actions.taskSelected(task) }
+    }
+    state.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+}
+
+private data class TaskSearchState(
+    val tasks: List<TodoistTask>,
+    val query: String,
+    val selectedId: String?,
+    val message: String?,
+)
+
+private data class TaskSearchActions(
+    val queryChanged: (String) -> Unit,
+    val taskSelected: (TodoistTask?) -> Unit,
+)
 
 @Composable
 private fun TaskRow(task: TodoistTask, selected: Boolean, onClick: () -> Unit) {

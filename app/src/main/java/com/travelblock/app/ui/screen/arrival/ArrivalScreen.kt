@@ -56,18 +56,22 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
+data class ArrivalScreenActions(
+    val continueJourney: () -> Unit,
+    val viewLogbook: () -> Unit,
+    val todoistRepository: TodoistRepository?,
+)
+
 @Composable
 fun ArrivalScreen(
     arrivalSummary: ArrivalSummary?,
     homeAirportCode: String,
-    onContinueJourney: () -> Unit,
-    onViewLogbook: () -> Unit,
-    todoistRepository: TodoistRepository? = null,
+    actions: ArrivalScreenActions,
 ) {
     var showReturnHomePlaceholder by remember { mutableStateOf(false) }
 
     if (arrivalSummary == null) {
-        EmptyArrivalState(onContinueJourney)
+        EmptyArrivalState(actions.continueJourney)
         return
     }
 
@@ -84,7 +88,10 @@ fun ArrivalScreen(
             ArrivalScene(ArrivalLocation(arrivalSummary.destination.displayCode, arrivalSummary.destination.longitude))
             WelcomeHeader(arrivalSummary.destination)
             RoutePostcard(arrivalSummary)
-            TodoistArrivalCard(arrivalSummary.todoistTaskId, arrivalSummary.todoistTaskContent, todoistRepository)
+            TodoistArrivalCard(
+                task = arrivalSummary.todoistTaskId?.let { id -> arrivalSummary.todoistTaskContent?.let { TodoistArrivalTask(id, it) } },
+                repository = actions.todoistRepository,
+            )
             MetricsRow(arrivalSummary)
             if (arrivalSummary.focusObjective.isNotBlank() || arrivalSummary.focusTag.isNotBlank()) {
                 FocusRecap(arrivalSummary.focusTag, arrivalSummary.focusObjective)
@@ -100,8 +107,8 @@ fun ArrivalScreen(
             }
         }
         ArrivalActions(
-            onContinueJourney = onContinueJourney,
-            onViewLogbook = onViewLogbook,
+            onContinueJourney = actions.continueJourney,
+            onViewLogbook = actions.viewLogbook,
             onReturnHome = { showReturnHomePlaceholder = true },
             modifier = Modifier.align(Alignment.BottomCenter),
         )

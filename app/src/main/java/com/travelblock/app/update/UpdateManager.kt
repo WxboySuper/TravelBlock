@@ -18,12 +18,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URL
 
 private val Context.updateStore by preferencesDataStore("app_updates")
 
@@ -46,7 +44,7 @@ class UpdateManager private constructor(context: Context) {
     private val mutableLastCheck = MutableStateFlow(0L)
     val lastCheckMillis: StateFlow<Long> = mutableLastCheck.asStateFlow()
     private var pendingInfo: UpdateInfo? = null
-    private var downloadedFile: File? = null
+    private val downloader by lazy { ApkDownloader(app) }
 
     init { InstallStatusReceiver.manager = this }
 
@@ -115,7 +113,7 @@ class UpdateManager private constructor(context: Context) {
                 val ratio = if (progress.expected > 0) progress.received.toFloat() / progress.expected else 0f
                 mutableState.value = UpdateUiState.Downloading(ratio)
             }
-            installPackage(requireNotNull(downloadedFile))
+            installPackage(requireNotNull(downloader.file))
         }.onFailure { error ->
             Log.w("TravelBlockUpdate", "Update install failed", error)
             openReleasePage(info)
@@ -123,29 +121,10 @@ class UpdateManager private constructor(context: Context) {
         }
     }
 
-    fun download(info: UpdateInfo): Flow<DownloadProgress> = flow {
-        val directory = File(app.cacheDir, "updates").apply { mkdirs() }
-        directory.listFiles()?.forEach(File::delete)
-        val file = File(directory, "TravelBlock-${info.build}.apk")
-        val connection = URL(info.apkUrl).openConnection().apply { connectTimeout = 5_000; readTimeout = 5_000 }
-        try {
-            connection.getInputStream().use { input -> file.outputStream().use { output ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                var received = 0L
-                val expected = info.sizeBytes.takeIf { it > 0 } ?: connection.contentLengthLong
-                emit(DownloadProgress(0, expected))
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    output.write(buffer, 0, count)
-                    received += count
-                    emit(DownloadProgress(received, expected))
-                }
-                if (info.sizeBytes > 0 && received != info.sizeBytes) error("APK size mismatch")
-            } }
-            downloadedFile = file
-        } catch (error: Throwable) { file.delete(); throw error }
-    }.flowOn(Dispatchers.IO)
+    fun download(info: UpdateInfo): Flow<DownloadProgress> = downloader.download(info).onEach { progress ->
+        val ratio = if (progress.expected > 0) progress.received.toFloat() / progress.expected else 0f
+        mutableState.value = UpdateUiState.Downloading(ratio)
+    }
 
     private fun installPackage(file: File) {
         val installer = app.packageManager.packageInstaller

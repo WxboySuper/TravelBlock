@@ -38,12 +38,15 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           SHORT=$(git rev-parse --short HEAD)
           PUBLISHED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          FIRST_LINE="build=${BUILD_NUMBER} sha=${SHORT} published=${PUBLISHED}"
+          SECOND_LINE="Build of commit ${SHORT}. Open this page on your phone and tap TravelBlock.apk to install."
+          printf '%s\n%s\n' "$FIRST_LINE" "$SECOND_LINE" > release-notes.txt
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest TravelBlock.apk \
             --title "TravelBlock latest build" \
-            --notes "build=${{ github.run_number }} sha=$SHORT published=$PUBLISHED
-Build of commit $SHORT. Open this page on your phone and tap TravelBlock.apk to install." \
+            --notes-file release-notes.txt \
             --prerelease --target "$GITHUB_SHA"

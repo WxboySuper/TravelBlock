@@ -113,11 +113,13 @@ fun CockpitScreen(
 
     CockpitScreenContent(
         uiState = viewModel.uiState,
-        onDivertRequested = viewModel::requestDivert,
-        onDismissDivert = viewModel::dismissDivertDialog,
-        onConfirmDivert = viewModel::confirmDivert,
-        onSkipLayover = viewModel::skipLayover,
-        onBoardNextLeg = viewModel::boardNextLeg,
+        callbacks = CockpitContentCallbacks(
+            onDivertRequested = viewModel::requestDivert,
+            onDismissDivert = viewModel::dismissDivertDialog,
+            onConfirmDivert = viewModel::confirmDivert,
+            onSkipLayover = viewModel::skipLayover,
+            onBoardNextLeg = viewModel::boardNextLeg,
+        ),
     )
 }
 
@@ -164,6 +166,14 @@ data class CockpitActions(
     val onFlightUpdated: (ActiveFlight) -> Unit = {},
 )
 
+data class CockpitContentCallbacks(
+    val onDivertRequested: () -> Unit,
+    val onDismissDivert: () -> Unit,
+    val onConfirmDivert: () -> Unit,
+    val onSkipLayover: () -> Unit = {},
+    val onBoardNextLeg: () -> Unit = {},
+)
+
 private fun ActiveFlight.toArrivalSummary(airports: List<Airport>): ArrivalSummary {
     val legReward = FlightRewardCalculator.completedReward(this)
     val completionBonus = if (isItinerary) com.travelblock.app.domain.engine.ItineraryRewards.COMPLETION_BONUS else 0
@@ -177,11 +187,7 @@ private fun ActiveFlight.toArrivalSummary(airports: List<Airport>): ArrivalSumma
 @Composable
 fun CockpitScreenContent(
     uiState: CockpitUiState,
-    onDivertRequested: () -> Unit,
-    onDismissDivert: () -> Unit,
-    onConfirmDivert: () -> Unit,
-    onSkipLayover: () -> Unit = {},
-    onBoardNextLeg: () -> Unit = {},
+    callbacks: CockpitContentCallbacks,
 ) {
     TravelBlockTheme(darkTheme = true) {
         val flight = uiState.activeFlight
@@ -190,12 +196,12 @@ fun CockpitScreenContent(
             EmptyFlightDeck()
         } else {
             if (uiState.showDivertDialog) {
-                DivertDialog(flight, uiState, onDismissDivert, onConfirmDivert)
+                DivertDialog(flight, uiState, callbacks.onDismissDivert, callbacks.onConfirmDivert)
             }
             if (uiState.status == ActiveFlightStatus.Layover) {
-                LayoverDeck(flight, uiState, onSkipLayover, onBoardNextLeg)
+                LayoverDeck(flight, uiState, callbacks.onSkipLayover, callbacks.onBoardNextLeg)
             } else {
-                ActiveCockpit(flight, uiState, onDivertRequested)
+                ActiveCockpit(flight, uiState, callbacks.onDivertRequested)
             }
         }
     }

@@ -326,7 +326,6 @@ private fun startQuickFlight(pass: BoardingPass, runtime: TravelBlockRuntime, na
     runtime.coroutineScope.launch {
         runtime.container.activeFlightSessionRepository.saveActiveFlight(flight)
         runtime.container.landingAlarmScheduler.schedule(flight)
-        runtime.container.liveUpdateRefreshScheduler.schedule(flight)
         navigateToCockpit(navController, popHome = true)
     }
 }
@@ -360,7 +359,6 @@ private fun startFocusFlight(
     runtime.coroutineScope.launch {
         runtime.container.activeFlightSessionRepository.saveActiveFlight(activeFlight)
         runtime.container.landingAlarmScheduler.schedule(activeFlight)
-        runtime.container.liveUpdateRefreshScheduler.schedule(activeFlight)
         navigateToCockpit(navController, popHome = true)
         val transaction = createSeatUpgradeTransaction(activeFlight, Instant.now())
         if (transaction != null) runtime.container.pointsRepository.insertTransaction(transaction)
@@ -669,6 +667,7 @@ private fun LiveFlightUpdatesEffect(
 ) {
     LaunchedEffect(flight?.startedAt) {
         if (flight == null) return@LaunchedEffect
+        if (!container.liveFlightNotificationHelper.canPostNotifications()) return@LaunchedEffect
         container.liveFlightNotificationHelper.show(flight)
         container.liveUpdateRefreshScheduler.schedule(flight)
         while (true) {

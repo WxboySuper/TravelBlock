@@ -32,7 +32,7 @@ class LiveFlightNotificationHelper(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun show(flight: ActiveFlight, now: Instant = Instant.now()) {
-        if (!canPost()) return
+        if (!canPostNotifications()) return
         createChannel()
         val model = FlightLiveUpdateModel.create(flight, now)
         if (model.phase == FlightLivePhase.ARRIVED) {
@@ -47,7 +47,7 @@ class LiveFlightNotificationHelper(private val context: Context) {
         notificationManager.cancel(NOTIFICATION_ID)
     }
 
-    private fun canPost(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+    fun canPostNotifications(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     private fun buildNotification(flight: ActiveFlight, model: FlightLiveUpdate): android.app.Notification {

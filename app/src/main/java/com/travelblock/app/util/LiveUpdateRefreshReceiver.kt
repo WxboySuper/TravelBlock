@@ -24,6 +24,10 @@ class LiveUpdateRefreshReceiver : BroadcastReceiver() {
 
     private suspend fun refresh(context: Context, expectedStart: Long) {
         val container = TravelBlockContainer(context)
+        if (!container.liveFlightNotificationHelper.canPostNotifications()) {
+            LiveUpdateRefreshScheduler(context).cancel()
+            return
+        }
         val flight = container.activeFlightSessionRepository.getActiveFlight()
         if (flight == null || flight.startedAt.toEpochMilli() != expectedStart) return
         if (!flight.plannedArrivalAt.isAfter(Instant.now())) {

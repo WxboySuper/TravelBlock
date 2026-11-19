@@ -224,71 +224,103 @@ class CockpitViewModel(
     }
 
     private fun saveResult(result: FlightResultRequest) {
-        val flight = result.flight
-        val status = result.status
-        val flightLogRepository = flightLogRepository ?: return
-        val pointsRepository = pointsRepository ?: return
-        val settingsRepository = settingsRepository ?: return
+        if (flightLogRepository == null || pointsRepository == null || settingsRepository == null) return
         if (resultSaved) return
         resultSaved = true
+        viewModelScope.launch { persistResult(result) }
+    }
 
+    private suspend fun persistResult(result: FlightResultRequest) {
+        val flight = result.flight
+        val status = result.status
+        val flightLogs = flightLogRepository ?: return
+        val points = pointsRepository ?: return
+        val settings = settingsRepository ?: return
         val resolvedPointsEarned = result.pointsEarned ?: when (status) {
             FlightLogStatus.COMPLETED -> FlightRewardCalculator.completedReward(flight)
             FlightLogStatus.DIVERTED -> 0
-        }
-        val loggedDurationMinutes = when (status) {
-            FlightLogStatus.COMPLETED -> flight.durationMinutes
-            FlightLogStatus.DIVERTED -> result.focusedDuration?.toMinutes()?.toInt() ?: 0
         }
         val flightId = UUID.nameUUIDFromBytes(
             "${flight.flightNumber}:${flight.startedAt.toEpochMilli()}".toByteArray(),
         ).toString()
         val endedAt = clock.instant()
+        flightLogs.insertFlightLog(buildFlightLog(result, flightId, resolvedPointsEarned, endedAt.toEpochMilli()))
+        points.insertTransaction(buildFlightPoints(result, flightId, resolvedPointsEarned, endedAt.toEpochMilli()))
+        saveTripBonus(points, result, flightId, endedAt.toEpochMilli())
+        saveArrivalAirport(settings, result, flight)
+        saveSessionAfterResult(result.sessionAfter)
+    }
 
-        viewModelScope.launch {
-            flightLogRepository.insertFlightLog(
-                FlightLogEntity(
-                    id = flightId,
-                    flightNumber = flight.flightNumber,
-                    originCode = flight.origin.code,
-                    destinationCode = result.landedAirport?.code ?: flight.destination.code,
-                    durationMinutes = loggedDurationMinutes,
-                    distanceMiles = flight.distanceMiles,
-                    status = status.name,
-                    startedAt = flight.startedAt.toEpochMilli(),
-                    endedAt = endedAt.toEpochMilli(),
-                    seat = flight.seat.label,
-                    pointsEarned = resolvedPointsEarned,
-                    focusObjective = flight.focusObjective,
-                    focusTag = flight.focusTag,
-                    todoistTaskId = flight.todoistTaskId,
-                    todoistTaskContent = flight.todoistTaskContent,
-                ),
-            )
-            pointsRepository.insertTransaction(
-                PointsTransactionEntity(
-                    id = flightId,
-                    amount = resolvedPointsEarned,
-                    reason = if (status == FlightLogStatus.COMPLETED) "Completed flight" else "Diverted flight",
-                    createdAt = endedAt.toEpochMilli(),
-                    relatedFlightId = flightId,
-                ),
-            )
-            if (result.tripBonus > 0) pointsRepository.insertTransaction(
-                PointsTransactionEntity(
-                    id = "$flightId-trip-bonus",
-                    amount = result.tripBonus,
-                    reason = "Completed long-haul trip",
-                    createdAt = endedAt.toEpochMilli(),
-                    relatedFlightId = flightId,
-                ),
-            )
-            if (status == FlightLogStatus.COMPLETED || status == FlightLogStatus.DIVERTED) {
-                settingsRepository.setCurrentAirportCode(AirportCode(result.landedAirport?.code ?: flight.destination.code))
-            }
-            if (result.sessionAfter != null) activeFlightSessionRepository?.saveActiveFlight(result.sessionAfter)
-            else activeFlightSessionRepository?.clearActiveFlight()
-        }
+    private fun buildFlightLog(
+        result: FlightResultRequest,
+        flightId: String,
+        pointsEarned: Int,
+        endedAtMillis: Long,
+    ): FlightLogEntity {
+        val flight = result.flight
+        val duration = result.focusedDuration?.toMinutes()?.toInt() ?: flight.durationMinutes
+        return FlightLogEntity(
+            id = flightId,
+            flightNumber = flight.flightNumber,
+            originCode = flight.origin.code,
+            destinationCode = result.landedAirport?.code ?: flight.destination.code,
+            durationMinutes = duration,
+            distanceMiles = flight.distanceMiles,
+            status = result.status.name,
+            startedAt = flight.startedAt.toEpochMilli(),
+            endedAt = endedAtMillis,
+            seat = flight.seat.label,
+            pointsEarned = pointsEarned,
+            focusObjective = flight.focusObjective,
+            focusTag = flight.focusTag,
+            todoistTaskId = flight.todoistTaskId,
+            todoistTaskContent = flight.todoistTaskContent,
+        )
+    }
+
+    private suspend fun buildFlightPoints(
+        result: FlightResultRequest,
+        flightId: String,
+        pointsEarned: Int,
+        endedAtMillis: Long,
+    ) = PointsTransactionEntity(
+        id = flightId,
+        amount = pointsEarned,
+        reason = if (result.status == FlightLogStatus.COMPLETED) "Completed flight" else "Diverted flight",
+        createdAt = endedAtMillis,
+        relatedFlightId = flightId,
+    )
+
+    private suspend fun saveTripBonus(
+        points: PointsRepository,
+        result: FlightResultRequest,
+        flightId: String,
+        endedAtMillis: Long,
+    ) {
+        if (result.tripBonus <= 0) return
+        points.insertTransaction(
+            PointsTransactionEntity(
+                id = "$flightId-trip-bonus",
+                amount = result.tripBonus,
+                reason = "Completed long-haul trip",
+                createdAt = endedAtMillis,
+                relatedFlightId = flightId,
+            ),
+        )
+    }
+
+    private suspend fun saveArrivalAirport(
+        settings: SettingsRepository,
+        result: FlightResultRequest,
+        flight: ActiveFlight,
+    ) {
+        if (result.status !in setOf(FlightLogStatus.COMPLETED, FlightLogStatus.DIVERTED)) return
+        settings.setCurrentAirportCode(AirportCode(result.landedAirport?.code ?: flight.destination.code))
+    }
+
+    private suspend fun saveSessionAfterResult(sessionAfter: ActiveFlight?) {
+        if (sessionAfter != null) activeFlightSessionRepository?.saveActiveFlight(sessionAfter)
+        else activeFlightSessionRepository?.clearActiveFlight()
     }
 
     private fun ActiveFlight?.toUiState(

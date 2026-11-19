@@ -107,24 +107,9 @@ fun CockpitScreen(
         ),
     )
 
-    var arrivalHandled by remember(activeFlight) { mutableStateOf(false) }
-    var diversionHandled by remember(activeFlight) { mutableStateOf(false) }
-
-    LaunchedEffect(viewModel.uiState.status, viewModel.uiState.activeFlight) {
-        val flight = viewModel.uiState.activeFlight
-        if (flight != null) actions.onFlightUpdated(flight)
-        if (!arrivalHandled && flight != null && viewModel.uiState.status == ActiveFlightStatus.Arrived) {
-            arrivalHandled = true
-            actions.onFlightArrived(flight.toArrivalSummary(container.airportRepository.getAllAirports()))
-        }
-    }
-    LaunchedEffect(viewModel.uiState.status, viewModel.uiState.diversionSummary) {
-        val diversionSummary = viewModel.uiState.diversionSummary
-        if (!diversionHandled && diversionSummary != null && viewModel.uiState.status == ActiveFlightStatus.Diverted) {
-            diversionHandled = true
-            actions.onFlightDiverted(diversionSummary)
-        }
-    }
+    FlightUpdateEffect(viewModel.uiState.activeFlight, actions.onFlightUpdated)
+    ArrivalEffect(viewModel.uiState.activeFlight, viewModel.uiState.status, container, actions)
+    DiversionEffect(viewModel.uiState.status, viewModel.uiState.diversionSummary, actions.onFlightDiverted)
 
     CockpitScreenContent(
         uiState = viewModel.uiState,
@@ -134,6 +119,42 @@ fun CockpitScreen(
         onSkipLayover = viewModel::skipLayover,
         onBoardNextLeg = viewModel::boardNextLeg,
     )
+}
+
+@Composable
+private fun FlightUpdateEffect(flight: ActiveFlight?, onFlightUpdated: (ActiveFlight) -> Unit) {
+    LaunchedEffect(flight) { flight?.let(onFlightUpdated) }
+}
+
+@Composable
+private fun ArrivalEffect(
+    flight: ActiveFlight?,
+    status: ActiveFlightStatus,
+    container: TravelBlockContainer,
+    actions: CockpitActions,
+) {
+    var arrivalHandled by remember(flight) { mutableStateOf(false) }
+    LaunchedEffect(flight, status) {
+        if (flight != null && status == ActiveFlightStatus.Arrived && !arrivalHandled) {
+            arrivalHandled = true
+            actions.onFlightArrived(flight.toArrivalSummary(container.airportRepository.getAllAirports()))
+        }
+    }
+}
+
+@Composable
+private fun DiversionEffect(
+    status: ActiveFlightStatus,
+    summary: DiversionSummary?,
+    onFlightDiverted: (DiversionSummary) -> Unit,
+) {
+    var diversionHandled by remember(summary) { mutableStateOf(false) }
+    LaunchedEffect(status, summary) {
+        if (status == ActiveFlightStatus.Diverted && summary != null && !diversionHandled) {
+            diversionHandled = true
+            onFlightDiverted(summary)
+        }
+    }
 }
 
 data class CockpitActions(

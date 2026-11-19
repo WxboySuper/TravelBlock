@@ -219,14 +219,13 @@ private fun BoardBody(uiState: HomeUiState, onRouteSelected: (String) -> Unit, o
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DurationTabs(uiState: HomeUiState, onDurationSelected: (Int) -> Unit) {
-    // Two rows so the long haul lengths are visible without scrolling.
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        uiState.availableDurationsMinutes.chunked(5).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                row.forEach { minutes -> DurationTab(minutes, minutes == uiState.selectedDurationMinutes, onDurationSelected) }
-            }
+    // Tabs wrap onto as many rows as the screen and text size need; each label stays on one line.
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        uiState.availableDurationsMinutes.forEach { minutes ->
+            DurationTab(minutes, minutes == uiState.selectedDurationMinutes, onDurationSelected)
         }
     }
 }
@@ -237,11 +236,13 @@ private fun DurationTab(minutes: Int, selected: Boolean, onDurationSelected: (In
         durationTabLabel(minutes),
         style = MaterialTheme.typography.labelMedium,
         color = if (selected) BoardBackground else Lamp,
+        maxLines = 1,
+        softWrap = false,
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(if (selected) Lamp else Color.Transparent)
             .clickable { onDurationSelected(minutes) }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     )
 }
 

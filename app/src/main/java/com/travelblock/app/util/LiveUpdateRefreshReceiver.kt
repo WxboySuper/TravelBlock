@@ -30,7 +30,7 @@ class LiveUpdateRefreshReceiver : BroadcastReceiver() {
         }
         val flight = container.activeFlightSessionRepository.getActiveFlight()
         if (flight == null || flight.startedAt.toEpochMilli() != expectedStart) return
-        if (!flight.plannedArrivalAt.isAfter(Instant.now())) {
+        if (flight.status != com.travelblock.app.domain.model.ActiveFlightStatus.Layover && !flight.plannedArrivalAt.isAfter(Instant.now())) {
             LiveUpdateRefreshScheduler(context).cancel()
             LiveFlightNotificationHelper(context).cancel()
             return

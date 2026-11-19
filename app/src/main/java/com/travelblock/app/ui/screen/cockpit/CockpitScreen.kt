@@ -95,16 +95,8 @@ fun CockpitScreen(
     actions: CockpitActions,
 ) {
     val viewModel: CockpitViewModel = viewModel(
-        key = activeFlight?.let { "${it.flightNumber}-${it.startedAt}" } ?: "empty-cockpit",
-        factory = CockpitViewModelFactory(
-            activeFlight = activeFlight,
-            flightLogRepository = container.flightLogRepository,
-            pointsRepository = container.pointsRepository,
-            settingsRepository = container.settingsRepository,
-            activeFlightSessionRepository = container.activeFlightSessionRepository,
-            airports = container.airportRepository.getAllAirports(),
-            onPrepareForLanding = actions.onPrepareForLanding,
-        ),
+        key = activeFlight.viewModelKey(),
+        factory = container.cockpitViewModelFactory(activeFlight, actions),
     )
 
     FlightUpdateEffect(viewModel.uiState.activeFlight, actions.onFlightUpdated)
@@ -122,6 +114,21 @@ fun CockpitScreen(
         ),
     )
 }
+
+private fun ActiveFlight?.viewModelKey(): String = this?.let { "$flightNumber-$startedAt" } ?: "empty-cockpit"
+
+private fun TravelBlockContainer.cockpitViewModelFactory(
+    activeFlight: ActiveFlight?,
+    actions: CockpitActions,
+) = CockpitViewModelFactory(
+    activeFlight = activeFlight,
+    flightLogRepository = flightLogRepository,
+    pointsRepository = pointsRepository,
+    settingsRepository = settingsRepository,
+    activeFlightSessionRepository = activeFlightSessionRepository,
+    airports = airportRepository.getAllAirports(),
+    onPrepareForLanding = actions.onPrepareForLanding,
+)
 
 @Composable
 private fun FlightUpdateEffect(flight: ActiveFlight?, onFlightUpdated: (ActiveFlight) -> Unit) {

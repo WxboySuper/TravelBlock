@@ -15,6 +15,7 @@ import com.travelblock.app.domain.engine.FlightRewardCalculator
 import com.travelblock.app.domain.engine.TripSuggester
 import com.travelblock.app.domain.engine.TripSuggestion
 import com.travelblock.app.domain.engine.TripWish
+import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.DraftFlightBooking
 import com.travelblock.app.domain.model.FlightRoute
 import com.travelblock.app.domain.model.RouteAvailabilityResult
@@ -85,7 +86,7 @@ class HomeViewModel(
     /** A few trips for this wish to choose from, built through real hubs. Cheap enough to ask on every tap. */
     fun tripOptions(wish: TripWish): List<TripSuggestion> {
         val origin = uiState.currentAirport ?: return emptyList()
-        return TripSuggester.options(origin, airportRepository.getAllAirports(), wish)
+        return TripSuggester.options(origin, airportRepository.getAllAirports(), wish.copy(visited = uiState.visitedAirports))
     }
 
     fun draftFor(suggestion: TripSuggestion): DraftFlightBooking {
@@ -180,7 +181,10 @@ class HomeViewModel(
         viewModelScope.launch {
             repository.observeFlightLogs().collect { logs ->
                 val pilot = PilotProgressionEngine.summarize(logs)
+                val visited = pilot.airportsVisited.toSet()
                 uiState = uiState.copy(
+                    visitedAirports = visited,
+                    routes = uiState.routes.map { it.copy(isNew = it.isNewTo(visited)) },
                     pilotRankLabel = pilot.rank.rank.title,
                     pilotProgressLabel = pilot.rank.nextRank?.let {
                         "${formatRemaining(pilot.rank.hoursRemaining)} to ${it.title}"
@@ -256,8 +260,13 @@ class HomeViewModel(
             availabilityLabel = availability.toDisplayLabel(),
             legCount = plan?.legCount ?: 1,
             breakMinutes = plan?.breakMinutes ?: 0,
+            isNew = destination.isNewTo(uiState.visitedAirports),
         )
     }
+
+    private fun Airport.isNewTo(visited: Set<String>) = listOfNotNull(code, icao, iata).none { it in visited }
+
+    private fun HomeRouteCardUiModel.isNewTo(visited: Set<String>) = id !in visited && destinationIcao !in visited && destinationCode !in visited
 
     private fun RouteAvailabilityResult.toDisplayLabel(): String {
         return when (this) {

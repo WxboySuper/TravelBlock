@@ -52,11 +52,11 @@ private val PlannerMinutes = listOf(45, 60, 120, 180, 240, 360, 480)
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TripPlannerPanel(origin: Airport?, actions: TripPlannerHomeActions) {
+fun TripPlannerPanel(origin: Airport?, visitedCount: Int, actions: TripPlannerHomeActions) {
     var minutes by remember { mutableIntStateOf(120) }
     var hubs by remember { mutableStateOf(true) }
     var major by remember { mutableStateOf(true) }
-    val options = remember(minutes, hubs, major, origin?.code) { actions.options(TripWish(minutes, hubs, major)) }
+    val options = remember(minutes, hubs, major, origin?.code, visitedCount) { actions.options(TripWish(minutes, hubs, major)) }
     PaperCard(Modifier.padding(horizontal = 14.dp).fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Kicker("Trip planner", color = DuskBlue)
@@ -94,7 +94,10 @@ private fun OptionCard(suggestion: TripSuggestion, onChoose: () -> Unit) {
             .clickable(onClick = onChoose).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(route.destination.city.ifBlank { route.destination.name }, style = MaterialTheme.typography.titleMedium, color = Ink)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(route.destination.city.ifBlank { route.destination.name }, style = MaterialTheme.typography.titleMedium, color = Ink)
+            if (suggestion.isNew) NewPlaceTag()
+        }
         Text(suggestion.stops.joinToString("  to  ") { it.displayCode }, style = MaterialTheme.typography.labelLarge, color = DuskBlue)
         Text(planSummary(suggestion), style = MaterialTheme.typography.bodySmall, color = WarmGray)
     }

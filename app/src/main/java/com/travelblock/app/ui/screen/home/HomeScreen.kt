@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.travelblock.app.TravelBlockContainer
@@ -152,7 +153,7 @@ fun HomeScreenContent(
             } else {
                 DeparturesBoard(uiState, onDurationSelected, onRouteSelected, onLoadMoreRoutes)
                 uiState.selectedRoute?.let { RouteDetails(it, onBookSelectedRoute) }
-                TripPlannerPanel(uiState.currentAirport, planner)
+                TripPlannerPanel(uiState.currentAirport, uiState.visitedAirports.size, planner)
                 Spacer(Modifier.height(14.dp))
                 FastTrack(uiState.lastFlight != null, onQuickStart, onRebookLastFlight)
             }
@@ -268,13 +269,27 @@ private fun BoardRow(route: HomeRouteCardUiModel, selected: Boolean, onClick: ()
     ) {
         FlapText(route.destinationCode, length = 3, width = 24.dp, height = 36.dp, fontSize = 20, color = tint)
         Column(Modifier.weight(1f)) {
-            Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.92f), maxLines = 1)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.92f), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                if (route.isNew) NewPlaceTag()
+            }
             Text(route.boardStatus(), style = MaterialTheme.typography.labelSmall, color = if (selected) Lamp else BoardDim)
         }
         val time = route.durationMinutes.boardTime()
         FlapText(time.digits, length = time.digits.length, width = 22.dp, height = 34.dp, fontSize = 18, color = tint)
         Text(time.unit, style = MaterialTheme.typography.labelSmall, color = BoardDim)
     }
+}
+
+/** A small "NEW" tag for somewhere you have not landed before. */
+@Composable
+internal fun NewPlaceTag() {
+    Text(
+        "NEW",
+        style = MaterialTheme.typography.labelSmall,
+        color = Color(0xFF14131A),
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(Lamp).padding(horizontal = 7.dp, vertical = 1.dp),
+    )
 }
 
 private fun HomeRouteCardUiModel.boardStatus(): String = when {
@@ -307,6 +322,7 @@ private fun RouteDetails(route: HomeRouteCardUiModel, onBook: () -> Unit) {
                 Kicker("Your route")
                 Text("${route.originCode} to ${route.destinationCode}", style = MaterialTheme.typography.titleLarge, color = Ink)
                 Text(route.destinationName, style = MaterialTheme.typography.bodySmall, color = WarmGray, maxLines = 2)
+                if (route.isNew) Text("A new place for you", style = MaterialTheme.typography.labelMedium, color = Sage)
                 Spacer(Modifier.size(4.dp))
                 Text("${route.focusTimeLabel} / ${route.distanceLabel}", style = MaterialTheme.typography.labelMedium, color = Ink)
                 if (route.isLongHaul) {

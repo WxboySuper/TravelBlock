@@ -24,6 +24,11 @@ class ApkDownloader(context: Context) {
         }
     }.flowOn(Dispatchers.IO)
 
+    fun deleteDownloadedApks() {
+        cacheDirectory.listFiles()?.forEach(File::delete)
+        file = null
+    }
+
     private fun newDestination(build: Int): File {
         cacheDirectory.mkdirs()
         cacheDirectory.listFiles()?.forEach(File::delete)

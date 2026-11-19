@@ -23,7 +23,6 @@ import com.travelblock.app.util.NotificationHelper
 
 class MainActivity : ComponentActivity() {
     private val updates by lazy { TravelBlockContainer(applicationContext).updateManager }
-    private var firstResume = true
     private var openArrivalRequested by mutableStateOf(false)
     private val requestNotificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -32,7 +31,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         openArrivalRequested = intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_ARRIVAL, false)
-        lifecycleScope.launch { updates.check() }
         // The app is always the daylight journal, so system bar icons stay dark by default; screens with dark
         // scenery (Home, onboarding scenes, cockpit) switch to light icons themselves.
         val lightBars = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
@@ -60,9 +58,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        lifecycleScope.launch {
-            if (firstResume) firstResume = false else updates.checkOnForeground()
-            if (Build.VERSION.SDK_INT < 26 || packageManager.canRequestPackageInstalls()) updates.resumePendingInstall()
-        }
+        lifecycleScope.launch { updates.onForeground() }
     }
 }

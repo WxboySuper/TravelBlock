@@ -29,14 +29,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_file_paths" />
+        </provider>
         <receiver
             android:name=".util.LandingAlarmReceiver"
             android:exported="false" />
         <receiver
             android:name=".util.LiveUpdateRefreshReceiver"
-            android:exported="false" />
-        <receiver
-            android:name=".update.InstallStatusReceiver"
             android:exported="false" />
     </application>
 

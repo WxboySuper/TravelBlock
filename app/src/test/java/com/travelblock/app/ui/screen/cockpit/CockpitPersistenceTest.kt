@@ -104,6 +104,8 @@ class CockpitPersistenceTest {
         viewModel.tick()
         advanceUntilIdle()
         assertEquals(ActiveFlightStatus.Layover, viewModel.uiState.status)
+        assertEquals(ActiveFlightStatus.Layover, sessions.flight?.status)
+        assertEquals(clock.millis() + 5 * 60 * 1_000, viewModel.uiState.activeFlight?.layoverEndsAtEpochMillis)
         assertEquals("task-1", flightLogs.logs.single().todoistTaskId)
         assertEquals(1, viewModel.uiState.activeFlight?.itineraryLegIndex?.plus(1))
 

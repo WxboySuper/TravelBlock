@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.travelblock.app.data.repository.AirportRepository
 import com.travelblock.app.data.repository.FlightLogRepository
+import com.travelblock.app.domain.engine.AutoSessionPlan
 import com.travelblock.app.domain.engine.PilotProgressionEngine
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.settings.SettingsRepository
@@ -97,6 +98,7 @@ class HomeViewModel(
             distanceMiles = distanceMiles,
             estimatedRewardPoints = rewardPoints,
             maxFlightTimeMinutes = maxDurationMinutes,
+            sessionPlan = AutoSessionPlan.forTotal(estimatedDurationMinutes),
         )
     }
 
@@ -204,6 +206,7 @@ class HomeViewModel(
             .joinToString(", ")
             .ifBlank { destination.country }
         val roundedDistance = distanceMiles.roundToInt()
+        val plan = AutoSessionPlan.summary(estimatedDurationMinutes)
         val points = FlightRewardCalculator.completedReward(
             durationMinutes = estimatedDurationMinutes,
             distanceMiles = distanceMiles,
@@ -223,9 +226,11 @@ class HomeViewModel(
             distanceMiles = distanceMiles,
             durationMinutes = estimatedDurationMinutes,
             distanceLabel = "$roundedDistance mi",
-            focusTimeLabel = "${estimatedDurationMinutes} min",
+            focusTimeLabel = focusLabel(estimatedDurationMinutes),
             estimatedPointsLabel = "+$points pts",
             availabilityLabel = availability.toDisplayLabel(),
+            legCount = plan?.legCount ?: 1,
+            breakMinutes = plan?.breakMinutes ?: 0,
         )
     }
 
@@ -240,4 +245,11 @@ class HomeViewModel(
     companion object {
         const val DefaultOriginCode = "KOUN"
     }
+}
+
+/** "23 min", "4 h" or "2 h 30 min": how long the focus time is, in the words people use. */
+internal fun focusLabel(minutes: Int): String = when {
+    minutes < 100 -> "$minutes min"
+    minutes % 60 == 0 -> "${minutes / 60} h"
+    else -> "${minutes / 60} h ${minutes % 60} min"
 }

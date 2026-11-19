@@ -1,6 +1,7 @@
 package com.travelblock.app.ui.screen.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.AlertDialog
@@ -220,21 +221,28 @@ private fun BoardBody(uiState: HomeUiState, onRouteSelected: (String) -> Unit, o
 
 @Composable
 private fun DurationTabs(uiState: HomeUiState, onDurationSelected: (Int) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        uiState.availableDurationsMinutes.forEach { minutes ->
-            val selected = minutes == uiState.selectedDurationMinutes
-            Text(
-                "$minutes MIN",
-                style = MaterialTheme.typography.labelMedium,
-                color = if (selected) BoardBackground else Lamp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(if (selected) Lamp else Color.Transparent)
-                    .clickable { onDurationSelected(minutes) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            )
+    // Two rows so the long haul lengths are visible without scrolling.
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        uiState.availableDurationsMinutes.chunked(5).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                row.forEach { minutes -> DurationTab(minutes, minutes == uiState.selectedDurationMinutes, onDurationSelected) }
+            }
         }
     }
+}
+
+@Composable
+private fun DurationTab(minutes: Int, selected: Boolean, onDurationSelected: (Int) -> Unit) {
+    Text(
+        durationTabLabel(minutes),
+        style = MaterialTheme.typography.labelMedium,
+        color = if (selected) BoardBackground else Lamp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) Lamp else Color.Transparent)
+            .clickable { onDurationSelected(minutes) }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    )
 }
 
 @Composable
@@ -255,12 +263,14 @@ private fun BoardRow(route: HomeRouteCardUiModel, selected: Boolean, onClick: ()
             Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.92f), maxLines = 1)
             Text(route.boardStatus(), style = MaterialTheme.typography.labelSmall, color = if (selected) Lamp else BoardDim)
         }
-        FlapText(route.durationMinutes.toString().padStart(2, ' '), length = 2, width = 22.dp, height = 34.dp, fontSize = 18, color = tint)
-        Text("MIN", style = MaterialTheme.typography.labelSmall, color = BoardDim)
+        val time = route.durationMinutes.boardTime()
+        FlapText(time.digits, length = time.digits.length, width = 22.dp, height = 34.dp, fontSize = 18, color = tint)
+        Text(time.unit, style = MaterialTheme.typography.labelSmall, color = BoardDim)
     }
 }
 
 private fun HomeRouteCardUiModel.boardStatus(): String = when {
+    isLongHaul -> "$legCount FLIGHTS / ${distanceLabel.uppercase()}"
     durationMinutes <= 10 -> "QUICK HOP / ${distanceLabel.uppercase()}"
     durationMinutes <= 30 -> "ON TIME / ${distanceLabel.uppercase()}"
     else -> "LONG HAUL / ${distanceLabel.uppercase()}"
@@ -291,6 +301,9 @@ private fun RouteDetails(route: HomeRouteCardUiModel, onBook: () -> Unit) {
                 Text(route.destinationName, style = MaterialTheme.typography.bodySmall, color = WarmGray, maxLines = 2)
                 Spacer(Modifier.size(4.dp))
                 Text("${route.focusTimeLabel} / ${route.distanceLabel}", style = MaterialTheme.typography.labelMedium, color = Ink)
+                if (route.isLongHaul) {
+                    Text("${route.legCount} flights, ${route.breakMinutes} min of layovers", style = MaterialTheme.typography.labelMedium, color = DuskBlue)
+                }
                 Text(route.estimatedPointsLabel, style = MaterialTheme.typography.labelMedium, color = Sage)
             }
         }
@@ -362,3 +375,12 @@ private fun CustomDurationDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
+
+/** The tab label for a focus length: minutes for short ones, hours from two hours up. */
+private fun durationTabLabel(minutes: Int): String = if (minutes >= 120) "${minutes / 60} HR" else "$minutes MIN"
+
+private data class BoardTime(val digits: String, val unit: String)
+
+/** The flip-board time: two digits of minutes, or H:MM for anything long enough not to fit. */
+private fun Int.boardTime(): BoardTime =
+    if (this < 100) BoardTime(toString().padStart(2, ' '), "MIN") else BoardTime("${this / 60}:${(this % 60).toString().padStart(2, '0')}", "HR")

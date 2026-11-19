@@ -7,4 +7,5 @@ data class DraftFlightBooking(
     val distanceMiles: Double,
     val estimatedRewardPoints: Int,
     val maxFlightTimeMinutes: Int = durationMinutes,
+    val sessionPlan: SessionPlan? = null,
 )

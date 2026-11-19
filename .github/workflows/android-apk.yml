@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      test_tag:
+        description: 'Optional: publish this ref as a test pre-release named test-<value> (never touches latest)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -49,4 +54,24 @@ jobs:
           gh release create latest TravelBlock.apk \
             --title "TravelBlock latest build" \
             --notes-file release-notes.txt \
+            --prerelease --target "$GITHUB_SHA"
+
+      - name: Publish a test pre-release (manual runs only, never the latest release)
+        if: github.event_name == 'workflow_dispatch' && inputs.test_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEST_TAG: ${{ inputs.test_tag }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          case "$TEST_TAG" in
+            *[!a-z0-9-]*) echo "test_tag may only contain a-z, 0-9 and dashes"; exit 1 ;;
+          esac
+          TAG="test-${TEST_TAG}"
+          SHORT=$(git rev-parse --short HEAD)
+          NOTE="Test build ${TAG} (run ${BUILD_NUMBER}, commit ${SHORT}). Not the latest release; the in-app updater ignores this."
+          printf '%s\n' "$NOTE" > test-notes.txt
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" TravelBlock.apk \
+            --title "Test: ${TEST_TAG} (build ${BUILD_NUMBER})" \
+            --notes-file test-notes.txt \
             --prerelease --target "$GITHUB_SHA"

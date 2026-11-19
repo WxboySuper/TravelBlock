@@ -125,39 +125,39 @@ class SettingsViewModelTest {
 
         override suspend fun getSettings(): UserSettings = settingsFlow.value
 
-        override suspend fun setHomeAirportCode(code: String) {
-            settingsFlow.value = settingsFlow.value.copy(homeAirportCode = code)
+        override suspend fun setHomeAirportCode(code: com.travelblock.app.data.settings.AirportCode) {
+            settingsFlow.value = settingsFlow.value.copy(homeAirportCode = code.value)
         }
 
-        override suspend fun setCurrentAirportCode(code: String) {
-            settingsFlow.value = settingsFlow.value.copy(currentAirportCode = code)
+        override suspend fun setCurrentAirportCode(code: com.travelblock.app.data.settings.AirportCode) {
+            settingsFlow.value = settingsFlow.value.copy(currentAirportCode = code.value)
         }
 
-        override suspend fun setSelectedTheme(theme: String) {
-            settingsFlow.value = settingsFlow.value.copy(selectedTheme = theme)
+        override suspend fun setSelectedTheme(theme: com.travelblock.app.data.settings.ThemePreference) {
+            settingsFlow.value = settingsFlow.value.copy(selectedTheme = theme.value)
         }
 
-        override suspend fun setSoundEnabled(enabled: Boolean) {
-            settingsFlow.value = settingsFlow.value.copy(soundEnabled = enabled)
+        override suspend fun setSoundEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            settingsFlow.value = settingsFlow.value.copy(soundEnabled = enabled.value)
         }
 
-        override suspend fun setAnnouncementsEnabled(enabled: Boolean) {
-            settingsFlow.value = settingsFlow.value.copy(announcementsEnabled = enabled)
+        override suspend fun setAnnouncementsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            settingsFlow.value = settingsFlow.value.copy(announcementsEnabled = enabled.value)
         }
 
-        override suspend fun setHapticsEnabled(enabled: Boolean) {
-            settingsFlow.value = settingsFlow.value.copy(hapticsEnabled = enabled)
+        override suspend fun setHapticsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            settingsFlow.value = settingsFlow.value.copy(hapticsEnabled = enabled.value)
         }
-        override suspend fun setOnboardingComplete(complete: Boolean) { settingsFlow.value = settingsFlow.value.copy(onboardingComplete = complete) }
-        override suspend fun setDebugShortFlightsEnabled(enabled: Boolean) { settingsFlow.value = settingsFlow.value.copy(debugShortFlightsEnabled = enabled) }
-        override suspend fun setDebugFlightDurationSeconds(seconds: Int) { settingsFlow.value = settingsFlow.value.copy(debugFlightDurationSeconds = seconds) }
+        override suspend fun setOnboardingComplete(complete: com.travelblock.app.data.settings.SettingEnabled) { settingsFlow.value = settingsFlow.value.copy(onboardingComplete = complete.value) }
+        override suspend fun setDebugShortFlightsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) { settingsFlow.value = settingsFlow.value.copy(debugShortFlightsEnabled = enabled.value) }
+        override suspend fun setDebugFlightDurationSeconds(seconds: com.travelblock.app.data.settings.FlightDurationSeconds) { settingsFlow.value = settingsFlow.value.copy(debugFlightDurationSeconds = seconds.value) }
 
-        override suspend fun setEquippedBoardingPassThemeId(id: String) {
-            settingsFlow.value = settingsFlow.value.copy(equippedBoardingPassThemeId = id)
+        override suspend fun setEquippedBoardingPassThemeId(id: com.travelblock.app.data.settings.EquippedItemId) {
+            settingsFlow.value = settingsFlow.value.copy(equippedBoardingPassThemeId = id.value)
         }
 
-        override suspend fun setEquippedAircraftIconId(id: String) {
-            settingsFlow.value = settingsFlow.value.copy(equippedAircraftIconId = id)
+        override suspend fun setEquippedAircraftIconId(id: com.travelblock.app.data.settings.EquippedItemId) {
+            settingsFlow.value = settingsFlow.value.copy(equippedAircraftIconId = id.value)
         }
 
         override suspend fun resetToDefaults() {

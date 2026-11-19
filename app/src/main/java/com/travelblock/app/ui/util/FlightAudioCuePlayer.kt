@@ -10,45 +10,65 @@ import java.util.Locale
 
 enum class FlightAudioCue { GateCleared, FlightStarted, FlightArrived, FlightDiverted, CheckIn, PrepareForLanding }
 
+@JvmInline
+value class FrequencyHertz(val value: Double)
+
+@JvmInline
+value class DurationSeconds(val value: Double)
+
+@JvmInline
+value class SampleRateHertz(val value: Int)
+
+@JvmInline
+value class AnnouncementText(val value: String)
+
+data class AudioPlaybackSettings(val soundEnabled: Boolean, val announcementsEnabled: Boolean = true)
+
+private data class Chime(val frequencies: List<FrequencyHertz>, val duration: DurationSeconds)
+private data class SampleRange(val index: Int, val count: Int)
+
 object FlightChimeGenerator {
     const val SampleRate = 22_050
+    private val sampleRate = SampleRateHertz(SampleRate)
 
     fun generate(cue: FlightAudioCue): ShortArray = when (cue) {
-        FlightAudioCue.GateCleared -> melody(arrayOf(660.0, 880.0), 0.48)
-        FlightAudioCue.FlightStarted -> melody(arrayOf(659.25, 523.25), 0.72)
-        FlightAudioCue.FlightArrived -> melody(arrayOf(784.0, 659.25, 523.25), 0.9)
-        FlightAudioCue.FlightDiverted -> tone(arrayOf(300.0), 0.3)
-        FlightAudioCue.CheckIn -> tone(arrayOf(1046.5), 0.16)
-        FlightAudioCue.PrepareForLanding -> tone(arrayOf(440.0), 0.12)
+        FlightAudioCue.GateCleared -> melody(chime(DurationSeconds(0.48), listOf(FrequencyHertz(660.0), FrequencyHertz(880.0))))
+        FlightAudioCue.FlightStarted -> melody(chime(DurationSeconds(0.72), listOf(FrequencyHertz(659.25), FrequencyHertz(523.25))))
+        FlightAudioCue.FlightArrived -> melody(chime(DurationSeconds(0.9), listOf(FrequencyHertz(784.0), FrequencyHertz(659.25), FrequencyHertz(523.25))))
+        FlightAudioCue.FlightDiverted -> tone(chime(DurationSeconds(0.3), listOf(FrequencyHertz(300.0))))
+        FlightAudioCue.CheckIn -> tone(chime(DurationSeconds(0.16), listOf(FrequencyHertz(1046.5))))
+        FlightAudioCue.PrepareForLanding -> tone(chime(DurationSeconds(0.12), listOf(FrequencyHertz(440.0))))
     }
 
-    private fun tone(frequencies: Array<Double>, seconds: Double): ShortArray = mixed(frequencies, seconds)
+    private fun chime(duration: DurationSeconds, frequencies: List<FrequencyHertz>) = Chime(frequencies, duration)
 
-    private fun mixed(frequencies: Array<Double>, seconds: Double): ShortArray {
-        val count = (SampleRate * seconds).toInt()
+    private fun tone(chime: Chime): ShortArray = mixed(chime)
+
+    private fun mixed(chime: Chime): ShortArray {
+        val count = (sampleRate.value * chime.duration.value).toInt()
         return ShortArray(count) { index ->
-            val time = index.toDouble() / SampleRate
-            val envelope = envelope(index, count)
-            val wave = frequencies.sumOf { kotlin.math.sin(2.0 * Math.PI * it * time) } / frequencies.size
+            val time = index.toDouble() / sampleRate.value
+            val envelope = envelope(SampleRange(index, count))
+            val wave = chime.frequencies.sumOf { kotlin.math.sin(2.0 * Math.PI * it.value * time) } / chime.frequencies.size
             (wave * envelope * Short.MAX_VALUE * 0.58).toInt().toShort()
         }
     }
 
-    private fun melody(frequencies: Array<Double>, seconds: Double): ShortArray {
-        val count = (SampleRate * seconds).toInt()
-        val noteLength = count.toDouble() / frequencies.size
+    private fun melody(chime: Chime): ShortArray {
+        val count = (sampleRate.value * chime.duration.value).toInt()
+        val noteLength = count.toDouble() / chime.frequencies.size
         return ShortArray(count) { index ->
-            val note = (index / noteLength).toInt().coerceAtMost(frequencies.lastIndex)
+            val note = (index / noteLength).toInt().coerceAtMost(chime.frequencies.lastIndex)
             val noteSample = (index - note * noteLength).toInt()
             val noteSamples = noteLength.toInt()
-            val toneSample = kotlin.math.sin(2.0 * Math.PI * frequencies[note] * noteSample / SampleRate)
-            (toneSample * envelope(index, count) * envelope(noteSample, noteSamples) * Short.MAX_VALUE * 0.72).toInt().toShort()
+            val toneSample = kotlin.math.sin(2.0 * Math.PI * chime.frequencies[note].value * noteSample / sampleRate.value)
+            (toneSample * envelope(SampleRange(index, count)) * envelope(SampleRange(noteSample, noteSamples)) * Short.MAX_VALUE * 0.72).toInt().toShort()
         }
     }
 
-    private fun envelope(index: Int, count: Int): Double {
-        val fade = (SampleRate * 0.025).toInt().coerceAtLeast(1)
-        return minOf(1.0, index.toDouble() / fade, (count - index - 1).toDouble() / fade).coerceAtLeast(0.0)
+    private fun envelope(range: SampleRange): Double {
+        val fade = (sampleRate.value * 0.025).toInt().coerceAtLeast(1)
+        return minOf(1.0, range.index.toDouble() / fade, (range.count - range.index - 1).toDouble() / fade).coerceAtLeast(0.0)
     }
 }
 
@@ -68,18 +88,18 @@ class FlightAudioCuePlayer(context: Context) {
     private val appContext = context.applicationContext
     private var textToSpeech: TextToSpeech? = null
     private var ttsReady = false
-    private var pendingSpeech: String? = null
+    private var pendingSpeech: AnnouncementText? = null
 
-    fun play(cue: FlightAudioCue, enabled: Boolean, announcementsEnabled: Boolean = true) {
-        if (!enabled) return
+    fun play(cue: FlightAudioCue, settings: AudioPlaybackSettings) {
+        if (!settings.soundEnabled) return
         playRawOrGenerated(cue)
-        announce(cue, enabled, announcementsEnabled)
+        announce(cue, settings)
     }
 
-    fun announce(cue: FlightAudioCue, enabled: Boolean, announcementsEnabled: Boolean = true) {
-        if (!enabled || !announcementsEnabled) return
+    fun announce(cue: FlightAudioCue, settings: AudioPlaybackSettings) {
+        if (!settings.soundEnabled || !settings.announcementsEnabled) return
         val announcement = FlightAnnouncements.text(cue)
-        if (announcement != null) speak(announcement)
+        if (announcement != null) speak(AnnouncementText(announcement))
     }
 
     private fun playRawOrGenerated(cue: FlightAudioCue) {
@@ -117,7 +137,7 @@ class FlightAudioCuePlayer(context: Context) {
         FlightAudioCue.PrepareForLanding -> null
     }
 
-    private fun speak(text: String) {
+    private fun speak(text: AnnouncementText) {
         if (textToSpeech == null) {
             textToSpeech = TextToSpeech(appContext) { status ->
                 ttsReady = status == TextToSpeech.SUCCESS
@@ -131,8 +151,8 @@ class FlightAudioCuePlayer(context: Context) {
         if (ttsReady) speakReady(text) else pendingSpeech = text
     }
 
-    private fun speakReady(text: String) {
-        textToSpeech?.speak(text, TextToSpeech.QUEUE_ADD, null, text.hashCode().toString())
+    private fun speakReady(text: AnnouncementText) {
+        textToSpeech?.speak(text.value, TextToSpeech.QUEUE_ADD, null, text.value.hashCode().toString())
     }
 
     private fun configureSpeech() {

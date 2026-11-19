@@ -5,16 +5,16 @@ import kotlinx.coroutines.flow.Flow
 interface SettingsRepository {
     val settings: Flow<UserSettings>
     suspend fun getSettings(): UserSettings
-    suspend fun setHomeAirportCode(code: String)
-    suspend fun setCurrentAirportCode(code: String)
-    suspend fun setSelectedTheme(theme: String)
-    suspend fun setSoundEnabled(enabled: Boolean)
-    suspend fun setAnnouncementsEnabled(enabled: Boolean)
-    suspend fun setHapticsEnabled(enabled: Boolean)
-    suspend fun setOnboardingComplete(complete: Boolean)
-    suspend fun setDebugShortFlightsEnabled(enabled: Boolean)
-    suspend fun setDebugFlightDurationSeconds(seconds: Int)
-    suspend fun setEquippedBoardingPassThemeId(id: String)
-    suspend fun setEquippedAircraftIconId(id: String)
+    suspend fun setHomeAirportCode(code: AirportCode)
+    suspend fun setCurrentAirportCode(code: AirportCode)
+    suspend fun setSelectedTheme(theme: ThemePreference)
+    suspend fun setSoundEnabled(enabled: SettingEnabled)
+    suspend fun setAnnouncementsEnabled(enabled: SettingEnabled)
+    suspend fun setHapticsEnabled(enabled: SettingEnabled)
+    suspend fun setOnboardingComplete(complete: SettingEnabled)
+    suspend fun setDebugShortFlightsEnabled(enabled: SettingEnabled)
+    suspend fun setDebugFlightDurationSeconds(seconds: FlightDurationSeconds)
+    suspend fun setEquippedBoardingPassThemeId(id: EquippedItemId)
+    suspend fun setEquippedAircraftIconId(id: EquippedItemId)
     suspend fun resetToDefaults()
 }

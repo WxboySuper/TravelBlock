@@ -12,6 +12,7 @@ import com.travelblock.app.data.repository.ActiveFlightSessionRepository
 import com.travelblock.app.data.repository.FlightLogRepository
 import com.travelblock.app.data.repository.PointsRepository
 import com.travelblock.app.data.settings.SettingsRepository
+import com.travelblock.app.data.settings.AirportCode
 import com.travelblock.app.domain.engine.ActiveFlightProgress
 import com.travelblock.app.domain.engine.DiversionEngine
 import com.travelblock.app.domain.engine.FlightRouteInterpolation
@@ -183,7 +184,7 @@ class CockpitViewModel(
                 ),
             )
             if (status == FlightLogStatus.COMPLETED || status == FlightLogStatus.DIVERTED) {
-                settingsRepository.setCurrentAirportCode(landedAirport.code)
+            settingsRepository.setCurrentAirportCode(AirportCode(landedAirport.code))
             }
             activeFlightSessionRepository?.clearActiveFlight()
         }

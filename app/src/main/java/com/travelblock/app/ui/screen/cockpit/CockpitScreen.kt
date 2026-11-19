@@ -93,9 +93,7 @@ import java.time.format.DateTimeFormatter
 fun CockpitScreen(
     container: TravelBlockContainer,
     activeFlight: ActiveFlight?,
-    onFlightArrived: (ArrivalSummary) -> Unit,
-    onFlightDiverted: (DiversionSummary) -> Unit,
-    onPrepareForLanding: () -> Unit = {},
+    actions: CockpitActions,
 ) {
     val viewModel: CockpitViewModel = viewModel(
         key = activeFlight?.let { "${it.flightNumber}-${it.startedAt}" } ?: "empty-cockpit",
@@ -106,7 +104,7 @@ fun CockpitScreen(
             settingsRepository = container.settingsRepository,
             activeFlightSessionRepository = container.activeFlightSessionRepository,
             airports = container.airportRepository.getAllAirports(),
-            onPrepareForLanding = onPrepareForLanding,
+            onPrepareForLanding = actions.onPrepareForLanding,
         ),
     )
 
@@ -117,7 +115,7 @@ fun CockpitScreen(
         val flight = viewModel.uiState.activeFlight
         if (!arrivalHandled && flight != null && viewModel.uiState.status == ActiveFlightStatus.Arrived) {
             arrivalHandled = true
-            onFlightArrived(
+            actions.onFlightArrived(
                 ArrivalSummary.fromCompletedFlight(
                     flight = flight,
                     pointsEarned = FlightRewardCalculator.completedReward(flight),
@@ -129,7 +127,7 @@ fun CockpitScreen(
         val diversionSummary = viewModel.uiState.diversionSummary
         if (!diversionHandled && diversionSummary != null && viewModel.uiState.status == ActiveFlightStatus.Diverted) {
             diversionHandled = true
-            onFlightDiverted(diversionSummary)
+            actions.onFlightDiverted(diversionSummary)
         }
     }
 
@@ -140,6 +138,12 @@ fun CockpitScreen(
         onConfirmDivert = viewModel::confirmDivert,
     )
 }
+
+data class CockpitActions(
+    val onFlightArrived: (ArrivalSummary) -> Unit,
+    val onFlightDiverted: (DiversionSummary) -> Unit,
+    val onPrepareForLanding: () -> Unit = {},
+)
 
 /**
  * The view from a window seat. Outside the window the sky follows the real local time over the plane's

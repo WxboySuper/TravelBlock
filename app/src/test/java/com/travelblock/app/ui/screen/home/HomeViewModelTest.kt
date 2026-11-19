@@ -109,7 +109,7 @@ class HomeViewModelTest {
         )
         advanceUntilIdle()
 
-        settingsRepository.setCurrentAirportCode("KDFW")
+        settingsRepository.setCurrentAirportCode(com.travelblock.app.data.settings.AirportCode("KDFW"))
         advanceUntilIdle()
 
         assertEquals("KDFW", viewModel.uiState.currentAirport?.code)
@@ -180,39 +180,39 @@ class HomeViewModelTest {
 
         override suspend fun getSettings(): UserSettings = state.value
 
-        override suspend fun setHomeAirportCode(code: String) {
-            state.value = state.value.copy(homeAirportCode = code)
+        override suspend fun setHomeAirportCode(code: com.travelblock.app.data.settings.AirportCode) {
+            state.value = state.value.copy(homeAirportCode = code.value)
         }
 
-        override suspend fun setCurrentAirportCode(code: String) {
-            state.value = state.value.copy(currentAirportCode = code)
+        override suspend fun setCurrentAirportCode(code: com.travelblock.app.data.settings.AirportCode) {
+            state.value = state.value.copy(currentAirportCode = code.value)
         }
 
-        override suspend fun setSelectedTheme(theme: String) {
-            state.value = state.value.copy(selectedTheme = theme)
+        override suspend fun setSelectedTheme(theme: com.travelblock.app.data.settings.ThemePreference) {
+            state.value = state.value.copy(selectedTheme = theme.value)
         }
 
-        override suspend fun setSoundEnabled(enabled: Boolean) {
-            state.value = state.value.copy(soundEnabled = enabled)
+        override suspend fun setSoundEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            state.value = state.value.copy(soundEnabled = enabled.value)
         }
 
-        override suspend fun setAnnouncementsEnabled(enabled: Boolean) {
-            state.value = state.value.copy(announcementsEnabled = enabled)
+        override suspend fun setAnnouncementsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            state.value = state.value.copy(announcementsEnabled = enabled.value)
         }
 
-        override suspend fun setHapticsEnabled(enabled: Boolean) {
-            state.value = state.value.copy(hapticsEnabled = enabled)
+        override suspend fun setHapticsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) {
+            state.value = state.value.copy(hapticsEnabled = enabled.value)
         }
-        override suspend fun setOnboardingComplete(complete: Boolean) { state.value = state.value.copy(onboardingComplete = complete) }
-        override suspend fun setDebugShortFlightsEnabled(enabled: Boolean) { state.value = state.value.copy(debugShortFlightsEnabled = enabled) }
-        override suspend fun setDebugFlightDurationSeconds(seconds: Int) { state.value = state.value.copy(debugFlightDurationSeconds = seconds) }
+        override suspend fun setOnboardingComplete(complete: com.travelblock.app.data.settings.SettingEnabled) { state.value = state.value.copy(onboardingComplete = complete.value) }
+        override suspend fun setDebugShortFlightsEnabled(enabled: com.travelblock.app.data.settings.SettingEnabled) { state.value = state.value.copy(debugShortFlightsEnabled = enabled.value) }
+        override suspend fun setDebugFlightDurationSeconds(seconds: com.travelblock.app.data.settings.FlightDurationSeconds) { state.value = state.value.copy(debugFlightDurationSeconds = seconds.value) }
 
-        override suspend fun setEquippedBoardingPassThemeId(id: String) {
-            state.value = state.value.copy(equippedBoardingPassThemeId = id)
+        override suspend fun setEquippedBoardingPassThemeId(id: com.travelblock.app.data.settings.EquippedItemId) {
+            state.value = state.value.copy(equippedBoardingPassThemeId = id.value)
         }
 
-        override suspend fun setEquippedAircraftIconId(id: String) {
-            state.value = state.value.copy(equippedAircraftIconId = id)
+        override suspend fun setEquippedAircraftIconId(id: com.travelblock.app.data.settings.EquippedItemId) {
+            state.value = state.value.copy(equippedAircraftIconId = id.value)
         }
 
         override suspend fun resetToDefaults() {

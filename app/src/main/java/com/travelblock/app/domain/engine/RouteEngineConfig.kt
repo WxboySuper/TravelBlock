@@ -20,6 +20,8 @@ object RouteEngineConfig {
     const val CompleteCodePriorityBoost = 0.12
     /** Bigger than every name-based boost: major hubs always list first. */
     const val MajorHubPriorityBoost = 2.0
+    /** A city's second airport lists after its main one, but still ahead of every non-hub. */
+    const val SecondaryHubPenalty = 0.5
 
     val MajorAirportNameSignals = listOf(
         "international",

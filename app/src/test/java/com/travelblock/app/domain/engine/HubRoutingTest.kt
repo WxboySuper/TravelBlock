@@ -32,6 +32,19 @@ class HubRoutingTest {
     }
 
     @Test
+    fun `the main airport of a city is preferred over its second airport`() {
+        val dfw = airport("KDFW", "DFW", 32.9, -97.0)
+        val dal = airport("KDAL", "DAL", 32.85, -96.85)
+        val tul = airport("KTUL", "TUL", 36.2, -95.9)
+        val to = airport("KCRS", "CRS", 32.0, -96.4)
+        val from = airport("KAAA", "AAA", 33.0, -96.9)
+
+        val connections = HubRouting.connections(from, to, listOf(from, to, dal, dfw, tul))
+
+        assertEquals("KDFW", connections.first().hub.code)
+    }
+
+    @Test
     fun `several hubs are offered least detour first`() {
         val tul = airport("KTUL", "TUL", 36.2, -95.9)
 

@@ -4,6 +4,7 @@ import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.FlightRoute
 import com.travelblock.app.domain.model.TripPreset
 import com.travelblock.app.domain.model.isMajorHub
+import com.travelblock.app.domain.model.isSecondaryHub
 import kotlin.math.abs
 import kotlin.math.atan2
 
@@ -38,6 +39,7 @@ object TripSuggester {
     private const val QUADRANT_DEGREES = 90
     private const val VISITED_PENALTY_MINUTES = 30
     private const val SMALL_AIRPORT_PENALTY_MINUTES = 8
+    private const val SECONDARY_AIRPORT_PENALTY_MINUTES = 4
     private val engine = AirportRouteEngine()
 
     fun options(origin: Airport, airports: List<Airport>, wish: TripWish): List<TripSuggestion> {
@@ -66,8 +68,13 @@ object TripSuggester {
                 val layover = suggestion.hub?.layoverMinutes?.takeIf { wish.layoversCountAgainstTime } ?: 0
                 val gap = abs(wish.minutes - (suggestion.hub?.totalFocusMinutes?.plus(layover) ?: suggestion.route.estimatedDurationMinutes))
                 val visitedPenalty = if (suggestion.isNew) 0 else VISITED_PENALTY_MINUTES
-                val smallPenalty = if (suggestion.route.destination.isMajorHub) 0 else SMALL_AIRPORT_PENALTY_MINUTES
-                return gap + visitedPenalty + smallPenalty
+                val destination = suggestion.route.destination
+                val sizePenalty = when {
+                    destination.isSecondaryHub -> SECONDARY_AIRPORT_PENALTY_MINUTES
+                    destination.isMajorHub -> 0
+                    else -> SMALL_AIRPORT_PENALTY_MINUTES
+                }
+                return gap + visitedPenalty + sizePenalty
             }
     }
 

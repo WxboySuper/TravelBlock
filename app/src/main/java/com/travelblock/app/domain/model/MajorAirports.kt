@@ -21,8 +21,22 @@ object MajorAirports {
             "SYD MEL BNE PER ADL AKL WLG CHC NAN POM"
         ).split(' ').toSet()
 
+    /**
+     * Major airports that are the second airport of a city that has a bigger one (Love Field next to DFW, Hobby next to
+     * IAH, Midway next to O'Hare...). They still count as major, but a connection or a trip prefers the main airport.
+     */
+    private val secondary: Set<String> = (
+        "DAL HOU MDW LGA BUR ONT SNA OAK ITM ORY LGW SAW DMK SHA GMP AEP TXL"
+        ).split(' ').toSet()
+
     fun isMajor(iata: String?): Boolean = iata != null && iata.uppercase() in codes
+
+    fun isSecondary(iata: String?): Boolean = iata != null && iata.uppercase() in secondary
 }
 
 val Airport.isMajorHub: Boolean
     get() = MajorAirports.isMajor(iata)
+
+/** A major airport that a bigger one in the same city should win over when both would do. */
+val Airport.isSecondaryHub: Boolean
+    get() = MajorAirports.isSecondary(iata)

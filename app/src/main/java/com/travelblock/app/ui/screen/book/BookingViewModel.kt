@@ -217,7 +217,7 @@ class BookingViewModel(
 
         val departureTime = LocalDateTime.now(clock).plusMinutes(TripTime.BOARDING_BUFFER_MINUTES.toLong())
         val shape = TripShape.of(draft)
-        val arrivalTime = departureTime.plusMinutes(shape.totalMinutes.toLong())
+        val arrivalTime = departureTime.plusMinutes(shape.firstLegMinutes.toLong())
         val flightNumber = generateFlightNumber(draft)
         val seatOptions = defaultSeatOptions(
             seed = "$flightNumber-${draft.origin.code}-${draft.destination.code}-${departureTime.toLocalDate()}",

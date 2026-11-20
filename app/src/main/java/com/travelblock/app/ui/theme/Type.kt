@@ -19,20 +19,20 @@ private fun archivo(weight: Int, width: Float): Font = Font(
 )
 
 @OptIn(ExperimentalTextApi::class)
-private fun atkinson(weight: Int): Font = Font(
-    R.font.atkinson,
+private fun instrument(weight: Int, width: Float = 100f): Font = Font(
+    R.font.instrument,
     FontWeight(weight),
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight), FontVariation.width(width)),
 )
 
 /** Wide, heavy lettering like the name on a fuselage: airport codes, big numbers and headlines. */
 val DisplayFamily = FontFamily(archivo(600, 112f), archivo(700, 114f), archivo(800, 118f))
 
 /** Narrow lettering for dense labels, like the print on a boarding pass. */
-val CondensedFamily = FontFamily(archivo(600, 78f), archivo(700, 78f))
+val CondensedFamily = FontFamily(instrument(600, 78f), instrument(700, 78f))
 
-/** The legible humanist sans of terminal wayfinding, for everything you read. */
-val BodyFamily = FontFamily(atkinson(400), atkinson(500), atkinson(600), atkinson(700))
+/** A clean, modern grotesque with plain numerals, for everything you read. */
+val BodyFamily = FontFamily(instrument(400), instrument(500), instrument(600), instrument(700))
 
 private val tight = (-0.02).em
 

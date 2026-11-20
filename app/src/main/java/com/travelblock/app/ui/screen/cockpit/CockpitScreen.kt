@@ -287,9 +287,9 @@ private fun cabinLook(night: Boolean, tier: TicketClass): CabinLook = when {
 }
 
 private fun seatBackHeight(tier: TicketClass) = when (tier) {
-    TicketClass.Premium -> 150.dp
-    TicketClass.ExtraLegroom -> 130.dp
-    else -> 104.dp
+    TicketClass.Premium -> 300.dp
+    TicketClass.ExtraLegroom -> 270.dp
+    else -> 240.dp
 }
 
 private fun activeKicker(flight: ActiveFlight): String {
@@ -342,7 +342,7 @@ private fun TrayTable(flight: ActiveFlight, uiState: CockpitUiState, look: Cabin
         Text("${flight.origin.displayCode}  to  ${flight.destination.displayCode}   /   arrive $arrive", style = MaterialTheme.typography.bodyMedium, color = look.accent)
         PlaneTrack(uiState.progress, look)
         TierPerks(flight, look)
-        SeatBackScreen(flight, uiState)
+        SeatBackDisplay(flight, uiState, look.accent, seatBackHeight(flight.seat.ticketClass))
         TrayFooter(uiState.status, look, onDivertRequested, Modifier.align(Alignment.CenterHorizontally))
     }
 }
@@ -410,33 +410,6 @@ private fun PlaneTrack(progress: Float, look: CabinLook) {
     }
 }
 
-/** The seat-back entertainment screen, showing the live flight map. */
-@Composable
-private fun SeatBackScreen(flight: ActiveFlight, uiState: CockpitUiState) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(seatBackHeight(flight.seat.ticketClass))
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF05070E))
-            .padding(3.dp)
-            .clip(RoundedCornerShape(15.dp)),
-    ) {
-        TravelMap(
-            stops = RouteStops(flight.origin.toStop(), flight.destination.toStop()),
-            modifier = Modifier.fillMaxSize(),
-            progress = uiState.progress.coerceIn(0f, 1f),
-            options = MapOptions(style = TravelMapStyle.Night),
-        )
-        Text(
-            "${uiState.milesRemainingLabel} to go",
-            style = MaterialTheme.typography.labelMedium,
-            color = Cream,
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Color(0x99000000), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
-        )
-    }
-}
-
 @Composable
 private fun DivertDialog(flight: ActiveFlight, uiState: CockpitUiState, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
@@ -490,6 +463,6 @@ private fun EmptyFlightDeck() {
     }
 }
 
-private fun Airport.toStop() = MapStop(displayCode, GeoPoint(latitude, longitude))
+internal fun Airport.toStop() = MapStop(displayCode, GeoPoint(latitude, longitude))
 
 private fun Airport.toGeo() = GeoPoint(latitude, longitude)

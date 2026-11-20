@@ -91,7 +91,7 @@ private data class AirportLabel(val code: String, val city: String)
 data class MetricContent(val label: String, val value: String)
 
 data class StickyActionListOptions(
-    val horizontalPadding: Dp = 20.dp,
+    val horizontalPadding: Dp = 24.dp,
     val listState: LazyListState? = null,
 )
 
@@ -137,7 +137,7 @@ fun StickyActionScaffold(
                 end = horizontalPadding,
                 bottom = (footerHeightDp + 20).dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
             content = content,
         )
         StickyActionFooter(
@@ -369,10 +369,11 @@ fun BoardingPassCard(
         if (showClearedStamp) {
             BoardingPassStatusStamp(
                 text = "Ready to board",
+                // Rides the perforation at the right edge, clear of both airport names above it.
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 112.dp)
-                    .rotate(-8f),
+                    .align(Alignment.TopEnd)
+                    .padding(top = 142.dp, end = 18.dp)
+                    .rotate(-6f),
             )
         }
     }

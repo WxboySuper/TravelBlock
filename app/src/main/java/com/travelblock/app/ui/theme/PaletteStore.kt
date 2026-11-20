@@ -5,7 +5,8 @@ import android.content.Context
 /** Remembers the chosen palette. A plain preference so it is available instantly at startup. */
 object PaletteStore {
     private const val FILE = "travelblock_theme"
-    private const val KEY = "palette"
+    // A new key so everyone starts on the redesigned default once, and can pick another from Settings.
+    private const val KEY = "palette_v2"
 
     fun load(context: Context) {
         val id = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY, null)

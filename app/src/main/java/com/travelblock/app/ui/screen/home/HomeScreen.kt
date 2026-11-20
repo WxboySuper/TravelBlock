@@ -33,6 +33,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import com.travelblock.app.ui.screen.book.formatMinutes
+import com.travelblock.app.ui.components.SecondaryButton
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
@@ -139,6 +142,7 @@ fun HomeScreenContent(
     onLoadMoreRoutes: () -> Unit = {},
     planner: TripPlannerHomeActions = TripPlannerHomeActions(),
 ) {
+    var quickMinutes by remember { mutableIntStateOf(PlannerDefaultMinutes) }
     val hour = remember(uiState.currentAirport) { localSolarHour(Instant.now(), uiState.currentAirport?.longitude ?: -97.0) }
     LightStatusBarIcons()
     Box(Modifier.fillMaxSize().background(Cream)) {
@@ -153,23 +157,24 @@ fun HomeScreenContent(
             } else {
                 DeparturesBoard(uiState, onDurationSelected, onRouteSelected, onLoadMoreRoutes)
                 uiState.selectedRoute?.let { RouteDetails(it, onBookSelectedRoute) }
-                TripPlannerPanel(uiState.currentAirport, uiState.visitedAirports.size, planner)
-                Spacer(Modifier.height(14.dp))
-                FastTrack(uiState.lastFlight != null, onQuickStart, onRebookLastFlight)
+                // The sections below the board sit on a solid sheet so they never show the window picture through them.
+                Column(Modifier.fillMaxWidth().background(Cream).padding(top = 28.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(36.dp)) {
+                    TripPlannerPanel(uiState.currentAirport, uiState.visitedAirports.size, planner) { quickMinutes = it }
+                    FastTrack(FastTrackState(quickMinutes, uiState.lastFlight != null), onQuickStart, onRebookLastFlight)
+                }
             }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
 private fun ConcourseHeader(uiState: HomeUiState) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Column {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) {
             Text(greeting().uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.92f))
             Text("Where to?", style = MaterialTheme.typography.displaySmall, color = Color.White)
             uiState.currentAirport?.let {
-                Text("Terminal ${it.displayCode} / ${it.city}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.92f))
+                Text("Terminal ${it.displayCode}, ${it.city}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.92f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -197,7 +202,7 @@ private fun DeparturesBoard(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("DEPARTURES", style = MaterialTheme.typography.labelLarge, color = Lamp)
+            Text("Departures", style = MaterialTheme.typography.headlineSmall, color = Lamp)
             BoardViewToggle(showMap) { showMap = it }
         }
         DurationTabs(uiState, onDurationSelected)
@@ -231,7 +236,7 @@ private fun BoardBody(uiState: HomeUiState, onRouteSelected: (String) -> Unit, o
 @Composable
 private fun DurationTabs(uiState: HomeUiState, onDurationSelected: (Int) -> Unit) {
     // Tabs wrap onto as many rows as the screen and text size need; each label stays on one line.
-    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         uiState.availableDurationsMinutes.forEach { minutes ->
             DurationTab(minutes, minutes == uiState.selectedDurationMinutes, onDurationSelected)
         }
@@ -242,7 +247,7 @@ private fun DurationTabs(uiState: HomeUiState, onDurationSelected: (Int) -> Unit
 private fun DurationTab(minutes: Int, selected: Boolean, onDurationSelected: (Int) -> Unit) {
     Text(
         durationTabLabel(minutes),
-        style = MaterialTheme.typography.labelMedium,
+        style = MaterialTheme.typography.labelLarge,
         color = if (selected) BoardBackground else Lamp,
         maxLines = 1,
         softWrap = false,
@@ -250,7 +255,7 @@ private fun DurationTab(minutes: Int, selected: Boolean, onDurationSelected: (In
             .clip(RoundedCornerShape(50))
             .background(if (selected) Lamp else Color.Transparent)
             .clickable { onDurationSelected(minutes) }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
     )
 }
 
@@ -260,44 +265,48 @@ private fun BoardRow(route: HomeRouteCardUiModel, selected: Boolean, onClick: ()
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(if (selected) Color(0xFF2B2938) else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = 10.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FlapText(route.destinationCode, length = 3, width = 24.dp, height = 36.dp, fontSize = 20, color = tint)
-        Column(Modifier.weight(1f)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(route.destinationCityRegion.substringBefore(",").uppercase(), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.92f), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        FlapText(route.destinationCode, length = 3, width = 28.dp, height = 44.dp, fontSize = 24, color = tint)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                route.destinationCityRegion.substringBefore(","),
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (route.isNew) NewPlaceTag()
+                Text(route.boardMeta(), style = MaterialTheme.typography.bodySmall, color = if (selected) Lamp else BoardDim, maxLines = 1)
             }
-            Text(route.boardStatus(), style = MaterialTheme.typography.labelSmall, color = if (selected) Lamp else BoardDim)
         }
         val time = route.durationMinutes.boardTime()
-        FlapText(time.digits, length = time.digits.length, width = 22.dp, height = 34.dp, fontSize = 18, color = tint)
-        Text(time.unit, style = MaterialTheme.typography.labelSmall, color = BoardDim)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            FlapText(time.digits, length = time.digits.length, width = 26.dp, height = 40.dp, fontSize = 22, color = tint)
+            Text(time.unit.lowercase(), style = MaterialTheme.typography.bodySmall, color = BoardDim)
+        }
     }
 }
 
-/** A small "NEW" tag for somewhere you have not landed before. */
+/** A small "New" tag for somewhere you have not landed before. */
 @Composable
 internal fun NewPlaceTag() {
     Text(
-        "NEW",
-        style = MaterialTheme.typography.labelSmall,
+        "New",
+        style = MaterialTheme.typography.labelMedium,
         color = Color(0xFF14131A),
         modifier = Modifier.clip(RoundedCornerShape(50)).background(Lamp).padding(horizontal = 7.dp, vertical = 1.dp),
     )
 }
 
-private fun HomeRouteCardUiModel.boardStatus(): String = when {
-    isLongHaul -> "$legCount FLIGHTS / ${distanceLabel.uppercase()}"
-    durationMinutes <= 10 -> "QUICK HOP / ${distanceLabel.uppercase()}"
-    durationMinutes <= 30 -> "ON TIME / ${distanceLabel.uppercase()}"
-    else -> "LONG HAUL / ${distanceLabel.uppercase()}"
-}
+private fun HomeRouteCardUiModel.boardMeta(): String =
+    if (isLongHaul) "$legCount flights, $distanceLabel" else distanceLabel
 
 @Composable
 private fun BoardMessage(text: String) {
@@ -355,56 +364,21 @@ private fun greeting(now: LocalTime = LocalTime.now()): String = when (now.hour)
     else -> "Late night study"
 }
 
-/** The priority lane: pick a time and we handle check-in, seat and boarding pass for you. */
-@OptIn(ExperimentalLayoutApi::class)
+/** The priority lane for when you are late: one button that skips check-in for the length chosen in the planner. */
 @Composable
-private fun FastTrack(lastFlightAvailable: Boolean, onQuickStart: (Int) -> Unit, onRebookLastFlight: () -> Unit) {
-    var showCustom by remember { mutableStateOf(false) }
-    PaperCard(Modifier.padding(horizontal = 14.dp).fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Kicker("Fast track", color = Sage)
-            Text("Running late? Skip the queue.", style = MaterialTheme.typography.titleLarge, color = Ink)
-            Text("We handle check-in, your seat and the boarding pass.", style = MaterialTheme.typography.bodySmall, color = WarmGray)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(15, 25, 45, 60, 90, 120, 240, 480).forEach { SoftChip(quickStartLabel(it), selected = false, onClick = { onQuickStart(it) }) }
-                SoftChip("Custom", selected = false, onClick = { showCustom = true })
-            }
-            if (lastFlightAvailable) {
-                Text(
-                    "Rebook last flight",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = DuskBlue,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onRebookLastFlight).padding(vertical = 6.dp, horizontal = 4.dp),
-                )
-            }
-        }
+private fun FastTrack(fast: FastTrackState, onQuickStart: (Int) -> Unit, onRebookLastFlight: () -> Unit) {
+    Column(Modifier.padding(horizontal = 24.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Running late?", style = MaterialTheme.typography.headlineSmall, color = Ink)
+        Text("Skip check-in. We pick the airport, your seat and the boarding pass.", style = MaterialTheme.typography.bodyMedium, color = WarmGray)
+        PrimaryButton("Fly ${formatMinutes(fast.minutes)} now", onClick = { onQuickStart(fast.minutes) })
+        if (fast.lastFlightAvailable) SecondaryButton("Rebook last flight", onClick = onRebookLastFlight)
     }
-    if (showCustom) CustomDurationDialog(onDismiss = { showCustom = false }, onConfirm = { showCustom = false; onQuickStart(it) })
 }
 
-@Composable
-private fun CustomDurationDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
-    var minutes by remember { mutableStateOf("30") }
-    val valid = (minutes.toIntOrNull() ?: 0) in 15..480
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Custom focus flight") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Choose a flight window from 15 to 480 minutes. Anything over 90 becomes a long haul with breaks.")
-                OutlinedTextField(minutes, { minutes = it.filter(Char::isDigit).take(3) }, label = { Text("Minutes") }, singleLine = true)
-            }
-        },
-        confirmButton = { Button(enabled = valid, onClick = { onConfirm(minutes.toInt()) }) { Text("Start flight") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}
-
-/** Fast-track chip text: minutes up to 90, hours beyond. */
-private fun quickStartLabel(minutes: Int): String = if (minutes >= 120) "${minutes / 60} hr" else "$minutes min"
+private data class FastTrackState(val minutes: Int, val lastFlightAvailable: Boolean)
 
 /** The tab label for a focus length: minutes for short ones, hours from two hours up. */
-private fun durationTabLabel(minutes: Int): String = if (minutes >= 120) "${minutes / 60} HR" else "$minutes MIN"
+private fun durationTabLabel(minutes: Int): String = if (minutes >= 60) "${minutes / 60} hr" else "$minutes min"
 
 private data class BoardTime(val digits: String, val unit: String)
 

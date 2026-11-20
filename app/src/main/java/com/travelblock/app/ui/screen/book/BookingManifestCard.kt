@@ -168,9 +168,9 @@ private fun FocusCargoField(value: String, onValueChange: (String) -> Unit) {
 
 @Composable
 internal fun PhaseHeader(eyebrow: String, title: String, detail: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Kicker(eyebrow, color = DuskBlue)
-        Text(title, style = MaterialTheme.typography.headlineMedium, color = Ink)
-        Text(detail, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
+    // The progress rail above already says which step this is, so the eyebrow is dropped.
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.displaySmall, color = Ink)
+        Text(detail, style = MaterialTheme.typography.bodyLarge, color = WarmGray)
     }
 }

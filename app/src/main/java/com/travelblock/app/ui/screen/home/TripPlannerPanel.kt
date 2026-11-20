@@ -18,6 +18,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,8 @@ data class TripPlannerHomeActions(
     val onPlan: (TripSuggestion) -> Unit = {},
 )
 
+internal const val PlannerDefaultMinutes = 120
+
 private val PlannerMinutes = listOf(45, 60, 120, 180, 240, 360, 480)
 
 /**
@@ -55,8 +58,9 @@ private val PlannerMinutes = listOf(45, 60, 120, 180, 240, 360, 480)
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TripPlannerPanel(origin: Airport?, visitedCount: Int, actions: TripPlannerHomeActions) {
-    var minutes by remember { mutableIntStateOf(120) }
+fun TripPlannerPanel(origin: Airport?, visitedCount: Int, actions: TripPlannerHomeActions, onMinutesChange: (Int) -> Unit = {}) {
+    var minutes by remember { mutableIntStateOf(PlannerDefaultMinutes) }
+    LaunchedEffect(minutes) { onMinutesChange(minutes) }
     var hubs by remember { mutableStateOf(true) }
     var major by remember { mutableStateOf(true) }
     var custom by remember { mutableStateOf<CustomTrip?>(null) }

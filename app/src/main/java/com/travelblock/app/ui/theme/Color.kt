@@ -30,6 +30,15 @@ data class TravelPalette(
     val nightLine: Color,
 )
 
+private val Apron = TravelPalette(
+    id = "apron", label = "Apron", tagline = "Cobalt on cool concrete with an aqua signal. Crisp, like a modern terminal.",
+    cream = Color(0xFFE8EDF4), paper = Color(0xFFFFFFFF), sand = Color(0xFFC9D2E0), ink = Color(0xFF0E1A33),
+    duskBlue = Color(0xFF1B2F8F), softSky = Color(0xFFE3EAFF), skyMist = Color(0xFF7C9CFF),
+    accent = Color(0xFF2745F2), highlight = Color(0xFF14C3BA), sage = Color(0xFF0F9F78),
+    warmGray = Color(0xFF55647C), lamp = Color(0xFF8FE4FF),
+    nightSky = Color(0xFF0A1122), nightSurface = Color(0xFF121C36), nightLine = Color(0xFF26335A),
+)
+
 private val HarborDusk = TravelPalette(
     id = "harbor", label = "Harbor Dusk", tagline = "Deep blue ink, sky and sage. Calm like a study at dusk.",
     cream = Color(0xFFF1F5F9), paper = Color(0xFFFAFCFE), sand = Color(0xFFDCE4EC), ink = Color(0xFF1D2A44),
@@ -67,7 +76,7 @@ private val GoldenHour = TravelPalette(
 )
 
 /** The palettes offered in Settings. The first is the default. */
-val TravelPalettes: List<TravelPalette> = listOf(HarborDusk, Lagoon, TwilightPlum, GoldenHour)
+val TravelPalettes: List<TravelPalette> = listOf(Apron, HarborDusk, Lagoon, TwilightPlum, GoldenHour)
 
 fun paletteById(id: String?): TravelPalette = TravelPalettes.firstOrNull { it.id == id } ?: TravelPalettes.first()
 

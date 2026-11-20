@@ -12,6 +12,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,6 +22,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import com.travelblock.app.domain.engine.TripTime
 import com.travelblock.app.ui.screen.book.formatMinutes
+import com.travelblock.app.ui.theme.DuskBlue
+import com.travelblock.app.ui.theme.Ink
+import com.travelblock.app.ui.theme.Paper
+import com.travelblock.app.ui.theme.SkyMist
+import com.travelblock.app.ui.theme.SoftSky
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -40,6 +46,7 @@ fun CustomTripDialog(onDismiss: () -> Unit, onConfirm: (CustomTrip) -> Unit) {
     val valid = minutes in TripTime.MIN_FOCUS_MINUTES..TripTime.MAX_FOCUS_MINUTES
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Paper,
         title = { Text("Custom trip") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -48,7 +55,7 @@ fun CustomTripDialog(onDismiss: () -> Unit, onConfirm: (CustomTrip) -> Unit) {
                     FilterChip(byEndTime, { byEndTime = true }, label = { Text("Land by") })
                 }
                 if (byEndTime) {
-                    TimeInput(clock)
+                    TimeInput(clock, colors = timeColors())
                 } else {
                     OutlinedTextField(
                         text,
@@ -66,6 +73,21 @@ fun CustomTripDialog(onDismiss: () -> Unit, onConfirm: (CustomTrip) -> Unit) {
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
+
+/** The clock in the app's own colours: cobalt for what is selected, soft sky for the rest (no stock pink or lilac). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun timeColors() = TimePickerDefaults.colors(
+    timeSelectorSelectedContainerColor = SkyMist,
+    timeSelectorUnselectedContainerColor = SoftSky,
+    timeSelectorSelectedContentColor = DuskBlue,
+    timeSelectorUnselectedContentColor = Ink,
+    periodSelectorSelectedContainerColor = DuskBlue,
+    periodSelectorSelectedContentColor = Paper,
+    periodSelectorUnselectedContainerColor = SoftSky,
+    periodSelectorUnselectedContentColor = Ink,
+    periodSelectorBorderColor = SkyMist,
+)
 
 private fun summary(valid: Boolean, minutes: Int, byEndTime: Boolean): String = when {
     valid && byEndTime -> "That leaves ${formatMinutes(minutes)} of focus, breaks and boarding included."

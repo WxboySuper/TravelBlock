@@ -91,7 +91,7 @@ private data class AirportLabel(val code: String, val city: String)
 data class MetricContent(val label: String, val value: String)
 
 data class StickyActionListOptions(
-    val horizontalPadding: Dp = 20.dp,
+    val horizontalPadding: Dp = 24.dp,
     val listState: LazyListState? = null,
 )
 
@@ -137,7 +137,7 @@ fun StickyActionScaffold(
                 end = horizontalPadding,
                 bottom = (footerHeightDp + 20).dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
             content = content,
         )
         StickyActionFooter(

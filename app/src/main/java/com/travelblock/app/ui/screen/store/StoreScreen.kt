@@ -79,7 +79,7 @@ fun StoreScreenContent(
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Cream).statusBarsPadding(),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
         item { StoreHeader() }
         item { WalletCard(uiState.pointsBalance, uiState.message) }

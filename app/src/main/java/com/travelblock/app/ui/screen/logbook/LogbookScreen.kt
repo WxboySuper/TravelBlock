@@ -86,8 +86,8 @@ fun LogbookScreenContent(
             .fillMaxSize()
             .background(Cream)
             .statusBarsPadding(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
         item { LogbookHeader() }
         when {

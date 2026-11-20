@@ -126,7 +126,7 @@ fun SettingsScreenContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
         item {
             Spacer(modifier = Modifier.height(12.dp))

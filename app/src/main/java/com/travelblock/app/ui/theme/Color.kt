@@ -32,7 +32,7 @@ data class TravelPalette(
 
 private val Apron = TravelPalette(
     id = "apron", label = "Apron", tagline = "Cobalt on cool concrete with an aqua signal. Crisp, like a modern terminal.",
-    cream = Color(0xFFEDF0F5), paper = Color(0xFFFFFFFF), sand = Color(0xFFD5DCE6), ink = Color(0xFF0E1A33),
+    cream = Color(0xFFE8EDF4), paper = Color(0xFFFFFFFF), sand = Color(0xFFC9D2E0), ink = Color(0xFF0E1A33),
     duskBlue = Color(0xFF1B2F8F), softSky = Color(0xFFE3EAFF), skyMist = Color(0xFF7C9CFF),
     accent = Color(0xFF2745F2), highlight = Color(0xFF14C3BA), sage = Color(0xFF0F9F78),
     warmGray = Color(0xFF55647C), lamp = Color(0xFF8FE4FF),

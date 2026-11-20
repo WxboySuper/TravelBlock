@@ -35,24 +35,36 @@ import com.travelblock.app.ui.theme.WarmGray
 
 /** Shared building blocks for the warm "travel journal" look. */
 
+/**
+ * A group of related content. By default it is flat: no box, no border, just the content on the page with the
+ * breathing room of its padding, so a screen reads as a few clear sections instead of a stack of boxes.
+ * Set [raised] for the one main object of a screen (a docket, a ticket, a board) that should sit on its own sheet.
+ * A [selected] group is tinted so a choice reads at a glance.
+ */
 @Composable
 fun PaperCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     selected: Boolean = false,
+    raised: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(14.dp)
-    val base = modifier
+    val shape = RoundedCornerShape(if (raised) 20.dp else 14.dp)
+    val tapped = if (onClick != null) modifier.clip(shape).clickable(onClick = onClick) else modifier
+    val inset = if (raised || selected) contentPadding else PaddingValues(vertical = contentPadding.calculateTopPadding())
     Surface(
-        modifier = if (onClick != null) base.clip(shape).clickable(onClick = onClick) else base,
+        modifier = tapped,
         shape = shape,
-        color = if (selected) SoftSky else Paper,
-        border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) DuskBlue.copy(alpha = 0.55f) else Sand),
-        shadowElevation = 0.dp,
+        color = when {
+            selected -> SoftSky
+            raised -> Paper
+            else -> Color.Transparent
+        },
+        border = if (selected) BorderStroke(1.5.dp, DuskBlue.copy(alpha = 0.55f)) else null,
+        shadowElevation = if (raised) 3.dp else 0.dp,
     ) {
-        Box(Modifier.padding(contentPadding)) { content() }
+        Box(Modifier.padding(inset)) { content() }
     }
 }
 

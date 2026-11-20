@@ -204,27 +204,26 @@ fun CompactRouteDocket(
     flight: DocketFlightDetails,
     modifier: Modifier = Modifier,
 ) {
-    PaperCard(modifier = modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)) {
+    PaperCard(modifier = modifier.fillMaxWidth(), raised = true, contentPadding = PaddingValues(horizontal = 22.dp, vertical = 20.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Kicker("Departure docket")
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(route.originCode, style = MaterialTheme.typography.headlineMedium, color = Ink)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(route.originCode, style = MaterialTheme.typography.displayMedium, color = Ink)
                     Icon(
                         Icons.Rounded.Flight,
                         contentDescription = null,
                         tint = Terracotta,
                         modifier = Modifier.size(22.dp).rotate(90f),
                     )
-                    Text(route.destinationCode, style = MaterialTheme.typography.headlineMedium, color = Ink)
+                    Text(route.destinationCode, style = MaterialTheme.typography.displayMedium, color = Ink)
                 }
                 Text(
                     text = "${flight.durationMinutes} min  /  ${flight.distanceMiles.roundToInt()} mi  /  ${flight.flightNumber}  /  Gate ${flight.gate}",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = WarmGray,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

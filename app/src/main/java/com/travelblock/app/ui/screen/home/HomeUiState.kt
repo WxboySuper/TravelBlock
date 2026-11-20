@@ -7,7 +7,7 @@ data class HomeUiState(
     val currentAirport: Airport? = null,
     val points: Int = 0,
     val selectedDurationMinutes: Int = 25,
-    val availableDurationsMinutes: List<Int> = listOf(15, 25, 45, 60, 90, 120, 180, 240, 360, 480),
+    val availableDurationsMinutes: List<Int> = listOf(25, 45, 60, 120, 240, 480),
     val lastFlight: FlightLogEntity? = null,
     val routes: List<HomeRouteCardUiModel> = emptyList(),
     val displayedRouteCount: Int = HomeRouteDisplayDefaults.initialCount,

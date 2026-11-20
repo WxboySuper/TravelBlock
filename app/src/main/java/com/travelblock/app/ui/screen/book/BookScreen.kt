@@ -304,7 +304,7 @@ private fun CheckInSurface(
 
     StickyActionScaffold(
         modifier = Modifier.fillMaxSize(),
-        options = StickyActionListOptions(horizontalPadding = 20.dp),
+        options = StickyActionListOptions(horizontalPadding = 24.dp),
         stickyAction = { BookingStickyActions(uiState, onContinueToSeatSelection, onCancelBooking, onContinue, onBackToManifest) },
     ) {
         item {

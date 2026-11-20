@@ -122,14 +122,14 @@ private fun Modifier.fillMaxSize(): Modifier = this.fillMaxWidth().height(2000.d
  * dark, and your plane drifting down toward the runway.
  */
 @Composable
-fun ArrivalScene(location: ArrivalLocation, modifier: Modifier = Modifier) {
+fun ArrivalScene(location: ArrivalLocation, modifier: Modifier = Modifier, corner: androidx.compose.ui.unit.Dp = 26.dp) {
     val hour = androidx.compose.runtime.remember(location.cityCode) {
         localSolarHour(java.time.Instant.now(), location.longitude)
     }
     val night = skyPaletteFor(hour).night
     val transition = rememberInfiniteTransition(label = "arrival")
     val glide by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
-    Box(modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(26.dp))) {
+    Box(modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(corner))) {
         SkyScene(hour, Modifier.fillMaxSize(), speed = 0.35f)
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width

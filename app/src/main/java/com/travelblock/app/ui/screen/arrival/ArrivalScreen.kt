@@ -77,35 +77,9 @@ fun ArrivalScreen(
     }
 
     Box(Modifier.fillMaxSize().background(Cream)) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .statusBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(top = 18.dp, bottom = 230.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            ArrivalScene(ArrivalLocation(arrivalSummary.destination.displayCode, arrivalSummary.destination.longitude))
-            WelcomeHeader(arrivalSummary.destination)
-            RoutePostcard(arrivalSummary)
-            TodoistArrivalCard(
-                tasks = TaskRefs.decode(arrivalSummary.todoistTaskId, arrivalSummary.todoistTaskContent).map { TodoistArrivalTask(it.id, it.content) },
-                repository = actions.todoistRepository,
-            )
-            MetricsRow(arrivalSummary)
-            if (arrivalSummary.focusObjective.isNotBlank() || arrivalSummary.focusTag.isNotBlank()) {
-                FocusRecap(arrivalSummary.focusTag, arrivalSummary.focusObjective)
-            }
-            Text(
-                "Saved to your logbook. Your points are added, and you are now at ${arrivalSummary.destination.displayCode}. " +
-                    "Your next departure board starts right here.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = WarmGray,
-            )
-            if (showReturnHomePlaceholder) {
-                ReturnHomeNote(arrivalSummary.destination.displayCode, homeAirportCode)
-            }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            ArrivalHero(arrivalSummary.destination)
+            ArrivalDetails(arrivalSummary, homeAirportCode, actions, showReturnHomePlaceholder)
         }
         ArrivalActions(
             onContinueJourney = actions.continueJourney,
@@ -117,23 +91,60 @@ fun ArrivalScreen(
 }
 
 @Composable
-private fun WelcomeHeader(destination: Airport) {
-    val cityLine = listOfNotNull(
-        destination.city.takeIf { it.isNotBlank() },
-        destination.stateOrRegion?.takeIf { it.isNotBlank() },
-    ).joinToString(", ")
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Kicker("You have landed", color = Sage)
-            Text(
-                "Welcome to ${destination.city.ifBlank { destination.displayCode }}",
-                style = MaterialTheme.typography.displaySmall,
-                color = Ink,
-            )
-            Text(destination.name, style = MaterialTheme.typography.bodyMedium, color = WarmGray)
-            if (cityLine.isNotBlank()) Text(cityLine, style = MaterialTheme.typography.bodySmall, color = WarmGray)
+private fun ArrivalDetails(
+    arrivalSummary: ArrivalSummary,
+    homeAirportCode: String,
+    actions: ArrivalScreenActions,
+    showReturnHome: Boolean,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 28.dp, bottom = 230.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
+    ) {
+        MetricsRow(arrivalSummary)
+        RoutePostcard(arrivalSummary)
+        TodoistArrivalCard(
+            tasks = TaskRefs.decode(arrivalSummary.todoistTaskId, arrivalSummary.todoistTaskContent).map { TodoistArrivalTask(it.id, it.content) },
+            repository = actions.todoistRepository,
+        )
+        if (arrivalSummary.focusObjective.isNotBlank() || arrivalSummary.focusTag.isNotBlank()) {
+            FocusRecap(arrivalSummary.focusTag, arrivalSummary.focusObjective)
         }
-        PassportStamp(destination.displayCode, Modifier.padding(start = 8.dp, top = 4.dp))
+        Text(
+            "Saved to your logbook. Your points are added, and you are now at ${arrivalSummary.destination.displayCode}. " +
+                "Your next departure board starts right here.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = WarmGray,
+        )
+        if (showReturnHome) {
+            ReturnHomeNote(arrivalSummary.destination.displayCode, homeAirportCode)
+        }
+    }
+}
+
+/** The sky over the arrival airport, edge to edge, with the city as the headline and the passport stamp pressed on it. */
+@Composable
+private fun ArrivalHero(destination: Airport) {
+    val placeLine = listOfNotNull(
+        destination.displayCode,
+        destination.stateOrRegion?.takeIf { it.isNotBlank() },
+    ).joinToString(" / ")
+    Box(Modifier.fillMaxWidth().height(340.dp)) {
+        ArrivalScene(
+            ArrivalLocation(destination.displayCode, destination.longitude),
+            Modifier.fillMaxSize(),
+            corner = 0.dp,
+        )
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC14131A)))))
+        Column(
+            Modifier.align(Alignment.BottomStart).padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Kicker("You have landed", color = Color.White.copy(alpha = 0.92f))
+            Text(destination.city.ifBlank { destination.displayCode }, style = MaterialTheme.typography.displayMedium, color = Color.White)
+            if (placeLine.isNotBlank()) Text(placeLine, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
+        }
+        PassportStamp(destination.displayCode, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(end = 28.dp, top = 28.dp))
     }
 }
 
@@ -144,10 +155,9 @@ private fun PassportStamp(code: String, modifier: Modifier = Modifier) {
     Column(
         modifier
             .rotate(-9f)
+            .background(Color.White.copy(alpha = 0.78f), RoundedCornerShape(14.dp))
             .border(BorderStroke(3.dp, Terracotta.copy(alpha = 0.85f)), RoundedCornerShape(14.dp))
-            .padding(4.dp)
-            .border(BorderStroke(1.dp, Terracotta.copy(alpha = 0.6f)), RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("ARRIVED", style = MaterialTheme.typography.labelSmall, color = Terracotta)
@@ -156,26 +166,26 @@ private fun PassportStamp(code: String, modifier: Modifier = Modifier) {
     }
 }
 
+/** The route on a flat full-width map; the flight number sits underneath instead of in a card. */
 @Composable
 private fun RoutePostcard(summary: ArrivalSummary) {
-    PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(10.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            TravelMap(
-                stops = RouteStops(summary.origin.toStop(), summary.destination.toStop()),
-                progress = 1f,
-                modifier = Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(16.dp)),
-            )
-            Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${summary.origin.displayCode}  to  ${summary.destination.displayCode}", style = MaterialTheme.typography.titleLarge, color = Ink)
-                StampPill("Flight ${summary.flightNumber}", color = Sage)
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TravelMap(
+            stops = RouteStops(summary.origin.toStop(), summary.destination.toStop()),
+            progress = 1f,
+            modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(24.dp)),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("${summary.origin.displayCode}  to  ${summary.destination.displayCode}", style = MaterialTheme.typography.headlineSmall, color = Ink)
+            Text("Flight ${summary.flightNumber}", style = MaterialTheme.typography.labelLarge, color = WarmGray)
         }
     }
 }
 
+/** Three big numbers side by side, no boxes: what this flight was worth. */
 @Composable
 private fun MetricsRow(summary: ArrivalSummary) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Metric("Focused", "${summary.durationMinutes} min", Modifier.weight(1f))
         Metric("Distance", "${summary.distanceMiles.roundToInt()} mi", Modifier.weight(1f))
         Metric("Points", "+${summary.pointsEarned}", Modifier.weight(1f), highlight = true)
@@ -184,11 +194,9 @@ private fun MetricsRow(summary: ArrivalSummary) {
 
 @Composable
 private fun Metric(label: String, value: String, modifier: Modifier = Modifier, highlight: Boolean = false) {
-    PaperCard(modifier, contentPadding = PaddingValues(14.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Kicker(label)
-            Text(value, style = MaterialTheme.typography.headlineSmall, color = if (highlight) Terracotta else Ink)
-        }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Kicker(label)
+        Text(value, style = MaterialTheme.typography.headlineMedium, color = if (highlight) DuskBlue else Ink, maxLines = 1)
     }
 }
 

@@ -84,10 +84,22 @@ fun RoutesMap(
     }
 }
 
+/** Attached and measured: only then does zooming to a box land where it should. */
+private val MapView.isReadyToFit: Boolean
+    get() = isAttachedToWindow && width > 0 && height > 0
+
+private const val REFIT_DELAY_MS = 400L
+private const val RETRY_DELAY_MS = 50L
+private const val MAX_RETRIES = 40
+
+/**
+ * Frames every route. A map built while the list is still scrolling has no size yet, and fitting then leaves it
+ * centred in the wrong place, so wait until it is attached and measured, fit, and fit once more after it settles.
+ */
 private fun MapView.fitAll(points: List<org.osmdroid.util.GeoPoint>) {
     if (points.isEmpty()) return
     val density = resources.displayMetrics.density
-    post {
+    val fit = {
         var box = BoundingBox.fromGeoPoints(points)
         // A single short hop (or one airport) would otherwise zoom to the maximum level.
         if (box.latitudeSpan < 0.4 && box.longitudeSpan < 0.4) {
@@ -96,6 +108,15 @@ private fun MapView.fitAll(points: List<org.osmdroid.util.GeoPoint>) {
         }
         zoomToBoundingBox(box, false, (40 * density).toInt())
     }
+    fun attempt(tries: Int) {
+        if (isReadyToFit) {
+            fit()
+            postDelayed({ fit() }, REFIT_DELAY_MS)
+        } else if (tries < MAX_RETRIES) {
+            postDelayed({ attempt(tries + 1) }, RETRY_DELAY_MS)
+        }
+    }
+    attempt(0)
 }
 
 private class RoutesOverlay(legs: List<RouteLeg>, style: TravelMapStyle) : Overlay() {

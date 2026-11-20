@@ -2,8 +2,6 @@ package com.travelblock.app.ui.screen.logbook
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -12,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.travelblock.app.ui.components.Kicker
-import com.travelblock.app.ui.components.MetricColumn
 import com.travelblock.app.ui.components.PaperCard
 import com.travelblock.app.ui.theme.WarmGray
 
@@ -44,22 +41,24 @@ fun travelStatsFor(entries: List<LogbookEntryUiModel>, lookup: AirportLookup?): 
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** The airport code as travellers know it: the planner stores ICAO codes, so US airports lose their leading K. */
+internal fun String.asAirportCode(): String = if (length == 4 && startsWith("K")) drop(1) else this
+
 @Composable
 internal fun TravelStatsCard(stats: TravelStats) {
+    val favourite = stats.favouriteAirport?.asAirportCode()
     PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(18.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Kicker("Travel stats")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(26.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                MetricColumn("Airports", stats.airports.toString())
-                MetricColumn("Countries", stats.countries.toString())
-                MetricColumn("Longest", "${stats.longestMiles} mi")
-                stats.favouriteAirport?.let { MetricColumn("Favourite", it) }
-            }
+            TotalsRow("Airports" to stats.airports.toString(), "Countries" to stats.countries.toString(), "Longest" to "${stats.longestMiles} mi")
             if (stats.longestRoute.isNotBlank()) {
-                Text("Longest flight: ${stats.longestRoute}", style = MaterialTheme.typography.bodySmall, color = WarmGray)
+                Text(
+                    "Longest flight: ${stats.longestRoute.split(" to ").joinToString(" to ") { it.asAirportCode() }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WarmGray,
+                )
             }
-            stats.favouriteAirport?.let {
+            favourite?.let {
                 Text("Most landings at $it: ${stats.favouriteAirportVisits}", style = MaterialTheme.typography.bodySmall, color = WarmGray)
             }
             stats.topFocusTag?.let { Text("Most flown for: $it", style = MaterialTheme.typography.bodySmall, color = WarmGray) }

@@ -198,18 +198,17 @@ internal fun LifetimeTotalsCard(summary: LogbookSummaryUiModel) {
     PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(18.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Kicker("Lifetime flight totals")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(26.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                MetricColumn("Flights", summary.totalFlightsLabel)
-                MetricColumn("Landed", summary.completedFlightsLabel)
-                MetricColumn("Diverted", summary.divertedFlightsLabel)
-                MetricColumn("Focus", summary.totalFocusTimeLabel)
-                MetricColumn("Miles", summary.totalMilesLabel)
-                MetricColumn("Points", summary.totalPointsLabel)
-            }
+            TotalsRow("Flights" to summary.totalFlightsLabel, "Landed" to summary.completedFlightsLabel, "Diverted" to summary.divertedFlightsLabel)
+            TotalsRow("Focus" to summary.totalFocusTimeLabel, "Miles" to summary.totalMilesLabel, "Points" to summary.totalPointsLabel)
         }
+    }
+}
+
+/** Three totals across, each in an equal share of the width so the two rows line up. */
+@Composable
+internal fun TotalsRow(vararg totals: Pair<String, String>) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        totals.forEach { (label, value) -> Box(Modifier.weight(1f)) { MetricColumn(label, value) } }
     }
 }
 
@@ -257,7 +256,7 @@ private fun PassportStamp(stamp: PassportStampInfo) {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(code, fontFamily = DisplayFamily, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
+            Text(code.asAirportCode(), fontFamily = DisplayFamily, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
             Text("ARRIVED", style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f), maxLines = 1, softWrap = false)
         }
     }
@@ -280,49 +279,36 @@ private val BadgeCatalog = mapOf(
 @Composable
 internal fun TrophyCaseCard(unlocked: Set<String>) {
     PaperCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(18.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Kicker("Trophy case")
             Text("${unlocked.size} of ${PilotProgressionEngine.badges.size} earned", style = MaterialTheme.typography.titleMedium, color = Ink)
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val tileWidth = (maxWidth - 24.dp) / 3
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    PilotProgressionEngine.badges.forEach { badge ->
-                        BadgeTile(badge, badge in unlocked, Modifier.width(tileWidth))
-                    }
-                }
-            }
+            PilotProgressionEngine.badges.forEach { badge -> BadgeRow(badge, badge in unlocked) }
         }
     }
 }
 
+/** One trophy per full-width row: the icon, the name, and either "Earned" or what it takes. */
 @Composable
-private fun BadgeTile(name: String, earned: Boolean, modifier: Modifier = Modifier) {
+private fun BadgeRow(name: String, earned: Boolean) {
     val info = BadgeCatalog[name] ?: BadgeInfo(Icons.Rounded.WorkspacePremium, "")
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
-                .size(58.dp)
+                .size(52.dp)
                 .background(if (earned) Marigold.copy(alpha = 0.25f) else Sand.copy(alpha = 0.55f), CircleShape)
                 .border(BorderStroke(2.dp, if (earned) Marigold else Sand), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(info.icon, contentDescription = null, tint = if (earned) Ink else WarmGray.copy(alpha = 0.55f), modifier = Modifier.size(28.dp))
+            Icon(info.icon, contentDescription = null, tint = if (earned) Ink else WarmGray.copy(alpha = 0.55f), modifier = Modifier.size(26.dp))
         }
-        Text(
-            name,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (earned) Ink else WarmGray,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-        )
-        Text(
-            if (earned) "Earned" else info.hint,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (earned) Sage else WarmGray.copy(alpha = 0.85f),
-            textAlign = TextAlign.Center,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.titleMedium, color = if (earned) Ink else WarmGray)
+            Text(
+                if (earned) "Earned" else info.hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (earned) Sage else WarmGray.copy(alpha = 0.85f),
+            )
+        }
     }
 }
 
@@ -334,7 +320,7 @@ internal fun TicketStub(entry: LogbookEntryUiModel, onClick: () -> Unit) {
         Row(Modifier.height(IntrinsicSize.Min)) {
             Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Kicker("${entry.flightNumber}  /  ${entry.dateLabel}")
-                Text(entry.routeLabel.replace(" -> ", "  →  "), style = MaterialTheme.typography.titleLarge, color = Ink)
+                Text(entry.routeLabel.split(" -> ").joinToString("  →  ") { it.asAirportCode() }, style = MaterialTheme.typography.titleLarge, color = Ink)
                 Text("${entry.durationLabel}  /  ${entry.distanceLabel}", style = MaterialTheme.typography.bodySmall, color = WarmGray)
             }
             PerforatedEdge()
@@ -364,15 +350,18 @@ private fun PerforatedEdge() {
 @Composable
 private fun StubSide(entry: LogbookEntryUiModel) {
     Column(
-        Modifier.width(104.dp).fillMaxHeight().padding(10.dp),
+        Modifier.width(124.dp).fillMaxHeight().padding(horizontal = 6.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(entry.pointsLabel, style = MaterialTheme.typography.titleSmall, color = DuskBlue)
-        StampPill(
-            text = entry.statusLabel,
+        Text(entry.pointsLabel, style = MaterialTheme.typography.titleSmall, color = DuskBlue, maxLines = 1, softWrap = false)
+        Text(
+            entry.statusLabel,
+            style = MaterialTheme.typography.labelMedium,
             color = if (entry.isCompleted) Sage else Terracotta,
-            modifier = Modifier.padding(top = 6.dp),
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(top = 4.dp),
         )
     }
 }

@@ -14,6 +14,12 @@ object ItineraryPlanner {
     private const val MIN_LEGS_FOR_ORIGIN_HUB = 3
     private const val MIN_LEGS_FOR_DESTINATION_HUB = 4
 
+    /**
+     * A stop closer than this to the start or the end of the trip is the same city, not a connection: the leg to it
+     * would still be given a whole focus block and a ten mile hop would take forty minutes.
+     */
+    private const val MIN_STOP_SEPARATION_MILES = 60.0
+
     fun plan(request: ItineraryRequest): FlightItinerary? {
         val (origin, destination, airports, trip) = request
         val preset = trip.preset
@@ -71,10 +77,16 @@ object ItineraryPlanner {
             .filter(Airport::isUsableForTravelBlockRouting)
             .filterNot { it.code == context.origin.code || it.code == context.destination.code || it.code in excludedCodes }
             .toList()
+        val apart = candidates.filter { isFarFromEnds(it, context) }.ifEmpty { candidates }
         // Connections happen at major hubs; a small airport is only ever the start or the end of a trip.
-        val pool = candidates.filter { it.isMajorHub }.ifEmpty { candidates }
+        val pool = apart.filter { it.isMajorHub }.ifEmpty { apart }
         return pool.minByOrNull { airport -> stopScore(airport, target, context) }
     }
+
+    private fun isFarFromEnds(airport: Airport, context: RouteContext): Boolean =
+        listOf(context.origin, context.destination).all { end ->
+            AirportRouteEngine.distanceMiles(end.latitude, end.longitude, airport.latitude, airport.longitude) >= MIN_STOP_SEPARATION_MILES
+        }
 
     private fun stopScore(
         airport: Airport,

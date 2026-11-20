@@ -35,6 +35,20 @@ class ItineraryPlannerTest {
     }
 
     @Test
+    fun `a hub in the same city as the start is not used as the first stop`() {
+        val origin = airport("RVS", 0.0, 0.0)
+        val destination = airport("ZZZ", 0.0, 30.0)
+        val sameCityHub = airport("DEN", 0.0, 0.1)
+        val farHub = airport("DFW", 0.0, 3.0)
+
+        val trip = ItineraryPlanner.plan(
+            ItineraryRequest(origin, destination, listOf(sameCityHub, farHub), ItineraryTrip(TripPreset("test", "Test", 3), 120)),
+        )
+
+        assertEquals("DFW", trip?.airports?.get(1)?.code)
+    }
+
+    @Test
     fun `planner rejects impossible route and same airport`() {
         val origin = airport("AAA", 0.0, 0.0)
         val preset = TripPreset("test", "Test", 2)

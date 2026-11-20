@@ -61,10 +61,53 @@ class FlightLiveUpdateModelTest {
 
         val model = FlightLiveUpdateModel.create(layover, start)
 
-        assertEquals("Layover in TUL", model.title)
+        assertEquals("Layover in Norman", model.title)
         assertEquals("Next leg in 02:05", model.statusText)
         assertEquals("02:05", model.shortChipText)
         assertEquals(FlightLivePhase.LAYOVER, model.phase)
+    }
+
+    @Test
+    fun aSingleFlightShowsTheInstrumentsAndNoTripBar() {
+        val model = modelAt(600)
+
+        assertTrue(model.detailText.contains(" ft / "))
+        assertTrue(model.detailText.endsWith(" mph"))
+        assertEquals(null, model.trip)
+    }
+
+    @Test
+    fun aLongHaulSpansEveryFlightAndBreakInOneBar() {
+        val trip = flight.copy(
+            itineraryCodes = "KOUN,KOKC,KTUL",
+            itineraryLegCount = 2,
+            itineraryLegIndex = 1,
+            itinerarySchedule = ActiveItinerarySchedule(listOf(30, 30), listOf(10)),
+        )
+
+        val bar = FlightLiveUpdateModel.create(trip, start.plusSeconds(600)).trip
+
+        assertEquals(listOf(30, 10, 30), bar?.segments)
+        assertEquals(70, bar?.totalMinutes)
+        // The first flight and the break are done (40 minutes) and the second flight is 10 minutes in.
+        assertEquals(50, bar?.progressMinutes)
+    }
+
+    @Test
+    fun aLayoverCountsTheBreakAlreadyTaken() {
+        val layover = flight.copy(
+            status = ActiveFlightStatus.Layover,
+            itineraryCodes = "KOUN,KOKC,KTUL",
+            itineraryLegIndex = 0,
+            itineraryLegCount = 2,
+            itinerarySchedule = ActiveItinerarySchedule(listOf(30, 30), listOf(10)),
+            layoverEndsAtEpochMillis = start.plusSeconds(6 * 60).toEpochMilli(),
+        )
+
+        val bar = FlightLiveUpdateModel.create(layover, start).trip
+
+        // 30 minutes flown plus 4 of the 10 minute break (6 remain).
+        assertEquals(34, bar?.progressMinutes)
     }
 
     private fun modelAt(elapsedSeconds: Long) = FlightLiveUpdateModel.create(flight, start.plusSeconds(elapsedSeconds))

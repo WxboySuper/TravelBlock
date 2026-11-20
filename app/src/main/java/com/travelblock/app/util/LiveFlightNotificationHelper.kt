@@ -19,6 +19,7 @@ import com.travelblock.app.domain.model.ActiveFlight
 import com.travelblock.app.domain.model.FlightLivePhase
 import com.travelblock.app.domain.model.FlightLiveUpdate
 import com.travelblock.app.domain.model.FlightLiveUpdateModel
+import com.travelblock.app.domain.model.TripBar
 import java.time.Instant
 
 class LiveFlightNotificationHelper(private val context: Context) {
@@ -54,8 +55,10 @@ class LiveFlightNotificationHelper(private val context: Context) {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_plane)
             .setContentTitle(model.title)
-            .setContentText(model.statusText)
+            .setContentText(contentLine(model))
             .setSubText(flight.liveLegLabel())
+            .setColor(ACCENT)
+            .setColorized(false)
             .setOngoing(true)
             .setWhen(flight.nextTransitionAtEpochMillis)
             .setUsesChronometer(true)
@@ -64,21 +67,47 @@ class LiveFlightNotificationHelper(private val context: Context) {
             .setOnlyAlertOnce(true)
             .setShortCriticalText(model.shortChipText)
         if (isPromotionAvailable()) builder.setStyle(progressStyle(model)).setRequestPromotedOngoing(true)
+        else if (model.trip != null) builder.setProgress(model.trip.totalMinutes, model.trip.progressMinutes, false)
         else if (model.phase != FlightLivePhase.LAYOVER) builder.setProgress(model.segments.total, model.progressValue, false)
         return builder.build()
     }
 
+    /** The one line under the title: the countdown at a layover, otherwise the instruments. */
+    private fun contentLine(model: FlightLiveUpdate): String =
+        if (model.phase == FlightLivePhase.LAYOVER) model.statusText else model.detailText.ifBlank { model.statusText }
+
     private fun progressStyle(model: FlightLiveUpdate): NotificationCompat.ProgressStyle {
-        val segment = NotificationCompat.ProgressStyle.Segment(model.segments.takeoff).setColor(TERRACOTTA)
-        val cruise = NotificationCompat.ProgressStyle.Segment(model.segments.cruise).setColor(TERRACOTTA)
-        val descent = NotificationCompat.ProgressStyle.Segment(model.segments.descent).setColor(TERRACOTTA)
+        val trip = model.trip
+        return if (trip != null) tripStyle(trip) else flightStyle(model)
+    }
+
+    /** One flight: takeoff, cruise and descent as three segments with the plane riding the bar. */
+    private fun flightStyle(model: FlightLiveUpdate): NotificationCompat.ProgressStyle {
+        val segments = listOf(model.segments.takeoff, model.segments.cruise, model.segments.descent)
+            .map { NotificationCompat.ProgressStyle.Segment(it).setColor(ACCENT) }
         return NotificationCompat.ProgressStyle()
             .setProgress(model.progressValue)
-            .setProgressSegments(listOf(segment, cruise, descent))
+            .setProgressSegments(segments)
             .setProgressPoints(listOf(
-                NotificationCompat.ProgressStyle.Point(model.segments.takeoff).setColor(SAND),
-                NotificationCompat.ProgressStyle.Point(model.segments.takeoff + model.segments.cruise).setColor(SAND),
+                NotificationCompat.ProgressStyle.Point(model.segments.takeoff).setColor(MIST),
+                NotificationCompat.ProgressStyle.Point(model.segments.takeoff + model.segments.cruise).setColor(MIST),
             ))
+            .setProgressTrackerIcon(IconCompat.createWithResource(context, R.drawable.ic_plane))
+            .setStyledByProgress(true)
+    }
+
+    /** A long haul: every flight is a blue segment, every layover a pale one, with a stop marker between them. */
+    private fun tripStyle(trip: TripBar): NotificationCompat.ProgressStyle {
+        val flights = trip.flightMinutes.size
+        val segments = trip.segments.mapIndexed { index, minutes ->
+            NotificationCompat.ProgressStyle.Segment(minutes.coerceAtLeast(1)).setColor(if (index % 2 == 0) ACCENT else MIST)
+        }
+        val stops = trip.segments.runningFold(0) { total, minutes -> total + minutes }.drop(1).dropLast(1)
+            .filterIndexed { index, _ -> index % 2 == 0 && index / 2 < flights - 1 }
+        return NotificationCompat.ProgressStyle()
+            .setProgress(trip.progressMinutes)
+            .setProgressSegments(segments)
+            .setProgressPoints(stops.map { NotificationCompat.ProgressStyle.Point(it).setColor(ACCENT) })
             .setProgressTrackerIcon(IconCompat.createWithResource(context, R.drawable.ic_plane))
             .setStyledByProgress(true)
     }
@@ -96,13 +125,14 @@ class LiveFlightNotificationHelper(private val context: Context) {
     private fun ActiveFlight.liveLegLabel(): String {
         if (!isItinerary) return "Seat ${seat.label}"
         val leg = itineraryLegIndex + if (status == com.travelblock.app.domain.model.ActiveFlightStatus.Layover) 2 else 1
-        return "Leg $leg of $itineraryLegCount · Seat ${seat.label}"
+        return "Leg $leg of $itineraryLegCount, seat ${seat.label}"
     }
 
     companion object {
         const val CHANNEL_ID = "travelblock_live_flight"
         const val NOTIFICATION_ID = 1002
-        private const val TERRACOTTA = 0xFFCF6F4A.toInt()
-        private const val SAND = 0xFFE8DFCF.toInt()
+        // The Apron palette: cobalt for flying, a pale blue for breaks.
+        private const val ACCENT = 0xFF2745F2.toInt()
+        private const val MIST = 0xFFB9C6FF.toInt()
     }
 }

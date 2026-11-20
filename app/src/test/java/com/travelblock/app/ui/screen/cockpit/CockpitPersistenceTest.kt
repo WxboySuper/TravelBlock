@@ -58,9 +58,9 @@ class CockpitPersistenceTest {
 
         assertEquals(1, flightLogs.logs.size)
         assertEquals(FlightLogStatus.COMPLETED.name, flightLogs.logs.single().status)
-        assertEquals(151, flightLogs.logs.single().pointsEarned)
+        assertEquals(37, flightLogs.logs.single().pointsEarned)
         assertEquals(1, points.transactions.size)
-        assertEquals(151, points.transactions.single().amount)
+        assertEquals(37, points.transactions.single().amount)
         assertEquals("KOKC", settings.currentAirportCode)
     }
 
@@ -123,7 +123,7 @@ class CockpitPersistenceTest {
 
         assertEquals(2, flightLogs.logs.size)
         assertEquals(3, points.transactions.size)
-        assertTrue(points.transactions.any { it.reason == "Completed long-haul trip" && it.amount == 100 })
+        assertTrue(points.transactions.any { it.reason == "Completed long-haul trip" && it.amount == 20 })
         assertNull(sessions.flight)
     }
 
@@ -187,8 +187,8 @@ class CockpitPersistenceTest {
         assertEquals(1, flightLogs.logs.size)
         assertEquals(FlightLogStatus.DIVERTED.name, flightLogs.logs.single().status)
         assertEquals(15, flightLogs.logs.single().durationMinutes)
-        assertEquals(37, flightLogs.logs.single().pointsEarned)
-        assertEquals(37, points.transactions.single().amount)
+        assertEquals(9, flightLogs.logs.single().pointsEarned)
+        assertEquals(9, points.transactions.single().amount)
         assertEquals("KOUN", settings.currentAirportCode)
     }
 

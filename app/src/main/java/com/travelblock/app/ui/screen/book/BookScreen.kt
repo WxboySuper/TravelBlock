@@ -399,6 +399,7 @@ private fun BookingStepContent(
             seats = uiState.seatOptions,
             selectedSeatId = uiState.selectedSeatId,
             seatSelectionMessage = uiState.seatSelectionMessage,
+            pointsBalance = uiState.pointsBalance,
             onSeatSelected = onSeatSelected,
         )
         else -> Unit

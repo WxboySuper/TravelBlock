@@ -102,6 +102,7 @@ fun CabinSeatMap(
     seats: List<SeatOption>,
     selectedSeatId: String?,
     seatSelectionMessage: String?,
+    pointsBalance: Int,
     onSeatSelected: (String) -> Unit,
 ) {
     PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
@@ -115,7 +116,14 @@ fun CabinSeatMap(
                     Text("Cabin map", style = MaterialTheme.typography.titleLarge, color = Ink)
                     Text("Muted seats are already taken.", style = MaterialTheme.typography.bodySmall, color = WarmGray)
                 }
-                selectedSeatId?.let { StampPill(text = "Seat $it", color = DuskBlue) }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("$pointsBalance pts", style = MaterialTheme.typography.titleLarge, color = DuskBlue)
+                    Text(
+                        selectedSeatId?.let { "Seat $it" } ?: "Your balance",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WarmGray,
+                    )
+                }
             }
             SeatLegend()
             seatSelectionMessage?.let {

@@ -84,6 +84,10 @@ fun RoutesMap(
     }
 }
 
+/** Attached and measured: only then does zooming to a box land where it should. */
+private val MapView.isReadyToFit: Boolean
+    get() = isAttachedToWindow && width > 0 && height > 0
+
 private const val REFIT_DELAY_MS = 400L
 private const val RETRY_DELAY_MS = 50L
 private const val MAX_RETRIES = 40
@@ -105,7 +109,7 @@ private fun MapView.fitAll(points: List<org.osmdroid.util.GeoPoint>) {
         zoomToBoundingBox(box, false, (40 * density).toInt())
     }
     fun attempt(tries: Int) {
-        if (width > 0 && height > 0 && isAttachedToWindow) {
+        if (isReadyToFit) {
             fit()
             postDelayed({ fit() }, REFIT_DELAY_MS)
         } else if (tries < MAX_RETRIES) {

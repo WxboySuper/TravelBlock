@@ -79,7 +79,7 @@ fun ArrivalScreen(
     Box(Modifier.fillMaxSize().background(Cream)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             ArrivalHero(arrivalSummary.destination)
-            ArrivalDetails(arrivalSummary, homeAirportCode, actions, showReturnHomePlaceholder)
+            ArrivalDetails(arrivalSummary, actions, headingHomeTo = homeAirportCode.takeIf { showReturnHomePlaceholder })
         }
         ArrivalActions(
             onContinueJourney = actions.continueJourney,
@@ -93,9 +93,9 @@ fun ArrivalScreen(
 @Composable
 private fun ArrivalDetails(
     arrivalSummary: ArrivalSummary,
-    homeAirportCode: String,
     actions: ArrivalScreenActions,
-    showReturnHome: Boolean,
+    /** The home airport code while the "heading home" note is showing, otherwise null. */
+    headingHomeTo: String?,
 ) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 28.dp, bottom = 230.dp),
@@ -116,9 +116,7 @@ private fun ArrivalDetails(
             style = MaterialTheme.typography.bodyMedium,
             color = WarmGray,
         )
-        if (showReturnHome) {
-            ReturnHomeNote(arrivalSummary.destination.displayCode, homeAirportCode)
-        }
+        headingHomeTo?.let { ReturnHomeNote(arrivalSummary.destination.displayCode, it) }
     }
 }
 

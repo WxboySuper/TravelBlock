@@ -35,12 +35,15 @@ object ItineraryPlanner {
                 ?: return null
             route += stop
         }
+        val airportsInOrder = listOf(origin) + route + destination
+        // Every flight takes as long as its distance says, whatever focus block the trip was sized from.
+        val legMinutes = LegTimes.forStops(airportsInOrder)
         return FlightItinerary(
             preset = preset,
-            airports = listOf(origin) + route + destination,
+            airports = airportsInOrder,
             schedule = ItinerarySchedule(
-                focusMinutes = trip.focusMinutes,
-                legDurationsMinutes = trip.legDurationsMinutes.ifEmpty { List(preset.legCount) { trip.focusMinutes } },
+                focusMinutes = legMinutes.sum(),
+                legDurationsMinutes = legMinutes,
                 breakDurationsMinutes = trip.breakDurationsMinutes,
             ),
         )

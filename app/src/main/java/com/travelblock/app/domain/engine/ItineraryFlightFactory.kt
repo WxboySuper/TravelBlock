@@ -38,9 +38,12 @@ fun createInitialFlight(
     val totalDistance = itinerary.airports.zipWithNext().sumOf { (from, to) ->
         engine.distanceMiles(from, to)
     }
+    val firstLegMinutes = itinerary.legDurationsMinutes.first()
     return singleFlight.copy(
         origin = first[0],
         destination = first[1],
+        durationMinutes = firstLegMinutes,
+        plannedArrivalAt = startedAt.plusSeconds(firstLegMinutes * 60L),
         distanceMiles = engine.distanceMiles(first[0], first[1]),
         itineraryCodes = itinerary.airports.joinToString(",") { it.code },
         itineraryLabel = itinerary.preset.label,

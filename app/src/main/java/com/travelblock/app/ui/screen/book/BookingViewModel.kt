@@ -11,6 +11,7 @@ import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.TripPreset
 import com.travelblock.app.domain.model.SessionPlan
+import com.travelblock.app.domain.engine.LegTimes
 import com.travelblock.app.domain.engine.TripTime
 import com.travelblock.app.domain.engine.SessionPlanCalculator
 import com.travelblock.app.domain.model.Airport
@@ -56,35 +57,6 @@ class BookingViewModel(
         )
     }
 
-    fun selectTripPreset(preset: TripPreset?) {
-        uiState = uiState.copy(
-            tripPreset = preset,
-            sessionPlan = null,
-            hub = null,
-            hubChosen = false,
-            stops = emptyList(),
-            durationMinutes = originalDurationMinutes,
-            arrivalTime = uiState.departureTime?.plusMinutes(originalDurationMinutes.toLong()),
-        )
-    }
-
-    fun selectSessionPlan(plan: SessionPlan?) {
-        val breakdown = plan?.let(SessionPlanCalculator::calculate)
-        uiState = uiState.copy(
-            hub = null,
-            hubChosen = false,
-            stops = emptyList(),
-            tripPreset = if (breakdown != null) {
-                TripPreset("planned", "Planned session", breakdown.legCount)
-            } else null,
-            sessionPlan = plan.takeIf { breakdown != null },
-            durationMinutes = breakdown?.legDurationsMinutes?.firstOrNull() ?: originalDurationMinutes,
-            arrivalTime = uiState.departureTime?.plusMinutes(
-                (breakdown?.totalFocusMinutes ?: originalDurationMinutes).toLong(),
-            ),
-        )
-    }
-
     /** Connect a trip through a major hub (or go back to the direct flight with null). */
     fun selectHubConnection(connection: HubConnection?) {
         val departure = uiState.departureTime
@@ -107,19 +79,6 @@ class BookingViewModel(
             sessionPlan = null,
             durationMinutes = connection.firstLegMinutes,
             arrivalTime = departure?.plusMinutes((connection.totalFocusMinutes + connection.layoverMinutes).toLong()),
-        )
-    }
-
-    fun selectTripDestination(destination: Airport) {
-        val origin = uiState.origin ?: return
-        val distance = AirportRouteEngine().distanceMiles(origin, destination)
-        uiState = uiState.copy(
-            hub = null,
-            hubChosen = false,
-            stops = emptyList(),
-            destination = destination,
-            distanceMiles = distance,
-            pointsRewardEstimate = FlightRewardCalculator.completedReward(uiState.durationMinutes, distance),
         )
     }
 
@@ -257,7 +216,13 @@ class BookingViewModel(
             fun of(draft: DraftFlightBooking): TripShape {
                 val breakdown = draft.sessionPlan?.let(SessionPlanCalculator::calculate)
                 val hub = draft.hub
+                val legs = LegTimes.forStops(draft.stops)
                 return when {
+                    draft.stops.size > 2 && breakdown != null -> TripShape(
+                        TripPreset("planned", "Planned session", breakdown.legCount),
+                        legs.sum() + breakdown.totalBreakMinutes,
+                        legs.first(),
+                    )
                     breakdown != null -> TripShape(
                         TripPreset("planned", "Planned session", breakdown.legCount),
                         breakdown.totalFocusMinutes,

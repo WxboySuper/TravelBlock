@@ -99,12 +99,13 @@ import com.travelblock.app.ui.util.rememberTravelBlockHaptics
 /** A real-cabin seat map: a fuselage outline with window markers, row numbers down the aisle, and seat-back shapes. */
 @Composable
 fun CabinSeatMap(
-    seats: List<SeatOption>,
-    selectedSeatId: String?,
-    seatSelectionMessage: String?,
-    pointsBalance: Int,
+    uiState: BookingUiState,
     onSeatSelected: (String) -> Unit,
 ) {
+    val seats = uiState.seatOptions
+    val selectedSeatId = uiState.selectedSeatId
+    val seatSelectionMessage = uiState.seatSelectionMessage
+    val pointsBalance = uiState.pointsBalance
     PaperCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(

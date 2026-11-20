@@ -395,13 +395,7 @@ private fun BookingStepContent(
 ) {
     when (step) {
         BookingFlowStep.Manifest -> ManifestCard(uiState, actions)
-        BookingFlowStep.SeatSelection -> CabinSeatMap(
-            seats = uiState.seatOptions,
-            selectedSeatId = uiState.selectedSeatId,
-            seatSelectionMessage = uiState.seatSelectionMessage,
-            pointsBalance = uiState.pointsBalance,
-            onSeatSelected = onSeatSelected,
-        )
+        BookingFlowStep.SeatSelection -> CabinSeatMap(uiState = uiState, onSeatSelected = onSeatSelected)
         else -> Unit
     }
 }

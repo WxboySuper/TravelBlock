@@ -5,6 +5,7 @@ import com.travelblock.app.domain.model.FlightItinerary
 import com.travelblock.app.domain.model.ItinerarySchedule
 import com.travelblock.app.domain.model.TripPreset
 import com.travelblock.app.domain.model.isMajorHub
+import com.travelblock.app.domain.model.isSecondaryHub
 
 /** A short trip rerouted through a major hub: the hub, the two flight times, and what the detour adds. */
 data class HubConnection(
@@ -24,6 +25,7 @@ data class HubConnection(
  */
 object HubRouting {
     private const val MAX_OPTIONS = 3
+    private const val SECONDARY_HUB_PENALTY_MILES = 400.0
     private const val MAX_DETOUR_FACTOR = 2.2
     private const val MAX_DETOUR_EXTRA_MILES = 250.0
     private val engine = AirportRouteEngine()
@@ -45,7 +47,8 @@ object HubRouting {
             .filter { it.code != origin.code && it.code != destination.code }
             .map { it to engine.distanceMiles(origin, it) + engine.distanceMiles(it, destination) }
             .filter { it.second <= limit }
-            .sortedBy { it.second }
+            // A city's second airport is only chosen over its main one when the main one is a real detour.
+            .sortedBy { (hub, miles) -> miles + if (hub.isSecondaryHub) SECONDARY_HUB_PENALTY_MILES else 0.0 }
             .take(MAX_OPTIONS)
             .map { (hub, _) -> connectionVia(origin, destination, hub, direct) }
             .toList()

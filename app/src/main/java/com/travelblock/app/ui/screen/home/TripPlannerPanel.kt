@@ -62,7 +62,7 @@ fun TripPlannerPanel(origin: Airport?, visitedCount: Int, actions: TripPlannerHo
     var minutes by remember { mutableIntStateOf(PlannerDefaultMinutes) }
     LaunchedEffect(minutes) { onMinutesChange(minutes) }
     var hubs by remember { mutableStateOf(true) }
-    var major by remember { mutableStateOf(true) }
+    var major by remember { mutableStateOf(false) }
     var custom by remember { mutableStateOf<CustomTrip?>(null) }
     var askCustom by remember { mutableStateOf(false) }
     val options = remember(minutes, hubs, major, custom, origin?.code, visitedCount) { actions.options(TripWish(minutes, hubs, major, layoversCountAgainstTime = custom?.landBy == true)) }

@@ -6,9 +6,11 @@ import com.travelblock.app.domain.model.ItinerarySchedule
 import com.travelblock.app.domain.model.GeoPoint
 import com.travelblock.app.domain.model.TripPreset
 import com.travelblock.app.domain.model.isMajorHub
+import com.travelblock.app.domain.model.isSecondaryHub
 import kotlin.math.abs
 
 object ItineraryPlanner {
+    private const val SECONDARY_HUB_PENALTY_MILES = 400.0
     private const val MIN_LEGS_FOR_ORIGIN_HUB = 3
     private const val MIN_LEGS_FOR_DESTINATION_HUB = 4
 
@@ -86,7 +88,8 @@ object ItineraryPlanner {
         val toDestination = AirportRouteEngine.distanceMiles(
             airport.latitude, airport.longitude, context.destination.latitude, context.destination.longitude,
         )
-        return positionError + abs(fromOrigin - toDestination) * 0.08 + preferredHubPenalty(airport, context)
+        val secondary = if (airport.isSecondaryHub) SECONDARY_HUB_PENALTY_MILES else 0.0
+        return positionError + abs(fromOrigin - toDestination) * 0.08 + preferredHubPenalty(airport, context) + secondary
     }
 
     private fun preferredHubPenalty(airport: Airport, context: RouteContext): Double {

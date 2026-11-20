@@ -59,6 +59,7 @@ class LiveFlightNotificationHelper(private val context: Context) {
             .setSubText(flight.liveLegLabel())
             .setColor(ACCENT)
             .setColorized(false)
+            .setLargeIcon(LiveRouteArt.render(flight, routeProgress(flight, model)))
             .setOngoing(true)
             .setWhen(flight.nextTransitionAtEpochMillis)
             .setUsesChronometer(true)
@@ -78,39 +79,57 @@ class LiveFlightNotificationHelper(private val context: Context) {
 
     private fun progressStyle(model: FlightLiveUpdate): NotificationCompat.ProgressStyle {
         val trip = model.trip
-        return if (trip != null) tripStyle(trip) else flightStyle(model)
+        return if (trip != null) tripStyle(trip, model) else flightStyle(model)
     }
 
-    /** One flight: takeoff, cruise and descent as three segments with the plane riding the bar. */
+    /** One flight: climb, cruise and descent in their own colours, with the plane pitched to match the stage. */
     private fun flightStyle(model: FlightLiveUpdate): NotificationCompat.ProgressStyle {
-        val segments = listOf(model.segments.takeoff, model.segments.cruise, model.segments.descent)
-            .map { NotificationCompat.ProgressStyle.Segment(it).setColor(ACCENT) }
-        return NotificationCompat.ProgressStyle()
+        val segments = listOf(
+            NotificationCompat.ProgressStyle.Segment(model.segments.takeoff).setColor(MIST),
+            NotificationCompat.ProgressStyle.Segment(model.segments.cruise).setColor(ACCENT),
+            NotificationCompat.ProgressStyle.Segment(model.segments.descent).setColor(SIGNAL),
+        )
+        return endpoints(NotificationCompat.ProgressStyle(), model)
             .setProgress(model.progressValue)
             .setProgressSegments(segments)
             .setProgressPoints(listOf(
-                NotificationCompat.ProgressStyle.Point(model.segments.takeoff).setColor(MIST),
-                NotificationCompat.ProgressStyle.Point(model.segments.takeoff + model.segments.cruise).setColor(MIST),
+                NotificationCompat.ProgressStyle.Point(model.segments.takeoff).setColor(WHITE),
+                NotificationCompat.ProgressStyle.Point(model.segments.takeoff + model.segments.cruise).setColor(WHITE),
             ))
-            .setProgressTrackerIcon(IconCompat.createWithResource(context, R.drawable.ic_plane))
             .setStyledByProgress(true)
     }
 
-    /** A long haul: every flight is a blue segment, every layover a pale one, with a stop marker between them. */
-    private fun tripStyle(trip: TripBar): NotificationCompat.ProgressStyle {
+    /** A long haul: every flight is a cobalt segment, every layover a pale one, with a stop marker between them. */
+    private fun tripStyle(trip: TripBar, model: FlightLiveUpdate): NotificationCompat.ProgressStyle {
         val flights = trip.flightMinutes.size
         val segments = trip.segments.mapIndexed { index, minutes ->
             NotificationCompat.ProgressStyle.Segment(minutes.coerceAtLeast(1)).setColor(if (index % 2 == 0) ACCENT else MIST)
         }
         val stops = trip.segments.runningFold(0) { total, minutes -> total + minutes }.drop(1).dropLast(1)
             .filterIndexed { index, _ -> index % 2 == 0 && index / 2 < flights - 1 }
-        return NotificationCompat.ProgressStyle()
+        return endpoints(NotificationCompat.ProgressStyle(), model)
             .setProgress(trip.progressMinutes)
             .setProgressSegments(segments)
-            .setProgressPoints(stops.map { NotificationCompat.ProgressStyle.Point(it).setColor(ACCENT) })
-            .setProgressTrackerIcon(IconCompat.createWithResource(context, R.drawable.ic_plane))
+            .setProgressPoints(stops.map { NotificationCompat.ProgressStyle.Point(it).setColor(WHITE) })
             .setStyledByProgress(true)
     }
+
+    /** Takeoff and landing icons at the two ends of the bar, and a plane that tilts up, level or down. */
+    private fun endpoints(style: NotificationCompat.ProgressStyle, model: FlightLiveUpdate): NotificationCompat.ProgressStyle =
+        style
+            .setProgressStartIcon(IconCompat.createWithResource(context, R.drawable.ic_takeoff))
+            .setProgressEndIcon(IconCompat.createWithResource(context, R.drawable.ic_landing))
+            .setProgressTrackerIcon(IconCompat.createWithResource(context, trackerFor(model.phase)))
+
+    private fun trackerFor(phase: FlightLivePhase): Int = when (phase) {
+        FlightLivePhase.TAKEOFF -> R.drawable.ic_plane_climb
+        FlightLivePhase.DESCENT -> R.drawable.ic_plane_descend
+        else -> R.drawable.ic_plane
+    }
+
+    /** How far along the map the plane is: this flight's own progress, or the end of the leg at a layover. */
+    private fun routeProgress(flight: ActiveFlight, model: FlightLiveUpdate): Float =
+        if (flight.status == com.travelblock.app.domain.model.ActiveFlightStatus.Layover) 1f else model.progressFraction
 
     private fun isPromotionAvailable(): Boolean = Build.VERSION.SDK_INT >= 36 &&
         context.getSystemService(NotificationManager::class.java)?.canPostPromotedNotifications() == true
@@ -134,5 +153,7 @@ class LiveFlightNotificationHelper(private val context: Context) {
         // The Apron palette: cobalt for flying, a pale blue for breaks.
         private const val ACCENT = 0xFF2745F2.toInt()
         private const val MIST = 0xFFB9C6FF.toInt()
+        private const val SIGNAL = 0xFF14C3BA.toInt()
+        private const val WHITE = 0xFFFFFFFF.toInt()
     }
 }

@@ -29,6 +29,6 @@ class TripTimeTest {
 
     @Test
     fun `a window too small for a trip gives zero`() {
-        assertEquals(0, TripTime.focusForElapsed(20))
+        assertEquals(0, TripTime.focusForElapsed(15))
     }
 }

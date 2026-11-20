@@ -6,7 +6,7 @@ import java.time.LocalTime
 /** Turns "land by 5:30" into the focus time a trip has to fit, breaks and boarding included. */
 object TripTime {
     /** The booking flow schedules departure this long after check-in starts. */
-    const val BOARDING_BUFFER_MINUTES = 8
+    const val BOARDING_BUFFER_MINUTES = 1
     const val MIN_FOCUS_MINUTES = 15
     const val MAX_FOCUS_MINUTES = 720
     private const val MINUTES_PER_DAY = 24 * 60

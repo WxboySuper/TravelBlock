@@ -11,6 +11,7 @@ import com.travelblock.app.domain.model.SeatOption
 import com.travelblock.app.domain.model.TicketClass
 import com.travelblock.app.domain.model.TripPreset
 import com.travelblock.app.domain.model.SessionPlan
+import com.travelblock.app.domain.engine.TripTime
 import com.travelblock.app.domain.engine.SessionPlanCalculator
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.engine.AirportRouteEngine
@@ -214,7 +215,7 @@ class BookingViewModel(
     private fun createInitialState(draft: DraftFlightBooking?): BookingUiState {
         if (draft == null) return BookingUiState()
 
-        val departureTime = LocalDateTime.now(clock).plusMinutes(8)
+        val departureTime = LocalDateTime.now(clock).plusMinutes(TripTime.BOARDING_BUFFER_MINUTES.toLong())
         val shape = TripShape.of(draft)
         val arrivalTime = departureTime.plusMinutes(shape.totalMinutes.toLong())
         val flightNumber = generateFlightNumber(draft)

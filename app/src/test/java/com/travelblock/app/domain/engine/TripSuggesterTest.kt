@@ -34,7 +34,7 @@ class TripSuggesterTest {
     fun `a long trip lists the hubs it flies through`() {
         val options = TripSuggester.options(origin, all, TripWish(minutes = 240))
 
-        assertTrue(options.all { it.stops.size >= 2 && it.focusMinutes == 240 })
+        assertTrue(options.all { it.stops.size >= 2 && it.focusMinutes == LegTimes.forStops(it.stops).sum() })
     }
 
     @Test

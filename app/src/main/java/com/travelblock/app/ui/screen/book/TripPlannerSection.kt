@@ -5,6 +5,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import com.travelblock.app.domain.engine.HubConnection
 import com.travelblock.app.domain.engine.HubRouting
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.ui.theme.DuskBlue
@@ -14,18 +15,15 @@ private const val QUICK_HOP_MILES = 60.0
 
 /** The trip card plus the hub choices for the picked destination, with a sensible default already applied. */
 @Composable
-internal fun TripPlannerSection(uiState: BookingUiState, origin: Airport, airports: List<Airport>, actions: TripPlannerActions) {
+internal fun TripPlannerSection(uiState: BookingUiState, origin: Airport, airports: List<Airport>, onHub: (HubConnection?) -> Unit) {
     val hubs = remember(origin.code, uiState.destination?.code, airports) {
         uiState.destination?.let { HubRouting.connections(origin, it, airports) }.orEmpty()
     }
     // Smart default: a trip long enough to matter connects through its nearest hub unless you say otherwise.
     LaunchedEffect(hubs, uiState.hubChosen) {
-        if (shouldDefaultToHub(uiState, hubs.isNotEmpty())) actions.onHub(hubs.first())
+        if (shouldDefaultToHub(uiState, hubs.isNotEmpty())) onHub(hubs.first())
     }
-    TripPlannerCard(
-        TripPlannerState(uiState.tripPreset, uiState.sessionPlan, uiState.destination, airports, HubOption(hubs, uiState.hub)),
-        actions,
-    )
+    TripPlannerCard(HubOption(hubs, uiState.hub), onHub)
 }
 
 private fun shouldDefaultToHub(uiState: BookingUiState, hasHubs: Boolean): Boolean {

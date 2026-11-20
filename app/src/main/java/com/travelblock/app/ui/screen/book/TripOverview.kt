@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.travelblock.app.domain.engine.HubConnection
+import com.travelblock.app.domain.engine.LegTimes
 import com.travelblock.app.domain.engine.SessionPlanCalculator
 import com.travelblock.app.domain.engine.TripTime
 import com.travelblock.app.domain.model.Airport
@@ -48,7 +49,7 @@ data class OverviewLeg(val from: Airport, val to: Airport, val minutes: Int, val
 /** The flights of a planned trip with their lengths and breaks, from the session plan or the hub connection. */
 fun tripOverviewLegs(stops: List<Airport>, plan: SessionPlan?, hub: HubConnection?): List<OverviewLeg> {
     val breakdown = plan?.let(SessionPlanCalculator::calculate)
-    val minutes = breakdown?.legDurationsMinutes ?: hub?.let { listOf(it.firstLegMinutes, it.secondLegMinutes) } ?: return emptyList()
+    val minutes = breakdown?.let { LegTimes.forStops(stops) } ?: hub?.let { listOf(it.firstLegMinutes, it.secondLegMinutes) } ?: return emptyList()
     val breaks = breakdown?.breakDurationsMinutes ?: hub?.let { listOf(it.layoverMinutes) }.orEmpty()
     return stops.zipWithNext().zip(minutes).mapIndexed { index, (pair, legMinutes) ->
         OverviewLeg(pair.first, pair.second, legMinutes, breaks.getOrNull(index))

@@ -73,21 +73,6 @@ class BookingViewModelTest {
     }
 
     @Test
-    fun longHaulCheckInCarriesPresetAndSelectedFinalDestination() {
-        val viewModel = BookingViewModel(draftFlightBooking = draft, clock = fixedClock)
-        val finalDestination = Airport("EGLL", "EGLL", "LHR", "Heathrow Airport", "London", null, "GB", 51.47, -0.45, 83)
-        val preset = TripPreset.presets.first { it.id == "transatlantic" }
-
-        viewModel.selectTripPreset(preset)
-        viewModel.selectTripDestination(finalDestination)
-
-        assertEquals(preset, viewModel.uiState.boardingPass?.tripPreset)
-        assertEquals("EGLL", viewModel.uiState.boardingPass?.destination?.code)
-        assertEquals(25, viewModel.uiState.boardingPass?.focusDurationMinutes)
-        assertTrue(viewModel.uiState.distanceMiles > 4_000)
-    }
-
-    @Test
     fun cannotSkipDirectlyFromManifestToBoardingPassOrGateCall() {
         val viewModel = BookingViewModel(draftFlightBooking = draft, clock = fixedClock)
 

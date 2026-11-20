@@ -19,7 +19,8 @@ class ItineraryPlannerTest {
 
         assertNotNull(trip)
         assertEquals(listOf("AAA", "HUB", "ZZZ"), trip?.airports?.map(Airport::code))
-        assertEquals(25, trip?.focusMinutes)
+        assertEquals(LegTimes.forStops(trip!!.airports).sum(), trip.focusMinutes)
+        assertEquals(LegTimes.forStops(trip.airports), trip.legDurationsMinutes)
     }
 
     @Test

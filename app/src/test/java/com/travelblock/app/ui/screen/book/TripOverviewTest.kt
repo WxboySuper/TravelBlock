@@ -1,6 +1,7 @@
 package com.travelblock.app.ui.screen.book
 
 import com.travelblock.app.domain.engine.HubConnection
+import com.travelblock.app.domain.engine.LegTimes
 import com.travelblock.app.domain.model.Airport
 import com.travelblock.app.domain.model.SessionBreakPlan
 import com.travelblock.app.domain.model.SessionPlan
@@ -21,7 +22,7 @@ class TripOverviewTest {
 
         assertEquals(listOf("AAA", "BBB"), legs.map { it.from.code to it.to.code }.first().toList())
         assertEquals(2, legs.size)
-        assertEquals(100, legs.sumOf { it.minutes })
+        assertEquals(LegTimes.forStops(listOf(a, b, c)), legs.map { it.minutes })
         assertEquals(SessionBreakPlan().regularMinutes, legs.first().breakAfterMinutes)
         assertNull(legs.last().breakAfterMinutes)
     }

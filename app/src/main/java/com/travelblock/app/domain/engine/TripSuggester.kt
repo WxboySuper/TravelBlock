@@ -66,7 +66,7 @@ object TripSuggester {
         val score: Int
             get() {
                 val layover = suggestion.hub?.layoverMinutes?.takeIf { wish.layoversCountAgainstTime } ?: 0
-                val gap = abs(wish.minutes - (suggestion.hub?.totalFocusMinutes?.plus(layover) ?: suggestion.route.estimatedDurationMinutes))
+                val gap = abs(wish.minutes - (suggestion.hub?.totalFocusMinutes?.plus(layover) ?: suggestion.focusMinutes))
                 val visitedPenalty = if (suggestion.isNew) 0 else VISITED_PENALTY_MINUTES
                 val destination = suggestion.route.destination
                 val sizePenalty = when {
@@ -88,7 +88,7 @@ object TripSuggester {
     /** A long trip is flown in blocks with breaks; the planner puts its connections at hubs, so ask it where. */
     private fun longHaul(route: FlightRoute, airports: List<Airport>, wish: TripWish): TripSuggestion {
         val plan = AutoSessionPlan.forTotal(wish.minutes)?.let(SessionPlanCalculator::calculate)
-        val stops = plan?.let {
+        val itinerary = plan?.let {
             ItineraryPlanner.plan(
                 ItineraryRequest(
                     origin = route.origin,
@@ -101,9 +101,11 @@ object TripSuggester {
                         breakDurationsMinutes = it.breakDurationsMinutes,
                     ),
                 ),
-            )?.airports
-        } ?: listOf(route.origin, route.destination)
-        return TripSuggestion(route, null, wish.minutes, stops, isNewTo(route.destination, wish))
+            )
+        }
+        val stops = itinerary?.airports ?: listOf(route.origin, route.destination)
+        // The time shown is the time the flights really take, which is what the distances add up to.
+        return TripSuggestion(route, null, itinerary?.totalFocusMinutes ?: route.estimatedDurationMinutes, stops, isNewTo(route.destination, wish))
     }
 
     private fun isNewTo(destination: Airport, wish: TripWish): Boolean =
